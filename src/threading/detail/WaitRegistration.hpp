@@ -4,21 +4,65 @@
 #include <cstdint>
 #include <limits>
 
+#include "TaskRecord.hpp"
+
 namespace ESPressio::Threading::Detail {
+
+    enum class WaitRegistrationStatus : std::uint8_t {
+        Registered = 0,
+        CapacityUnavailable = 1
+    };
+
+
+    template<std::size_t TContextCapacity>
+    struct ExecutionContextIndexTraits final {
+
+        static_assert(
+            TContextCapacity > 0U,
+            "ExecutionContextIndex requires positive managed-context capacity"
+        );
+
+        /// Smallest index Type able to address every managed execution context plus an invalid sentinel.
+        using Type = typename SmallestIndex<TContextCapacity>::Type;
+
+        /// Sentinel which cannot identify a valid managed execution context.
+        static constexpr Type Invalid = SmallestIndex<TContextCapacity>::Invalid;
+
+    };
+
 
     template<class TRecordIndex, class TContextIndex>
     struct TaskWaitRegistration final {
 
+        /// Managed execution-context index Type used by this registration.
+        using ContextIndexType = TContextIndex;
+
         // Wait target.
 
-        /// Target Task record index or the invalid sentinel when inactive.
-        TRecordIndex RecordIndex;
+        /// Target Task record index.
+        TRecordIndex RecordIndex{};
 
         /// Target Task record incarnation Phase.
-        bool Phase;
+        bool Phase = false;
 
-        /// Waiting managed execution context.
-        TContextIndex ContextIndex;
+
+        // Wake routing.
+
+        /// Waiting managed execution context, or the invalid sentinel while inactive.
+        TContextIndex WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+
+
+        // Registration state.
+
+        /// Indicates whether this registration currently participates in target wake discovery.
+        bool IsActive() const noexcept {
+            return WaitingContextIndex != std::numeric_limits<TContextIndex>::max();
+        }
+
+        /// Returns this registration to its structurally inactive state.
+        void Clear() noexcept {
+            WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+        }
 
     };
 
@@ -26,13 +70,32 @@ namespace ESPressio::Threading::Detail {
     template<class TContextIndex>
     struct ThreadJoinRegistration final {
 
+        /// Managed execution-context index Type used by this registration.
+        using ContextIndexType = TContextIndex;
+
         // Wait target.
 
         /// Target Dedicated Thread activation Phase.
-        bool Phase;
+        bool Phase = false;
 
-        /// Waiting managed execution context or the invalid sentinel when inactive.
-        TContextIndex ContextIndex;
+
+        // Wake routing.
+
+        /// Waiting managed execution context, or the invalid sentinel while inactive.
+        TContextIndex WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+
+
+        // Registration state.
+
+        /// Indicates whether this registration currently participates in target wake discovery.
+        bool IsActive() const noexcept {
+            return WaitingContextIndex != std::numeric_limits<TContextIndex>::max();
+        }
+
+        /// Returns this registration to its structurally inactive state.
+        void Clear() noexcept {
+            WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+        }
 
     };
 
@@ -40,56 +103,92 @@ namespace ESPressio::Threading::Detail {
     template<class TContextIndex>
     struct ShutdownWaitRegistration final {
 
-        // Waiting context.
+        /// Managed execution-context index Type used by this registration.
+        using ContextIndexType = TContextIndex;
 
-        /// Waiting managed execution context or the invalid sentinel when inactive.
-        TContextIndex ContextIndex;
+        // Wake routing.
+
+        /// Waiting managed execution context, or the invalid sentinel while inactive.
+        TContextIndex WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+
+
+        // Registration state.
+
+        /// Indicates whether this registration currently participates in shutdown wake discovery.
+        bool IsActive() const noexcept {
+            return WaitingContextIndex != std::numeric_limits<TContextIndex>::max();
+        }
+
+        /// Returns this registration to its structurally inactive state.
+        void Clear() noexcept {
+            WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+        }
 
     };
 
 
-    template<class TRegistration, class TInactivePredicate>
+    template<class TRegistration, std::size_t TCapacity>
     class RegistrationSet final {
+
+        static_assert(
+            TCapacity > 0U,
+            "A bounded waiter-registration set requires positive capacity"
+        );
 
         private:
 
-            // Bounded registration storage.
+            // Target-owned bounded storage.
 
-            /// Caller-defined registration records; inactivity is encoded structurally by the registration itself.
-            TRegistration* _registrations;
-
-            /// Number of statically provisioned registration slots.
-            std::size_t _capacity;
-
-            /// Predicate that identifies an inactive registration slot.
-            TInactivePredicate _isInactive;
+            /// Specialized waiter registrations owned directly by the target resource.
+            TRegistration _registrations[TCapacity];
 
         public:
 
-            // Construction.
+            // Registration lifecycle.
 
-            /// Binds this bounded registration view to statically owned target-resource storage.
-            RegistrationSet(
-                TRegistration* registrations,
-                std::size_t capacity,
-                TInactivePredicate isInactive
-            ) noexcept :
-                _registrations(registrations),
-                _capacity(capacity),
-                _isInactive(isInactive) {}
+            /// Publishes one complete active registration into the first inactive slot.
+            ///
+            /// The target resource must serialize this operation with target predicate checks,
+            /// terminal/phase publication and registration removal.
+            WaitRegistrationStatus Register(
+                const TRegistration& registration,
+                std::size_t& registrationIndex
+            ) noexcept {
+                for (std::size_t index = 0U; index < TCapacity; ++index) {
+                    if (_registrations[index].IsActive()) { continue; }
+
+                    _registrations[index] = registration;
+                    registrationIndex = index;
+                    return WaitRegistrationStatus::Registered;
+                }
+
+                return WaitRegistrationStatus::CapacityUnavailable;
+            }
+
+            /// Removes one previously published registration.
+            ///
+            /// The caller must supply an index obtained from a successful Register operation and
+            /// must serialize removal with the owning target resource's publication protocol.
+            void Unregister(
+                std::size_t registrationIndex
+            ) noexcept {
+                _registrations[registrationIndex].Clear();
+            }
 
 
-            // Mutation.
+            // Inspection.
 
-            /// Attempts to reserve one inactive registration slot.
-            TRegistration* TryAcquire() noexcept {
-                for (std::size_t index = 0U; index < _capacity; ++index) {
-                    if (_isInactive(_registrations[index])) {
-                        return &_registrations[index];
+            /// Returns the number of currently active registrations.
+            std::size_t ActiveCount() const noexcept {
+                std::size_t activeCount = 0U;
+
+                for (std::size_t index = 0U; index < TCapacity; ++index) {
+                    if (_registrations[index].IsActive()) {
+                        ++activeCount;
                     }
                 }
 
-                return nullptr;
+                return activeCount;
             }
 
 
@@ -100,8 +199,8 @@ namespace ESPressio::Threading::Detail {
             void VisitActive(
                 TVisitor&& visitor
             ) {
-                for (std::size_t index = 0U; index < _capacity; ++index) {
-                    if (_isInactive(_registrations[index])) { continue; }
+                for (std::size_t index = 0U; index < TCapacity; ++index) {
+                    if (!_registrations[index].IsActive()) { continue; }
 
                     visitor(
                         _registrations[index]
