@@ -24,6 +24,7 @@ namespace ESPressio::Threading::Detail {
             "A bounded index requires a positive capacity"
         );
 
+        /// Smallest unsigned index type able to represent every record plus an invalid sentinel.
         using Type = std::conditional_t<
             (TCapacity < static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())),
             std::uint8_t,
@@ -34,6 +35,7 @@ namespace ESPressio::Threading::Detail {
             >
         >;
 
+        /// Sentinel value which cannot identify a valid record for the configured capacity.
         static constexpr Type Invalid = std::numeric_limits<Type>::max();
 
     };
@@ -49,8 +51,13 @@ namespace ESPressio::Threading::Detail {
             /// Packed operational state, public ownership and incarnation Phase.
             typename TAtomicWord8Provider::Word _value;
 
+            /// Bit mask selecting the internal Task operational state.
             static constexpr std::uint8_t StateMask = 0x07U;
+
+            /// Bit mask selecting the sole public Task ownership interest.
             static constexpr std::uint8_t OwnerMask = 0x08U;
+
+            /// Bit mask selecting the record-incarnation Phase.
             static constexpr std::uint8_t PhaseMask = 0x10U;
 
         public:
@@ -147,7 +154,6 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-
             /// Releases the sole public ownership interest.
             void ReleaseOwner() noexcept {
                 auto expected = _value.LoadAcquire();
@@ -165,12 +171,6 @@ namespace ESPressio::Threading::Detail {
             }
 
     };
-
-
-    static_assert(
-        sizeof(TaskControl) == 1U,
-        "TaskControl must remain a one-byte intrinsic Task control representation"
-    );
 
 
     template<class TTaskRecord>
@@ -193,7 +193,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity>
+    template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity, class TAtomicWord8Provider>
     struct TaskRecord final {
 
         static_assert(
@@ -201,11 +201,18 @@ namespace ESPressio::Threading::Detail {
             "Task callable capacity must be positive"
         );
 
+        static_assert(
+            sizeof(TaskControl<TAtomicWord8Provider>) == 1U,
+            "TaskControl must remain a one-byte intrinsic Task control representation"
+        );
+
+        /// Payload bytes shared by callable storage and result storage.
         static constexpr std::size_t PayloadCapacity =
             TCallableCapacity > TResultCapacity
                 ? TCallableCapacity
                 : TResultCapacity;
 
+        /// Smallest record-index type satisfying the configured record capacity.
         using Index = typename SmallestIndex<TRecordCapacity>::Type;
 
         // Reusable callable/result payload.
