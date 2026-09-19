@@ -8,6 +8,44 @@
 
 namespace Test {
 
+    class AtomicByteProvider final {
+
+        public:
+
+            class Word final {
+
+                private:
+
+                    std::uint8_t _value = 0U;
+
+                public:
+
+                    std::uint8_t LoadRelaxed() const noexcept { return _value; }
+
+                    std::uint8_t LoadAcquire() const noexcept { return _value; }
+
+                    void StoreRelaxed(std::uint8_t value) noexcept { _value = value; }
+
+                    void StoreRelease(std::uint8_t value) noexcept { _value = value; }
+
+                    bool CompareExchangeAcqRel(
+                        std::uint8_t& expected,
+                        std::uint8_t desired
+                    ) noexcept {
+                        if (_value != expected) {
+                            expected = _value;
+                            return false;
+                        }
+
+                        _value = desired;
+                        return true;
+                    }
+
+            };
+
+    };
+
+
     struct OrdinaryPool final {};
 
 
@@ -48,7 +86,7 @@ namespace Test {
     );
 
     static_assert(
-        sizeof(ESPressio::Threading::Detail::TaskControl) == 1U,
+        sizeof(ESPressio::Threading::Detail::TaskControl<AtomicByteProvider>) == 1U,
         "Task intrinsic control must remain one byte"
     );
 
@@ -56,7 +94,7 @@ namespace Test {
 
 
 int main() {
-    ESPressio::Threading::Detail::TaskControl control;
+    ESPressio::Threading::Detail::TaskControl<Test::AtomicByteProvider> control;
 
     control.InitializeQueued();
 
