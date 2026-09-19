@@ -41,8 +41,8 @@ namespace ESPressio::Threading::Detail {
 
         // Payload execution.
 
-        /// Invokes the stored callable, replaces it with the result when completed, and publishes terminal state.
-        static void Invoke(
+        /// Invokes the stored callable and establishes any result payload without publishing terminal lifecycle state.
+        static TaskInvocationOutcome Invoke(
             TRecord& record
         ) {
             auto* callable = reinterpret_cast<TCallable*>(record.Payload);
@@ -65,19 +65,14 @@ namespace ESPressio::Threading::Detail {
                 callable->~TCallable();
 
                 if (completion.IsCancelled()) {
-                    record.Control.SetState(
-                        TaskOperationalState::Cancelled
-                    );
-                    return;
+                    return TaskInvocationOutcome::Cancelled;
                 }
 
                 new (record.Payload) TResult(
                     completion.TakeResult()
                 );
 
-                record.Control.SetState(
-                    TaskOperationalState::Completed
-                );
+                return TaskInvocationOutcome::Completed;
             } else {
                 static_assert(
                     std::is_invocable_r_v<TResult, TCallable&>,
@@ -91,13 +86,14 @@ namespace ESPressio::Threading::Detail {
                     std::move(result)
                 );
 
-                record.Control.SetState(
-                    TaskOperationalState::Completed
-                );
+                return TaskInvocationOutcome::Completed;
             }
         }
 
-        /// Destroys a live result payload after Completed publication.
+        /// Destroys the currently published callable/result payload.
+        ///
+        /// This operation must not be called during the short Worker-owned interval after Invoke
+        /// has replaced the callable payload but before the facility publishes terminal state.
         static void Destroy(
             TRecord& record
         ) noexcept {
@@ -161,8 +157,8 @@ namespace ESPressio::Threading::Detail {
 
         // Payload execution.
 
-        /// Invokes the stored void callable and publishes its terminal state.
-        static void Invoke(
+        /// Invokes the stored void callable without publishing terminal lifecycle state.
+        static TaskInvocationOutcome Invoke(
             TRecord& record
         ) {
             auto* callable = reinterpret_cast<TCallable*>(record.Payload);
@@ -184,11 +180,9 @@ namespace ESPressio::Threading::Detail {
 
                 callable->~TCallable();
 
-                record.Control.SetState(
-                    completion.IsCancelled()
-                        ? TaskOperationalState::Cancelled
-                        : TaskOperationalState::Completed
-                );
+                return completion.IsCancelled()
+                    ? TaskInvocationOutcome::Cancelled
+                    : TaskInvocationOutcome::Completed;
             } else {
                 static_assert(
                     std::is_invocable_r_v<void, TCallable&>,
@@ -198,13 +192,14 @@ namespace ESPressio::Threading::Detail {
                 (*callable)();
                 callable->~TCallable();
 
-                record.Control.SetState(
-                    TaskOperationalState::Completed
-                );
+                return TaskInvocationOutcome::Completed;
             }
         }
 
         /// Destroys a live callable payload when execution has not consumed it.
+        ///
+        /// This operation must not be called during the short Worker-owned interval after Invoke
+        /// has consumed the callable but before the facility publishes terminal state.
         static void Destroy(
             TRecord& record
         ) noexcept {
