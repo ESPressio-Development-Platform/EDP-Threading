@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 #include <ESPressio_System.hpp>
 
@@ -159,6 +160,69 @@ namespace ESPressio::Threading {
         };
 
 
+        template<class TLeftResource, class TRightResource>
+        struct ResourceIdentityConflict {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TLeftPoolIdentity, class TLeftRecordCapacity, class TLeftCallableCapacity, class TLeftResultCapacity, class TLeftWorkers, class TRightPoolIdentity, class TRightRecordCapacity, class TRightCallableCapacity, class TRightResultCapacity, class TRightWorkers>
+        struct ResourceIdentityConflict<
+            TaskExecutionFacility<TLeftPoolIdentity, TLeftRecordCapacity, TLeftCallableCapacity, TLeftResultCapacity, TLeftWorkers>,
+            TaskExecutionFacility<TRightPoolIdentity, TRightRecordCapacity, TRightCallableCapacity, TRightResultCapacity, TRightWorkers>
+        > {
+
+            static constexpr bool Value = std::is_same_v<TLeftPoolIdentity, TRightPoolIdentity>;
+
+        };
+
+
+        template<class TLeftThreadIdentity, class... TLeftProperties, class TRightThreadIdentity, class... TRightProperties>
+        struct ResourceIdentityConflict<
+            DedicatedThread<TLeftThreadIdentity, TLeftProperties...>,
+            DedicatedThread<TRightThreadIdentity, TRightProperties...>
+        > {
+
+            static constexpr bool Value = std::is_same_v<TLeftThreadIdentity, TRightThreadIdentity>;
+
+        };
+
+
+        template<class TLeftTaskIdentity, class... TLeftProperties, class TRightTaskIdentity, class... TRightProperties>
+        struct ResourceIdentityConflict<
+            DedicatedWorkerLease<TLeftTaskIdentity, TLeftProperties...>,
+            DedicatedWorkerLease<TRightTaskIdentity, TRightProperties...>
+        > {
+
+            static constexpr bool Value = std::is_same_v<TLeftTaskIdentity, TRightTaskIdentity>;
+
+        };
+
+
+        template<class... TResources>
+        struct UniqueResourceIdentities;
+
+
+        template<>
+        struct UniqueResourceIdentities<> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TFirstResource, class... TRestResources>
+        struct UniqueResourceIdentities<TFirstResource, TRestResources...> {
+
+            static constexpr bool Value =
+                ((!ResourceIdentityConflict<TFirstResource, TRestResources>::Value) && ...) &&
+                UniqueResourceIdentities<TRestResources...>::Value;
+
+        };
+
+
         template<bool THasTaskExecution, bool THasDedicatedThreadExecution>
         struct TopologyProviderBase;
 
@@ -202,6 +266,11 @@ namespace ESPressio::Threading {
         (Detail::IsTaskFacility<TResources>::Value || ... || false),
         (Detail::IsDedicatedThread<TResources>::Value || ... || false)
     > {
+
+        static_assert(
+            Detail::UniqueResourceIdentities<TResources...>::Value,
+            "ThreadingTopology contains duplicate Task Pool, Dedicated Thread, or Dedicated Worker Lease semantic identity"
+        );
 
         static constexpr std::size_t ResourceCount = sizeof...(TResources);
 
