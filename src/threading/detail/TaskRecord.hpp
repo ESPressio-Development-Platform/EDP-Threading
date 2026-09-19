@@ -243,6 +243,10 @@ namespace ESPressio::Threading::Detail {
         /// Smallest managed execution-context index Type satisfying the complete topology capacity.
         using ExecutionContextIndex = typename SmallestIndex<TExecutionContextCapacity>::Type;
 
+        /// Sentinel which cannot identify a valid managed execution context.
+        static constexpr ExecutionContextIndex InvalidExecutionContextIndex =
+            SmallestIndex<TExecutionContextCapacity>::Invalid;
+
         /// Smallest scratch Type able to hold either a queue link or an execution-context index.
         using ScratchIndex = typename SmallestIndex<ScratchCapacity>::Type;
 
