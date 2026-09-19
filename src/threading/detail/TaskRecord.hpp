@@ -120,6 +120,26 @@ namespace ESPressio::Threading::Detail {
     );
 
 
+    template<class TTaskRecord>
+    struct TaskPayloadOperations final {
+
+        // Payload lifecycle.
+
+        /// Executes the callable and publishes its result into the record payload.
+        void (*Invoke)(TTaskRecord&);
+
+        /// Destroys the currently live callable/result payload.
+        void (*Destroy)(TTaskRecord&) noexcept;
+
+        /// Moves a completed result into caller-provided typed storage.
+        void (*MoveResult)(
+            TTaskRecord&,
+            void*
+        );
+
+    };
+
+
     template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity>
     struct TaskRecord final {
 
@@ -155,17 +175,8 @@ namespace ESPressio::Threading::Detail {
 
         // Type-erased payload lifecycle.
 
-        /// Executes the callable and publishes its result into this record.
-        void (*Invoke)(TaskRecord&) = nullptr;
-
-        /// Destroys the currently live payload object when one exists.
-        void (*DestroyPayload)(TaskRecord&) noexcept = nullptr;
-
-        /// Moves a completed result into caller-provided storage.
-        void (*MoveResult)(
-            TaskRecord&,
-            void*
-        ) = nullptr;
+        /// One pointer to immutable Type-specific payload operations shared by all records of that callable/result pairing.
+        const TaskPayloadOperations<TaskRecord>* PayloadOperations = nullptr;
 
     };
 
