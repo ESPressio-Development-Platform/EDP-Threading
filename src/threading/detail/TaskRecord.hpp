@@ -117,6 +117,37 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Atomically changes the operational state only when the expected state still owns the transition.
+            bool CompareExchangeState(
+                TaskOperationalState expectedState,
+                TaskOperationalState desiredState
+            ) noexcept {
+                auto expected = _value.LoadAcquire();
+
+                for (;;) {
+                    if (
+                        static_cast<TaskOperationalState>(
+                            expected & StateMask
+                        ) != expectedState
+                    ) {
+                        return false;
+                    }
+
+                    const auto desired = static_cast<std::uint8_t>(
+                        (expected & static_cast<std::uint8_t>(~StateMask)) |
+                        static_cast<std::uint8_t>(desiredState)
+                    );
+
+                    if (_value.CompareExchangeAcqRel(
+                        expected,
+                        desired
+                    )) {
+                        return true;
+                    }
+                }
+            }
+
+
             /// Releases the sole public ownership interest.
             void ReleaseOwner() noexcept {
                 auto expected = _value.LoadAcquire();
