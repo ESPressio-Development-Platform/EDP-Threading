@@ -17,13 +17,14 @@ namespace ESPressio::Threading {
             // Observation.
 
             /// Reads the stable public lifecycle state for one Task record.
-            TaskState (*State)(const void*) noexcept;
+            TaskState (*State)(const void*, const void*) noexcept;
 
             /// Waits indefinitely for one Task record to become terminal.
-            TaskWaitResult (*Wait)(void*);
+            TaskWaitResult (*Wait)(void*, void*);
 
             /// Waits for one Task record to become terminal within a relative duration.
             TaskWaitResult (*WaitFor)(
+                void*,
                 void*,
                 Duration
             );
@@ -31,17 +32,19 @@ namespace ESPressio::Threading {
             /// Waits for one Task record to become terminal by a canonical monotonic deadline.
             TaskWaitResult (*WaitUntil)(
                 void*,
+                void*,
                 MonotonicTimestamp
             );
 
             /// Requests cooperative cancellation of one Task record.
-            TaskCancelResult (*Cancel)(void*) noexcept;
+            TaskCancelResult (*Cancel)(void*, void*) noexcept;
 
             /// Releases the sole public Task ownership interest.
-            void (*Release)(void*) noexcept;
+            void (*Release)(void*, void*) noexcept;
 
             /// Moves a completed result into caller-provided typed storage.
             TaskTakeStatus (*TakeResult)(
+                void*,
                 void*,
                 void*
             );
@@ -58,6 +61,9 @@ namespace ESPressio::Threading {
 
             // Handle binding.
 
+            /// Opaque address of the concrete facility owning this Task.
+            void* _owner;
+
             /// Opaque address of the concrete Task record.
             void* _record;
 
@@ -72,9 +78,11 @@ namespace ESPressio::Threading {
                 if (_record == nullptr) { return; }
 
                 _operations->Release(
+                    _owner,
                     _record
                 );
 
+                _owner = nullptr;
                 _record = nullptr;
                 _operations = nullptr;
             }
@@ -85,9 +93,11 @@ namespace ESPressio::Threading {
 
             /// Creates a valid Task handle for one successfully admitted record.
             Task(
+                void* owner,
                 void* record,
                 const Detail::TaskHandleOperations& operations
             ) noexcept :
+                _owner(owner),
                 _record(record),
                 _operations(&operations) {}
 
@@ -101,8 +111,10 @@ namespace ESPressio::Threading {
             Task(
                 Task&& other
             ) noexcept :
+                _owner(other._owner),
                 _record(other._record),
                 _operations(other._operations) {
+                other._owner = nullptr;
                 other._record = nullptr;
                 other._operations = nullptr;
             }
@@ -115,8 +127,10 @@ namespace ESPressio::Threading {
 
                 Release();
 
+                _owner = other._owner;
                 _record = other._record;
                 _operations = other._operations;
+                other._owner = nullptr;
                 other._record = nullptr;
                 other._operations = nullptr;
 
@@ -139,6 +153,7 @@ namespace ESPressio::Threading {
             /// Returns the stable public Task lifecycle state.
             TaskState State() const noexcept {
                 return _operations->State(
+                    _owner,
                     _record
                 );
             }
@@ -167,6 +182,7 @@ namespace ESPressio::Threading {
             /// Waits indefinitely until this Task becomes terminal or the waiting context is interrupted.
             TaskWaitResult Wait() {
                 return _operations->Wait(
+                    _owner,
                     _record
                 );
             }
@@ -176,6 +192,7 @@ namespace ESPressio::Threading {
                 Duration duration
             ) {
                 return _operations->WaitFor(
+                    _owner,
                     _record,
                     duration
                 );
@@ -186,6 +203,7 @@ namespace ESPressio::Threading {
                 MonotonicTimestamp deadline
             ) {
                 return _operations->WaitUntil(
+                    _owner,
                     _record,
                     deadline
                 );
@@ -197,6 +215,7 @@ namespace ESPressio::Threading {
             /// Requests cooperative cancellation of this Task.
             TaskCancelResult Cancel() noexcept {
                 return _operations->Cancel(
+                    _owner,
                     _record
                 );
             }
@@ -209,6 +228,7 @@ namespace ESPressio::Threading {
                 alignas(TResult) std::byte resultStorage[sizeof(TResult)];
 
                 const auto status = _operations->TakeResult(
+                    _owner,
                     _record,
                     resultStorage
                 );
@@ -223,6 +243,7 @@ namespace ESPressio::Threading {
                 );
                 result->~TResult();
 
+                _owner = nullptr;
                 _record = nullptr;
                 _operations = nullptr;
 
@@ -239,6 +260,9 @@ namespace ESPressio::Threading {
 
             // Handle binding.
 
+            /// Opaque address of the concrete facility owning this Task.
+            void* _owner;
+
             /// Opaque address of the concrete Task record.
             void* _record;
 
@@ -253,9 +277,11 @@ namespace ESPressio::Threading {
                 if (_record == nullptr) { return; }
 
                 _operations->Release(
+                    _owner,
                     _record
                 );
 
+                _owner = nullptr;
                 _record = nullptr;
                 _operations = nullptr;
             }
@@ -266,9 +292,11 @@ namespace ESPressio::Threading {
 
             /// Creates a valid void Task handle for one successfully admitted record.
             Task(
+                void* owner,
                 void* record,
                 const Detail::TaskHandleOperations& operations
             ) noexcept :
+                _owner(owner),
                 _record(record),
                 _operations(&operations) {}
 
@@ -282,8 +310,10 @@ namespace ESPressio::Threading {
             Task(
                 Task&& other
             ) noexcept :
+                _owner(other._owner),
                 _record(other._record),
                 _operations(other._operations) {
+                other._owner = nullptr;
                 other._record = nullptr;
                 other._operations = nullptr;
             }
@@ -296,8 +326,10 @@ namespace ESPressio::Threading {
 
                 Release();
 
+                _owner = other._owner;
                 _record = other._record;
                 _operations = other._operations;
+                other._owner = nullptr;
                 other._record = nullptr;
                 other._operations = nullptr;
 
@@ -320,6 +352,7 @@ namespace ESPressio::Threading {
             /// Returns the stable public Task lifecycle state.
             TaskState State() const noexcept {
                 return _operations->State(
+                    _owner,
                     _record
                 );
             }
@@ -348,6 +381,7 @@ namespace ESPressio::Threading {
             /// Waits indefinitely until this Task becomes terminal or the waiting context is interrupted.
             TaskWaitResult Wait() {
                 return _operations->Wait(
+                    _owner,
                     _record
                 );
             }
@@ -357,6 +391,7 @@ namespace ESPressio::Threading {
                 Duration duration
             ) {
                 return _operations->WaitFor(
+                    _owner,
                     _record,
                     duration
                 );
@@ -367,6 +402,7 @@ namespace ESPressio::Threading {
                 MonotonicTimestamp deadline
             ) {
                 return _operations->WaitUntil(
+                    _owner,
                     _record,
                     deadline
                 );
@@ -378,6 +414,7 @@ namespace ESPressio::Threading {
             /// Requests cooperative cancellation of this Task.
             TaskCancelResult Cancel() noexcept {
                 return _operations->Cancel(
+                    _owner,
                     _record
                 );
             }
