@@ -125,10 +125,91 @@ namespace ESPressio::Threading {
     };
 
 
+    namespace Detail {
+
+        template<class TResource>
+        struct IsTaskFacility {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers>
+        struct IsTaskFacility<TaskExecutionFacility<TPoolIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TResource>
+        struct IsDedicatedThread {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TThreadIdentity, class... TThreadProperties>
+        struct IsDedicatedThread<DedicatedThread<TThreadIdentity, TThreadProperties...>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<bool THasTaskExecution, bool THasDedicatedThreadExecution>
+        struct TopologyProviderBase;
+
+
+        template<>
+        struct TopologyProviderBase<false, false> : Framework::Provider<Domain> {};
+
+
+        template<>
+        struct TopologyProviderBase<true, false> : Framework::Provider<
+            Domain,
+            Framework::Provides<
+                Framework::Offer<TaskExecution>
+            >
+        > {};
+
+
+        template<>
+        struct TopologyProviderBase<false, true> : Framework::Provider<
+            Domain,
+            Framework::Provides<
+                Framework::Offer<DedicatedThreadExecution>
+            >
+        > {};
+
+
+        template<>
+        struct TopologyProviderBase<true, true> : Framework::Provider<
+            Domain,
+            Framework::Provides<
+                Framework::Offer<TaskExecution>,
+                Framework::Offer<DedicatedThreadExecution>
+            >
+        > {};
+
+    } // ESPressio::Threading::Detail
+
+
     template<class... TResources>
-    struct ThreadingTopology final {
+    struct ThreadingTopology final : Detail::TopologyProviderBase<
+        (Detail::IsTaskFacility<TResources>::Value || ... || false),
+        (Detail::IsDedicatedThread<TResources>::Value || ... || false)
+    > {
 
         static constexpr std::size_t ResourceCount = sizeof...(TResources);
+
+        static constexpr bool HasTaskExecution =
+            (Detail::IsTaskFacility<TResources>::Value || ... || false);
+
+        static constexpr bool HasDedicatedThreadExecution =
+            (Detail::IsDedicatedThread<TResources>::Value || ... || false);
 
     };
 
