@@ -81,9 +81,21 @@ namespace Test {
 
     struct QueueRecord final {
 
-        /// Compact intrusive queue link.
-        ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueNext =
+        /// Compact intrusive queue-link storage.
+        ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueLink =
             ESPressio::Threading::Detail::SmallestIndex<3U>::Invalid;
+
+        /// Stores the next queued record index.
+        void SetQueueNext(
+            ESPressio::Threading::Detail::SmallestIndex<3U>::Type recordIndex
+        ) noexcept {
+            QueueLink = recordIndex;
+        }
+
+        /// Returns the next queued record index.
+        ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueNext() const noexcept {
+            return QueueLink;
+        }
 
     };
 
@@ -143,6 +155,7 @@ namespace Test {
         32U,
         16U,
         8U,
+        4U,
         AtomicByteProvider
     >;
 
@@ -150,6 +163,7 @@ namespace Test {
         3U,
         32U,
         16U,
+        4U,
         AtomicByteProvider
     >;
 
@@ -483,7 +497,9 @@ int main() {
         ) == ESPressio::Threading::TaskState::Queued
     );
 
-    const auto completedClaim = facility.ClaimNextForWorker();
+    const auto completedClaim = facility.ClaimNextForWorker(
+        0U
+    );
 
     assert(
         completedClaim.IsClaimed()
@@ -595,7 +611,9 @@ int main() {
         Test::CancellationAwareCallable{}
     );
 
-    const auto cooperativeClaim = facility.ClaimNextForWorker();
+    const auto cooperativeClaim = facility.ClaimNextForWorker(
+        1U
+    );
 
     assert(
         cooperativeClaim.IsClaimed()
@@ -653,7 +671,9 @@ int main() {
         Test::ReturningCallable{}
     );
 
-    const auto abandonedRunningClaim = facility.ClaimNextForWorker();
+    const auto abandonedRunningClaim = facility.ClaimNextForWorker(
+        2U
+    );
 
     assert(
         abandonedRunningClaim.IsClaimed()
