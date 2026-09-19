@@ -4,6 +4,8 @@
 
 #include <ESPressio_Threading.hpp>
 
+#include "../src/threading/detail/DedicatedThreadControl.hpp"
+#include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/TaskRecord.hpp"
 
 namespace Test {
@@ -16,22 +18,38 @@ namespace Test {
 
                 private:
 
+                    // Test atomic state.
+
                     /// Test-owned byte value.
                     std::uint8_t _value = 0U;
 
                 public:
 
-                    /// Reads the test byte.
-                    std::uint8_t LoadRelaxed() const noexcept { return _value; }
+                    // Test atomic operations.
+
+                    /// Reads the test byte without ordering significance.
+                    std::uint8_t LoadRelaxed() const noexcept {
+                        return _value;
+                    }
 
                     /// Reads the test byte with acquire-equivalent test semantics.
-                    std::uint8_t LoadAcquire() const noexcept { return _value; }
+                    std::uint8_t LoadAcquire() const noexcept {
+                        return _value;
+                    }
 
-                    /// Stores the test byte.
-                    void StoreRelaxed(std::uint8_t value) noexcept { _value = value; }
+                    /// Stores the test byte without ordering significance.
+                    void StoreRelaxed(
+                        std::uint8_t value
+                    ) noexcept {
+                        _value = value;
+                    }
 
                     /// Stores the test byte with release-equivalent test semantics.
-                    void StoreRelease(std::uint8_t value) noexcept { _value = value; }
+                    void StoreRelease(
+                        std::uint8_t value
+                    ) noexcept {
+                        _value = value;
+                    }
 
                     /// Replaces the byte when the expected value matches.
                     bool CompareExchangeAcqRel(
@@ -58,6 +76,15 @@ namespace Test {
     struct TelemetryThread final {};
 
 
+    struct QueueRecord final {
+
+        /// Compact intrusive queue link.
+        ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueNext =
+            ESPressio::Threading::Detail::SmallestIndex<3U>::Invalid;
+
+    };
+
+
     using Topology = ESPressio::Threading::ThreadingTopology<
         ESPressio::Threading::TaskExecutionFacility<
             OrdinaryPool,
@@ -81,6 +108,14 @@ namespace Test {
     >;
 
 
+    using TestTaskRecord = ESPressio::Threading::Detail::TaskRecord<
+        32U,
+        16U,
+        8U,
+        AtomicByteProvider
+    >;
+
+
     static_assert(
         Topology::HasTaskExecution,
         "Topology containing a Task facility must advertise Task execution"
@@ -96,9 +131,30 @@ namespace Test {
         "Task intrinsic control must remain one byte"
     );
 
+    static_assert(
+        sizeof(ESPressio::Threading::Detail::DedicatedThreadControl<AtomicByteProvider>) == 1U,
+        "Dedicated Thread intrinsic control must remain one byte"
+    );
+
+    static_assert(
+        sizeof(ESPressio::Threading::Detail::AvailabilityBitmap<10U>) == 2U,
+        "Ten Task availability bits must occupy exactly two bytes"
+    );
+
+    static_assert(
+        sizeof(ESPressio::Threading::Detail::IntrusiveTaskQueue<3U>) == 2U,
+        "Three-record Task queue endpoints must occupy two one-byte indices"
+    );
+
+    static_assert(
+        TestTaskRecord::PayloadCapacity == 32U,
+        "Task record payload must use the larger callable/result capacity"
+    );
+
 } // Test
 
 
+/// Exercises compact Threading foundation primitives.
 int main() {
     ESPressio::Threading::Detail::TaskControl<Test::AtomicByteProvider> control;
 
@@ -133,6 +189,143 @@ int main() {
 
     assert(
         control.Phase() != firstPhase
+    );
+
+
+    ESPressio::Threading::Detail::AvailabilityBitmap<10U> availability;
+    std::size_t claimedIndex = 0U;
+
+    for (std::size_t expectedIndex = 0U; expectedIndex < 10U; ++expectedIndex) {
+        assert(
+            availability.TryClaim(
+                claimedIndex
+            )
+        );
+
+        assert(
+            claimedIndex == expectedIndex
+        );
+    }
+
+    assert(
+        !availability.TryClaim(
+            claimedIndex
+        )
+    );
+
+    availability.Release(
+        4U
+    );
+
+    assert(
+        availability.IsAvailable(
+            4U
+        )
+    );
+
+    assert(
+        availability.TryClaim(
+            claimedIndex
+        )
+    );
+
+    assert(
+        claimedIndex == 4U
+    );
+
+
+    Test::QueueRecord records[3U];
+    ESPressio::Threading::Detail::IntrusiveTaskQueue<3U> queue;
+
+    queue.Push(
+        records,
+        0U
+    );
+
+    queue.Push(
+        records,
+        1U
+    );
+
+    queue.Push(
+        records,
+        2U
+    );
+
+    assert(
+        queue.Head() == 0U
+    );
+
+    assert(
+        queue.Remove(
+            records,
+            1U
+        )
+    );
+
+    assert(
+        queue.Pop(
+            records
+        ) == 0U
+    );
+
+    assert(
+        queue.Pop(
+            records
+        ) == 2U
+    );
+
+    assert(
+        queue.Pop(
+            records
+        ) ==
+        ESPressio::Threading::Detail::IntrusiveTaskQueue<3U>::InvalidIndex
+    );
+
+
+    ESPressio::Threading::Detail::DedicatedThreadControl<Test::AtomicByteProvider> threadControl;
+    bool activationPhase = false;
+
+    assert(
+        threadControl.TryStart(
+            activationPhase
+        )
+    );
+
+    assert(
+        threadControl.State() ==
+        ESPressio::Threading::Detail::DedicatedThreadOperationalState::Running
+    );
+
+    assert(
+        threadControl.TryRequestStop()
+    );
+
+    assert(
+        threadControl.IsStopRequested()
+    );
+
+    assert(
+        threadControl.TryPublishStopped(
+            activationPhase
+        )
+    );
+
+    assert(
+        threadControl.State() ==
+        ESPressio::Threading::Detail::DedicatedThreadOperationalState::Stopped
+    );
+
+    const auto firstActivationPhase = activationPhase;
+
+    assert(
+        threadControl.TryStart(
+            activationPhase
+        )
+    );
+
+    assert(
+        activationPhase != firstActivationPhase
     );
 
     return 0;
