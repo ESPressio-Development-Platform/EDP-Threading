@@ -11,6 +11,7 @@
 #include "MonotonicWaitBudget.hpp"
 #include "TaskFacilityCore.hpp"
 #include "WaitRegistration.hpp"
+#include "WorkerLeaseScheduler.hpp"
 
 namespace ESPressio::Threading::Detail {
 
@@ -26,7 +27,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider, class TMutexProvider, class TManagedContextRouter>
+    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TWorkerCount, std::size_t TFirstWorkerContextIndex, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider, class TMutexProvider, class TManagedContextRouter>
     class TaskFacilityRuntime final {
 
         static_assert(
@@ -65,6 +66,24 @@ namespace ESPressio::Threading::Detail {
                 TExecutionContextCapacity
             >;
 
+            /// Facility-level pre-admission capacity waiter registration.
+            using AdmissionWaitRegistrationType = AdmissionWaitRegistration<
+                ContextIndex
+            >;
+
+            /// Bounded pre-admission waiters; no Task record exists while one is active.
+            using AdmissionWaiters = RegistrationSet<
+                AdmissionWaitRegistrationType,
+                TExecutionContextCapacity
+            >;
+
+            /// Bounded availability scheduler for this facility's statically configured Workers.
+            using WorkerScheduler = WorkerLeaseScheduler<
+                TWorkerCount,
+                TFirstWorkerContextIndex,
+                TExecutionContextCapacity
+            >;
+
 
             // Runtime state.
 
@@ -76,6 +95,12 @@ namespace ESPressio::Threading::Detail {
 
             /// Target-owned bounded Task waiter registrations.
             Waiters _waiters;
+
+            /// Facility-owned bounded pre-admission waiter registrations.
+            AdmissionWaiters _admissionWaiters;
+
+            /// Facility-owned Worker availability state.
+            WorkerScheduler _workerScheduler;
 
             /// Non-owning topology-stable managed-context router.
             TManagedContextRouter* _router;
@@ -158,28 +183,91 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Wakes every managed context currently blocked for Task-record admission capacity.
+            void WakeAdmissionWaiters() {
+                _admissionWaiters.VisitActive(
+                    [this](
+                        AdmissionWaitRegistrationType& registration
+                    ) {
+                        static_cast<void>(
+                            _router->Wake(
+                                registration.WaitingContextIndex
+                            )
+                        );
+                    }
+                );
+            }
+
+            /// Grants queued Tasks to currently available Workers in FIFO opportunity order.
+            ///
+            /// The facility lock must be held throughout this scheduling pass. Every successful
+            /// grant publishes Running with the selected dense Worker context before either the
+            /// dispatch waiter or Worker context is woken.
+            void ScheduleAvailableWorkers() {
+                for (;;) {
+                    const auto contextIndex = _workerScheduler.TryClaimAvailable();
+
+                    if (!contextIndex.has_value()) {
+                        return;
+                    }
+
+                    const auto claim = _core.ClaimNextForWorker(
+                        contextIndex.value()
+                    );
+
+                    if (!claim.IsClaimed()) {
+                        static_cast<void>(
+                            _workerScheduler.MarkAvailable(
+                                contextIndex.value()
+                            )
+                        );
+                        return;
+                    }
+
+                    const auto& binding = claim.Binding().value();
+
+                    WakeMatchingWaiters(
+                        binding.RecordIndex,
+                        binding.Phase
+                    );
+
+                    static_cast<void>(
+                        _router->Wake(
+                            contextIndex.value()
+                        )
+                    );
+                }
+            }
+
             /// Reclaims one ownerless terminal record when no waiter still retains its incarnation.
-            void ReclaimIfQuiescent(
+            bool ReclaimIfQuiescent(
                 Index recordIndex,
                 bool phase
             ) noexcept {
                 if (
-                    _core.IsOwnerlessTerminal(
+                    !_core.IsOwnerlessTerminal(
                         recordIndex,
                         phase
-                    ) &&
+                    ) ||
                     MatchingWaiterCount(
                         recordIndex,
                         phase
-                    ) == 0U
+                    ) != 0U
                 ) {
-                    static_cast<void>(
-                        _core.Reclaim(
-                            recordIndex,
-                            phase
-                        )
-                    );
+                    return false;
                 }
+
+                if (
+                    _core.Reclaim(
+                        recordIndex,
+                        phase
+                    ) != TaskReclaimResult::Reclaimed
+                ) {
+                    return false;
+                }
+
+                WakeAdmissionWaiters();
+                return true;
             }
 
 
@@ -583,6 +671,10 @@ namespace ESPressio::Threading::Detail {
                     )
                 );
 
+                if (result.IsAdmitted()) {
+                    ScheduleAvailableWorkers();
+                }
+
                 ReleaseLock();
                 return result;
             }
@@ -590,15 +682,35 @@ namespace ESPressio::Threading::Detail {
 
             // Worker execution.
 
-            /// Claims the oldest queued record for the supplied managed Worker context.
-            WorkerClaimResult ClaimNextForWorker(
+            /// Publishes one infrastructure-started Worker as available and grants queued work when present.
+            WorkerAvailabilityResult WorkerBecameAvailable(
                 ContextIndex contextIndex
             ) noexcept {
                 if (AcquireLock() != TaskFacilityLockResult::Acquired) {
-                    return WorkerClaimResult::QueueEmpty();
+                    return WorkerAvailabilityResult::OutsideFacilityRange;
                 }
 
-                auto result = _core.ClaimNextForWorker(
+                const auto result = _workerScheduler.MarkAvailable(
+                    contextIndex
+                );
+
+                if (result == WorkerAvailabilityResult::Available) {
+                    ScheduleAvailableWorkers();
+                }
+
+                ReleaseLock();
+                return result;
+            }
+
+            /// Returns the Task currently granted to one Worker context, when one exists.
+            std::optional<TaskRecordBinding<Index>> AssignedTaskForContext(
+                ContextIndex contextIndex
+            ) noexcept {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return std::nullopt;
+                }
+
+                const auto result = _core.AssignedTaskForContext(
                     contextIndex
                 );
 
@@ -617,8 +729,9 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
-            /// Publishes one Worker invocation outcome, wakes waiters, and reclaims when quiescent.
-            void PublishInvocationOutcome(
+            /// Publishes one Worker outcome, releases that Worker Lease, and atomically schedules FIFO work.
+            void CompleteWorkerTask(
+                ContextIndex contextIndex,
                 Index recordIndex,
                 bool phase,
                 TaskInvocationOutcome outcome
@@ -638,10 +751,20 @@ namespace ESPressio::Threading::Detail {
                     phase
                 );
 
-                ReclaimIfQuiescent(
-                    recordIndex,
-                    phase
+                static_cast<void>(
+                    ReclaimIfQuiescent(
+                        recordIndex,
+                        phase
+                    )
                 );
+
+                if (
+                    _workerScheduler.MarkAvailable(
+                        contextIndex
+                    ) == WorkerAvailabilityResult::Available
+                ) {
+                    ScheduleAvailableWorkers();
+                }
 
                 ReleaseLock();
             }
@@ -857,6 +980,22 @@ namespace ESPressio::Threading::Detail {
             /// Returns the configured Task-record capacity.
             static constexpr std::size_t RecordCapacity() noexcept {
                 return Core::RecordCapacity();
+            }
+
+            /// Returns the configured Worker capacity.
+            static constexpr std::size_t WorkerCapacity() noexcept {
+                return TWorkerCount;
+            }
+
+            /// Returns the current number of Workers granted to Tasks.
+            std::size_t WorkersInUse() noexcept {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return TWorkerCount;
+                }
+
+                const auto result = _workerScheduler.InUseCount();
+                ReleaseLock();
+                return result;
             }
 
             /// Returns the current number of structurally allocated Task records.
