@@ -101,6 +101,18 @@ namespace ESPressio::Threading {
     template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers>
     struct TaskExecutionFacility final {
 
+        static_assert(
+            (TRecordCapacity::Value == 0U && TWorkers::Count == 0U) ||
+            (TRecordCapacity::Value > 0U && TWorkers::Count > 0U),
+            "TaskExecutionFacility must either compile away at zero records/workers or provide both record and Worker capacity"
+        );
+
+        static_assert(
+            TRecordCapacity::Value == 0U ||
+            (TCallableCapacity::Value > 0U && TResultCapacity::Value > 0U),
+            "An active TaskExecutionFacility requires positive callable and result capacities"
+        );
+
         using PoolIdentity = TPoolIdentity;
         using RecordCapacity = TRecordCapacity;
         using CallableStorageCapacity = TCallableCapacity;
