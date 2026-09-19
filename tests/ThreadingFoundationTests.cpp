@@ -10,6 +10,7 @@
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
 #include "../src/threading/detail/TaskRecord.hpp"
 #include "../src/threading/detail/WaitRegistration.hpp"
+#include "../src/threading/detail/WorkerLeaseScheduler.hpp"
 
 namespace Test {
 
@@ -219,6 +220,17 @@ namespace Test {
         sizeof(ESPressio::Threading::Detail::RegistrationSet<TaskRegistration, 4U>) ==
         sizeof(TaskRegistration) * 4U,
         "RegistrationSet must contain only target-owned registration records"
+    );
+
+    using TestWorkerScheduler = ESPressio::Threading::Detail::WorkerLeaseScheduler<
+        3U,
+        2U,
+        8U
+    >;
+
+    static_assert(
+        sizeof(TestWorkerScheduler) == 1U,
+        "Three Worker availability bits must occupy one byte"
     );
 
 } // Test
@@ -702,6 +714,59 @@ int main() {
             abandonedRunningClaim.Binding()->RecordIndex,
             abandonedRunningClaim.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReclaimResult::Reclaimed
+    );
+
+
+    Test::TestWorkerScheduler workerScheduler;
+
+    assert(
+        workerScheduler.AvailableCount() == 0U
+    );
+
+    assert(
+        workerScheduler.MarkAvailable(
+            2U
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::Available
+    );
+
+    assert(
+        workerScheduler.MarkAvailable(
+            4U
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::Available
+    );
+
+    assert(
+        workerScheduler.MarkAvailable(
+            1U
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::OutsideFacilityRange
+    );
+
+    assert(
+        workerScheduler.AvailableCount() == 2U
+    );
+
+    const auto firstWorkerLease = workerScheduler.TryClaimAvailable();
+
+    assert(
+        firstWorkerLease.has_value()
+    );
+
+    assert(
+        firstWorkerLease.value() == 2U
+    );
+
+    const auto secondWorkerLease = workerScheduler.TryClaimAvailable();
+
+    assert(
+        secondWorkerLease.has_value()
+    );
+
+    assert(
+        secondWorkerLease.value() == 4U
+    );
+
+    assert(
+        !workerScheduler.TryClaimAvailable().has_value()
     );
 
 
