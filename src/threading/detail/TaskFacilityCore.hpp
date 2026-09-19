@@ -320,6 +320,13 @@ namespace ESPressio::Threading::Detail {
 
             // Admission.
 
+            /// Indicates whether structural Task-record capacity is currently available.
+            ///
+            /// The owning facility runtime must serialize this query with admission/reclamation.
+            bool HasRecordCapacity() const noexcept {
+                return _availability.IsAnyAvailable();
+            }
+
             /// Moves one callable into a newly admitted bounded Task record and appends it to FIFO order.
             ///
             /// The owning facility runtime must serialize this operation with queue mutation,
@@ -450,6 +457,33 @@ namespace ESPressio::Threading::Detail {
                     recordIndex,
                     record.Control.Phase()
                 );
+            }
+
+            /// Returns the Task binding currently granted to one managed Worker context.
+            std::optional<TaskRecordBinding<Index>> AssignedTaskForContext(
+                ExecutionContextIndex contextIndex
+            ) const noexcept {
+                for (std::size_t index = 0U; index < TRecordCapacity; ++index) {
+                    const auto& record = _records[index];
+                    const auto state = record.Control.State();
+
+                    if (
+                        (
+                            state == TaskOperationalState::Running ||
+                            state == TaskOperationalState::RunningCancelRequested
+                        ) &&
+                        record.CurrentExecutionContextIndex() == contextIndex
+                    ) {
+                        return TaskRecordBinding<Index>{
+                            static_cast<Index>(
+                                index
+                            ),
+                            record.Control.Phase()
+                        };
+                    }
+                }
+
+                return std::nullopt;
             }
 
             /// Executes one Worker-owned Task payload outside the facility serialization boundary.
