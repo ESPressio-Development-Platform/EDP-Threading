@@ -101,6 +101,33 @@ namespace ESPressio::Threading::Detail {
 
 
     template<class TContextIndex>
+    struct AdmissionWaitRegistration final {
+
+        /// Managed execution-context index Type used by this registration.
+        using ContextIndexType = TContextIndex;
+
+        // Wake routing.
+
+        /// Waiting managed execution context, or the invalid sentinel while inactive.
+        TContextIndex WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+
+
+        // Registration state.
+
+        /// Indicates whether this registration currently participates in admission-capacity wake discovery.
+        bool IsActive() const noexcept {
+            return WaitingContextIndex != std::numeric_limits<TContextIndex>::max();
+        }
+
+        /// Returns this registration to its structurally inactive state.
+        void Clear() noexcept {
+            WaitingContextIndex = std::numeric_limits<TContextIndex>::max();
+        }
+
+    };
+
+
+    template<class TContextIndex>
     struct ShutdownWaitRegistration final {
 
         /// Managed execution-context index Type used by this registration.
