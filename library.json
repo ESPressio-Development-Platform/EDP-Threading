@@ -1,0 +1,40 @@
+{
+  "name": "EDP-Threading",
+  "description": "Deterministic Task and Dedicated Thread execution for the ESPressio Development Platform",
+  "keywords": "espressio,threading,task,thread,worker,concurrency,embedded",
+  "homepage": "https://espressio.org",
+  "authors": {
+    "name": "Simon J. Stuart",
+    "maintainer": true,
+    "url": "https://espressio.org"
+  },
+  "build": {
+    "flags": ["-std=gnu++17"],
+    "unflags": ["-std=gnu++11"]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ESPressio-Development-Platform/EDP-Threading.git"
+  },
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "frameworks": "*",
+  "platforms": "*",
+  "dependencies": [
+    {
+      "name": "EDP-System",
+      "version": "https://github.com/ESPressio-Development-Platform/EDP-System.git#main",
+      "platforms": "*"
+    },
+    {
+      "name": "EDP-Platform",
+      "version": "https://github.com/ESPressio-Development-Platform/EDP-Platform.git#main",
+      "platforms": "*"
+    },
+    {
+      "name": "EDP-Clock",
+      "version": "https://github.com/ESPressio-Development-Platform/EDP-Clock.git#main",
+      "platforms": "*"
+    }
+  ]
+}
