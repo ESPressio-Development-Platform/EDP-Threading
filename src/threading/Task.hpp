@@ -17,35 +17,38 @@ namespace ESPressio::Threading {
             // Observation.
 
             /// Reads the stable public lifecycle state for one Task record.
-            TaskState (*State)(const void*, const void*) noexcept;
+            TaskState (*State)(const void*, std::uint32_t, bool) noexcept;
 
             /// Waits indefinitely for one Task record to become terminal.
-            TaskWaitResult (*Wait)(void*, void*);
+            TaskWaitResult (*Wait)(void*, std::uint32_t, bool);
 
             /// Waits for one Task record to become terminal within a relative duration.
             TaskWaitResult (*WaitFor)(
                 void*,
-                void*,
+                std::uint32_t,
+                bool,
                 Duration
             );
 
             /// Waits for one Task record to become terminal by a canonical monotonic deadline.
             TaskWaitResult (*WaitUntil)(
                 void*,
-                void*,
+                std::uint32_t,
+                bool,
                 MonotonicTimestamp
             );
 
             /// Requests cooperative cancellation of one Task record.
-            TaskCancelResult (*Cancel)(void*, void*) noexcept;
+            TaskCancelResult (*Cancel)(void*, std::uint32_t, bool) noexcept;
 
             /// Releases the sole public Task ownership interest.
-            void (*Release)(void*, void*) noexcept;
+            void (*Release)(void*, std::uint32_t, bool) noexcept;
 
             /// Moves a completed result into caller-provided typed storage.
             TaskTakeStatus (*TakeResult)(
                 void*,
-                void*,
+                std::uint32_t,
+                bool,
                 void*
             );
 
@@ -64,8 +67,11 @@ namespace ESPressio::Threading {
             /// Opaque address of the concrete facility owning this Task.
             void* _owner;
 
-            /// Opaque address of the concrete Task record.
-            void* _record;
+            /// Stable record slot index within the owning bounded facility.
+            std::uint32_t _recordIndex;
+
+            /// One-bit incarnation Phase captured when this Task was admitted.
+            bool _phase;
 
             /// Static operations for the concrete facility owning the record.
             const Detail::TaskHandleOperations* _operations;
@@ -75,15 +81,17 @@ namespace ESPressio::Threading {
 
             /// Releases this handle's public ownership interest when one remains.
             void Release() noexcept {
-                if (_record == nullptr) { return; }
+                if (_owner == nullptr) { return; }
 
                 _operations->Release(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
 
                 _owner = nullptr;
-                _record = nullptr;
+                _recordIndex = 0U;
+                _phase = false;
                 _operations = nullptr;
             }
 
@@ -94,11 +102,13 @@ namespace ESPressio::Threading {
             /// Creates a valid Task handle for one successfully admitted record.
             Task(
                 void* owner,
-                void* record,
+                std::uint32_t recordIndex,
+                bool phase,
                 const Detail::TaskHandleOperations& operations
             ) noexcept :
                 _owner(owner),
-                _record(record),
+                _recordIndex(recordIndex),
+                _phase(phase),
                 _operations(&operations) {}
 
             /// Prevents shared public ownership through copying.
@@ -112,10 +122,12 @@ namespace ESPressio::Threading {
                 Task&& other
             ) noexcept :
                 _owner(other._owner),
-                _record(other._record),
+                _recordIndex(other._recordIndex),
+                _phase(other._phase),
                 _operations(other._operations) {
                 other._owner = nullptr;
-                other._record = nullptr;
+                other._recordIndex = 0U;
+                other._phase = false;
                 other._operations = nullptr;
             }
 
@@ -128,10 +140,12 @@ namespace ESPressio::Threading {
                 Release();
 
                 _owner = other._owner;
-                _record = other._record;
+                _recordIndex = other._recordIndex;
+                _phase = other._phase;
                 _operations = other._operations;
                 other._owner = nullptr;
-                other._record = nullptr;
+                other._recordIndex = 0U;
+                other._phase = false;
                 other._operations = nullptr;
 
                 return *this;
@@ -147,14 +161,15 @@ namespace ESPressio::Threading {
 
             /// Indicates whether this handle still owns a valid Task observation/result interest.
             bool IsValid() const noexcept {
-                return _record != nullptr;
+                return _owner != nullptr;
             }
 
             /// Returns the stable public Task lifecycle state.
             TaskState State() const noexcept {
                 return _operations->State(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
             }
 
@@ -183,7 +198,8 @@ namespace ESPressio::Threading {
             TaskWaitResult Wait() {
                 return _operations->Wait(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
             }
 
@@ -193,7 +209,8 @@ namespace ESPressio::Threading {
             ) {
                 return _operations->WaitFor(
                     _owner,
-                    _record,
+                    _recordIndex,
+                    _phase,
                     duration
                 );
             }
@@ -204,7 +221,8 @@ namespace ESPressio::Threading {
             ) {
                 return _operations->WaitUntil(
                     _owner,
-                    _record,
+                    _recordIndex,
+                    _phase,
                     deadline
                 );
             }
@@ -216,7 +234,8 @@ namespace ESPressio::Threading {
             TaskCancelResult Cancel() noexcept {
                 return _operations->Cancel(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
             }
 
@@ -229,7 +248,8 @@ namespace ESPressio::Threading {
 
                 const auto status = _operations->TakeResult(
                     _owner,
-                    _record,
+                    _recordIndex,
+                    _phase,
                     resultStorage
                 );
 
@@ -244,7 +264,8 @@ namespace ESPressio::Threading {
                 result->~TResult();
 
                 _owner = nullptr;
-                _record = nullptr;
+                _recordIndex = 0U;
+                _phase = false;
                 _operations = nullptr;
 
                 return taken;
@@ -263,8 +284,11 @@ namespace ESPressio::Threading {
             /// Opaque address of the concrete facility owning this Task.
             void* _owner;
 
-            /// Opaque address of the concrete Task record.
-            void* _record;
+            /// Stable record slot index within the owning bounded facility.
+            std::uint32_t _recordIndex;
+
+            /// One-bit incarnation Phase captured when this Task was admitted.
+            bool _phase;
 
             /// Static operations for the concrete facility owning the record.
             const Detail::TaskHandleOperations* _operations;
@@ -274,15 +298,17 @@ namespace ESPressio::Threading {
 
             /// Releases this handle's public ownership interest when one remains.
             void Release() noexcept {
-                if (_record == nullptr) { return; }
+                if (_owner == nullptr) { return; }
 
                 _operations->Release(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
 
                 _owner = nullptr;
-                _record = nullptr;
+                _recordIndex = 0U;
+                _phase = false;
                 _operations = nullptr;
             }
 
@@ -293,11 +319,13 @@ namespace ESPressio::Threading {
             /// Creates a valid void Task handle for one successfully admitted record.
             Task(
                 void* owner,
-                void* record,
+                std::uint32_t recordIndex,
+                bool phase,
                 const Detail::TaskHandleOperations& operations
             ) noexcept :
                 _owner(owner),
-                _record(record),
+                _recordIndex(recordIndex),
+                _phase(phase),
                 _operations(&operations) {}
 
             /// Prevents shared public ownership through copying.
@@ -311,10 +339,12 @@ namespace ESPressio::Threading {
                 Task&& other
             ) noexcept :
                 _owner(other._owner),
-                _record(other._record),
+                _recordIndex(other._recordIndex),
+                _phase(other._phase),
                 _operations(other._operations) {
                 other._owner = nullptr;
-                other._record = nullptr;
+                other._recordIndex = 0U;
+                other._phase = false;
                 other._operations = nullptr;
             }
 
@@ -327,10 +357,12 @@ namespace ESPressio::Threading {
                 Release();
 
                 _owner = other._owner;
-                _record = other._record;
+                _recordIndex = other._recordIndex;
+                _phase = other._phase;
                 _operations = other._operations;
                 other._owner = nullptr;
-                other._record = nullptr;
+                other._recordIndex = 0U;
+                other._phase = false;
                 other._operations = nullptr;
 
                 return *this;
@@ -346,14 +378,15 @@ namespace ESPressio::Threading {
 
             /// Indicates whether this handle still owns a valid Task observation interest.
             bool IsValid() const noexcept {
-                return _record != nullptr;
+                return _owner != nullptr;
             }
 
             /// Returns the stable public Task lifecycle state.
             TaskState State() const noexcept {
                 return _operations->State(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
             }
 
@@ -382,7 +415,8 @@ namespace ESPressio::Threading {
             TaskWaitResult Wait() {
                 return _operations->Wait(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
             }
 
@@ -392,7 +426,8 @@ namespace ESPressio::Threading {
             ) {
                 return _operations->WaitFor(
                     _owner,
-                    _record,
+                    _recordIndex,
+                    _phase,
                     duration
                 );
             }
@@ -403,7 +438,8 @@ namespace ESPressio::Threading {
             ) {
                 return _operations->WaitUntil(
                     _owner,
-                    _record,
+                    _recordIndex,
+                    _phase,
                     deadline
                 );
             }
@@ -415,7 +451,8 @@ namespace ESPressio::Threading {
             TaskCancelResult Cancel() noexcept {
                 return _operations->Cancel(
                     _owner,
-                    _record
+                    _recordIndex,
+                    _phase
                 );
             }
 
