@@ -6,6 +6,7 @@
 
 #include "../src/threading/detail/DedicatedThreadControl.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
+#include "../src/threading/detail/TaskPayloadAdapter.hpp"
 #include "../src/threading/detail/TaskRecord.hpp"
 #include "../src/threading/detail/WaitRegistration.hpp"
 
@@ -82,6 +83,34 @@ namespace Test {
         /// Compact intrusive queue link.
         ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueNext =
             ESPressio::Threading::Detail::SmallestIndex<3U>::Invalid;
+
+    };
+
+
+    struct ReturningCallable final {
+
+        /// Produces one deterministic test result.
+        int operator ()() const noexcept {
+            return 42;
+        }
+
+    };
+
+
+    struct CancellationAwareCallable final {
+
+        /// Acknowledges cooperative cancellation when requested.
+        ESPressio::Threading::TaskCompletion<int> operator ()(
+            ESPressio::Threading::TaskContext& context
+        ) const {
+            if (context.IsCancellationRequested()) {
+                return ESPressio::Threading::TaskCompletion<int>::Cancelled();
+            }
+
+            return ESPressio::Threading::TaskCompletion<int>::Completed(
+                7
+            );
+        }
 
     };
 
@@ -345,6 +374,79 @@ int main() {
 
     assert(
         activationPhase != firstActivationPhase
+    );
+
+
+    Test::TestTaskRecord completedRecord;
+    completedRecord.Control.InitializeQueued();
+    completedRecord.Control.SetState(
+        ESPressio::Threading::Detail::TaskOperationalState::Running
+    );
+
+    using ReturningAdapter = ESPressio::Threading::Detail::TaskPayloadAdapter<
+        Test::TestTaskRecord,
+        Test::ReturningCallable,
+        int
+    >;
+
+    new (completedRecord.Payload) Test::ReturningCallable();
+    completedRecord.PayloadOperations = &ReturningAdapter::Operations;
+
+    assert(
+        completedRecord.PayloadOperations->Invoke(
+            completedRecord
+        ) == ESPressio::Threading::Detail::TaskInvocationOutcome::Completed
+    );
+
+    assert(
+        completedRecord.Control.State() ==
+        ESPressio::Threading::Detail::TaskOperationalState::Running
+    );
+
+    completedRecord.Control.SetState(
+        ESPressio::Threading::Detail::TaskOperationalState::Completed
+    );
+
+    alignas(int) std::byte resultStorage[sizeof(int)];
+
+    completedRecord.PayloadOperations->MoveResult(
+        completedRecord,
+        resultStorage
+    );
+
+    assert(
+        *reinterpret_cast<int*>(resultStorage) == 42
+    );
+
+
+    Test::TestTaskRecord cancelledRecord;
+    cancelledRecord.Control.InitializeQueued();
+    cancelledRecord.Control.SetState(
+        ESPressio::Threading::Detail::TaskOperationalState::RunningCancelRequested
+    );
+
+    using CancellationAdapter = ESPressio::Threading::Detail::TaskPayloadAdapter<
+        Test::TestTaskRecord,
+        Test::CancellationAwareCallable,
+        int
+    >;
+
+    new (cancelledRecord.Payload) Test::CancellationAwareCallable();
+    cancelledRecord.PayloadOperations = &CancellationAdapter::Operations;
+
+    assert(
+        cancelledRecord.PayloadOperations->Invoke(
+            cancelledRecord
+        ) == ESPressio::Threading::Detail::TaskInvocationOutcome::Cancelled
+    );
+
+    assert(
+        cancelledRecord.Control.State() ==
+        ESPressio::Threading::Detail::TaskOperationalState::RunningCancelRequested
+    );
+
+    cancelledRecord.Control.SetState(
+        ESPressio::Threading::Detail::TaskOperationalState::Cancelled
     );
 
 
