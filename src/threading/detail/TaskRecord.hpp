@@ -207,7 +207,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity, class TAtomicWord8Provider>
+    template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider>
     struct TaskRecord final {
 
         static_assert(
@@ -216,9 +216,20 @@ namespace ESPressio::Threading::Detail {
         );
 
         static_assert(
+            TExecutionContextCapacity > 0U,
+            "Task records require positive managed execution-context capacity"
+        );
+
+        static_assert(
             sizeof(TaskControl<TAtomicWord8Provider>) == 1U,
             "TaskControl must remain a one-byte intrinsic Task control representation"
         );
+
+        /// Largest index capacity needed by the mutually exclusive queue/Worker scratch field.
+        static constexpr std::size_t ScratchCapacity =
+            TRecordCapacity > TExecutionContextCapacity
+                ? TRecordCapacity
+                : TExecutionContextCapacity;
 
         /// Payload bytes shared by callable storage and result storage.
         static constexpr std::size_t PayloadCapacity =
@@ -229,16 +240,25 @@ namespace ESPressio::Threading::Detail {
         /// Smallest record-index type satisfying the configured record capacity.
         using Index = typename SmallestIndex<TRecordCapacity>::Type;
 
+        /// Smallest managed execution-context index Type satisfying the complete topology capacity.
+        using ExecutionContextIndex = typename SmallestIndex<TExecutionContextCapacity>::Type;
+
+        /// Smallest scratch Type able to hold either a queue link or an execution-context index.
+        using ScratchIndex = typename SmallestIndex<ScratchCapacity>::Type;
+
         // Reusable callable/result payload.
 
         /// Storage reused first by the callable and then by its result.
         alignas(std::max_align_t) std::byte Payload[PayloadCapacity];
 
 
-        // Transient queue linkage.
+        // Mutually exclusive transient linkage.
 
-        /// Next record index while this record is queued.
-        Index QueueNext = SmallestIndex<TRecordCapacity>::Invalid;
+        /// Queued: next record index. Running: managed execution-context index owning execution.
+        ScratchIndex QueueOrExecutionContext =
+            static_cast<ScratchIndex>(
+                SmallestIndex<TRecordCapacity>::Invalid
+            );
 
 
         // Compact intrinsic control.
@@ -251,6 +271,41 @@ namespace ESPressio::Threading::Detail {
 
         /// One pointer to immutable Type-specific payload operations shared by all records of that callable/result pairing.
         const TaskPayloadOperations<TaskRecord>* PayloadOperations = nullptr;
+
+
+        // Scratch interpretation.
+
+        /// Stores the next queued record index in the mutually exclusive scratch field.
+        void SetQueueNext(
+            Index recordIndex
+        ) noexcept {
+            QueueOrExecutionContext = static_cast<ScratchIndex>(
+                recordIndex
+            );
+        }
+
+        /// Returns the next queued record index from the mutually exclusive scratch field.
+        Index QueueNext() const noexcept {
+            return static_cast<Index>(
+                QueueOrExecutionContext
+            );
+        }
+
+        /// Stores the managed execution-context index after this record is granted to a Worker.
+        void SetExecutionContextIndex(
+            ExecutionContextIndex contextIndex
+        ) noexcept {
+            QueueOrExecutionContext = static_cast<ScratchIndex>(
+                contextIndex
+            );
+        }
+
+        /// Returns the managed execution-context index owning current Worker execution.
+        ExecutionContextIndex CurrentExecutionContextIndex() const noexcept {
+            return static_cast<ExecutionContextIndex>(
+                QueueOrExecutionContext
+            );
+        }
 
     };
 
