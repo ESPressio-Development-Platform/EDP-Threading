@@ -164,7 +164,7 @@ namespace ESPressio::Threading {
 
 
         template<>
-        struct TopologyProviderBase<false, false> : Framework::Provider<Domain> {};
+        struct TopologyProviderBase<false, false> {};
 
 
         template<>
