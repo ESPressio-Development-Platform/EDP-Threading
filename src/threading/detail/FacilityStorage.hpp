@@ -54,17 +54,47 @@ namespace ESPressio::Threading::Detail {
 
             // Construction.
 
-            /// Marks every bounded Task record available.
-            AvailabilityBitmap() noexcept {
+            /// Creates a bounded bitmap with every entry either available or unavailable.
+            explicit AvailabilityBitmap(
+                bool initiallyAvailable = true
+            ) noexcept {
                 for (std::size_t byteIndex = 0U; byteIndex < ByteCount; ++byteIndex) {
-                    _bytes[byteIndex] = ValidMask(
-                        byteIndex
-                    );
+                    _bytes[byteIndex] = initiallyAvailable
+                        ? ValidMask(
+                            byteIndex
+                        )
+                        : 0U;
                 }
             }
 
 
             // Availability operations.
+
+            /// Indicates whether at least one bounded entry is currently available.
+            bool IsAnyAvailable() const noexcept {
+                for (std::size_t byteIndex = 0U; byteIndex < ByteCount; ++byteIndex) {
+                    if (_bytes[byteIndex] != 0U) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            /// Returns the number of currently available bounded entries.
+            std::size_t AvailableCount() const noexcept {
+                std::size_t availableCount = 0U;
+
+                for (std::size_t recordIndex = 0U; recordIndex < TCapacity; ++recordIndex) {
+                    if (IsAvailable(
+                        recordIndex
+                    )) {
+                        ++availableCount;
+                    }
+                }
+
+                return availableCount;
+            }
 
             /// Attempts to claim the lowest-index available record.
             ///
