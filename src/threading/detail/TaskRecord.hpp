@@ -39,6 +39,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    template<class TAtomicWord8Provider>
     class TaskControl final {
 
         private:
@@ -46,7 +47,7 @@ namespace ESPressio::Threading::Detail {
             // Packed control byte.
 
             /// Packed operational state, public ownership and incarnation Phase.
-            std::uint8_t _value = 0U;
+            typename TAtomicWord8Provider::Word _value;
 
             static constexpr std::uint8_t StateMask = 0x07U;
             static constexpr std::uint8_t OwnerMask = 0x08U;
@@ -59,18 +60,18 @@ namespace ESPressio::Threading::Detail {
             /// Returns the internal operational state.
             TaskOperationalState State() const noexcept {
                 return static_cast<TaskOperationalState>(
-                    _value & StateMask
+                    _value.LoadAcquire() & StateMask
                 );
             }
 
             /// Indicates whether the sole public Task ownership interest exists.
             bool HasOwner() const noexcept {
-                return (_value & OwnerMask) != 0U;
+                return (_value.LoadAcquire() & OwnerMask) != 0U;
             }
 
             /// Returns the current one-bit record-incarnation Phase.
             bool Phase() const noexcept {
-                return (_value & PhaseMask) != 0U;
+                return (_value.LoadAcquire() & PhaseMask) != 0U;
             }
 
             /// Indicates whether cooperative cancellation has been requested while Running.
@@ -83,14 +84,17 @@ namespace ESPressio::Threading::Detail {
 
             /// Initializes a newly claimed record and toggles its incarnation Phase.
             void InitializeQueued() noexcept {
+                const auto current = _value.LoadRelaxed();
                 const auto nextPhase = static_cast<std::uint8_t>(
-                    (_value ^ PhaseMask) & PhaseMask
+                    (current ^ PhaseMask) & PhaseMask
                 );
 
-                _value = static_cast<std::uint8_t>(
-                    nextPhase |
-                    OwnerMask |
-                    static_cast<std::uint8_t>(TaskOperationalState::Queued)
+                _value.StoreRelease(
+                    static_cast<std::uint8_t>(
+                        nextPhase |
+                        OwnerMask |
+                        static_cast<std::uint8_t>(TaskOperationalState::Queued)
+                    )
                 );
             }
 
@@ -98,17 +102,35 @@ namespace ESPressio::Threading::Detail {
             void SetState(
                 TaskOperationalState state
             ) noexcept {
-                _value = static_cast<std::uint8_t>(
-                    (_value & static_cast<std::uint8_t>(~StateMask)) |
-                    static_cast<std::uint8_t>(state)
-                );
+                auto expected = _value.LoadAcquire();
+
+                for (;;) {
+                    const auto desired = static_cast<std::uint8_t>(
+                        (expected & static_cast<std::uint8_t>(~StateMask)) |
+                        static_cast<std::uint8_t>(state)
+                    );
+
+                    if (_value.CompareExchangeAcqRel(
+                        expected,
+                        desired
+                    )) { return; }
+                }
             }
 
             /// Releases the sole public ownership interest.
             void ReleaseOwner() noexcept {
-                _value = static_cast<std::uint8_t>(
-                    _value & static_cast<std::uint8_t>(~OwnerMask)
-                );
+                auto expected = _value.LoadAcquire();
+
+                for (;;) {
+                    const auto desired = static_cast<std::uint8_t>(
+                        expected & static_cast<std::uint8_t>(~OwnerMask)
+                    );
+
+                    if (_value.CompareExchangeAcqRel(
+                        expected,
+                        desired
+                    )) { return; }
+                }
             }
 
     };
@@ -170,7 +192,7 @@ namespace ESPressio::Threading::Detail {
         // Compact intrinsic control.
 
         /// One-byte Task lifecycle/ownership/Phase representation.
-        TaskControl Control;
+        TaskControl<TAtomicWord8Provider> Control;
 
 
         // Type-erased payload lifecycle.
