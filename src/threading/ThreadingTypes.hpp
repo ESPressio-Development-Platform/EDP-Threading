@@ -130,25 +130,32 @@ namespace ESPressio::Threading {
 
             // Cancellation observation.
 
-            /// Address of the cancellation predicate owned by the active Task record.
-            const bool* _cancellationRequested;
+            /// Opaque active Task record supplied by the facility.
+            const void* _context;
+
+            /// Predicate used to inspect cancellation without duplicating control state.
+            bool (*_isCancellationRequested)(const void*) noexcept;
 
         public:
 
             // Construction.
 
-            /// Creates a Task execution context over one stable cancellation predicate.
-            explicit TaskContext(
-                const bool& cancellationRequested
+            /// Creates a lightweight view over one active Task's authoritative cancellation state.
+            TaskContext(
+                const void* context,
+                bool (*isCancellationRequested)(const void*) noexcept
             ) noexcept :
-                _cancellationRequested(&cancellationRequested) {}
+                _context(context),
+                _isCancellationRequested(isCancellationRequested) {}
 
 
             // Cancellation inspection.
 
             /// Indicates whether cooperative Task cancellation has been requested.
             bool IsCancellationRequested() const noexcept {
-                return *_cancellationRequested;
+                return _isCancellationRequested(
+                    _context
+                );
             }
 
     };
@@ -160,25 +167,32 @@ namespace ESPressio::Threading {
 
             // Stop observation.
 
-            /// Address of the stop predicate owned by the Dedicated Thread resource.
-            const bool* _stopRequested;
+            /// Opaque Dedicated Thread resource supplied by the runtime.
+            const void* _context;
+
+            /// Predicate used to inspect stop state without duplicating control state.
+            bool (*_isStopRequested)(const void*) noexcept;
 
         public:
 
             // Construction.
 
-            /// Creates a Thread execution context over one stable stop predicate.
-            explicit ThreadContext(
-                const bool& stopRequested
+            /// Creates a lightweight view over one activation's authoritative stop state.
+            ThreadContext(
+                const void* context,
+                bool (*isStopRequested)(const void*) noexcept
             ) noexcept :
-                _stopRequested(&stopRequested) {}
+                _context(context),
+                _isStopRequested(isStopRequested) {}
 
 
             // Stop inspection.
 
             /// Indicates whether cooperative Dedicated Thread stop has been requested.
             bool IsStopRequested() const noexcept {
-                return *_stopRequested;
+                return _isStopRequested(
+                    _context
+                );
             }
 
     };
