@@ -478,8 +478,8 @@ int main() {
 
     assert(
         facility.PublicState(
-            completedAdmission.RecordIndex(),
-            completedAdmission.Phase()
+            completedAdmission.Binding()->RecordIndex,
+            completedAdmission.Binding()->Phase
         ) == ESPressio::Threading::TaskState::Queued
     );
 
@@ -490,19 +490,19 @@ int main() {
     );
 
     assert(
-        completedClaim.RecordIndex() == completedAdmission.RecordIndex()
+        completedClaim.Binding()->RecordIndex == completedAdmission.Binding()->RecordIndex
     );
 
     assert(
         facility.PublicState(
-            completedClaim.RecordIndex(),
-            completedClaim.Phase()
+            completedClaim.Binding()->RecordIndex,
+            completedClaim.Binding()->Phase
         ) == ESPressio::Threading::TaskState::Running
     );
 
     const auto completedOutcome = facility.Invoke(
-        completedClaim.RecordIndex(),
-        completedClaim.Phase()
+        completedClaim.Binding()->RecordIndex,
+        completedClaim.Binding()->Phase
     );
 
     assert(
@@ -510,15 +510,15 @@ int main() {
     );
 
     facility.PublishInvocationOutcome(
-        completedClaim.RecordIndex(),
-        completedClaim.Phase(),
+        completedClaim.Binding()->RecordIndex,
+        completedClaim.Binding()->Phase,
         completedOutcome
     );
 
     assert(
         facility.PublicState(
-            completedClaim.RecordIndex(),
-            completedClaim.Phase()
+            completedClaim.Binding()->RecordIndex,
+            completedClaim.Binding()->Phase
         ) == ESPressio::Threading::TaskState::Completed
     );
 
@@ -526,8 +526,8 @@ int main() {
 
     assert(
         facility.TakeResult(
-            completedClaim.RecordIndex(),
-            completedClaim.Phase(),
+            completedClaim.Binding()->RecordIndex,
+            completedClaim.Binding()->Phase,
             facilityResultStorage
         ) == ESPressio::Threading::TaskTakeStatus::Succeeded
     );
@@ -538,8 +538,8 @@ int main() {
 
     assert(
         facility.Reclaim(
-            completedClaim.RecordIndex(),
-            completedClaim.Phase()
+            completedClaim.Binding()->RecordIndex,
+            completedClaim.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReclaimResult::Reclaimed
     );
 
@@ -553,8 +553,8 @@ int main() {
     );
 
     const auto queuedCancellation = facility.Cancel(
-        queuedCancellationAdmission.RecordIndex(),
-        queuedCancellationAdmission.Phase()
+        queuedCancellationAdmission.Binding()->RecordIndex,
+        queuedCancellationAdmission.Binding()->Phase
     );
 
     assert(
@@ -571,22 +571,22 @@ int main() {
 
     assert(
         facility.Reclaim(
-            queuedCancellationAdmission.RecordIndex(),
-            queuedCancellationAdmission.Phase()
+            queuedCancellationAdmission.Binding()->RecordIndex,
+            queuedCancellationAdmission.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReclaimResult::NotEligible
     );
 
     assert(
         facility.ReleaseOwner(
-            queuedCancellationAdmission.RecordIndex(),
-            queuedCancellationAdmission.Phase()
+            queuedCancellationAdmission.Binding()->RecordIndex,
+            queuedCancellationAdmission.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReleaseEffect::OwnershipReleased
     );
 
     assert(
         facility.Reclaim(
-            queuedCancellationAdmission.RecordIndex(),
-            queuedCancellationAdmission.Phase()
+            queuedCancellationAdmission.Binding()->RecordIndex,
+            queuedCancellationAdmission.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReclaimResult::Reclaimed
     );
 
@@ -602,8 +602,8 @@ int main() {
     );
 
     const auto runningCancellation = facility.Cancel(
-        cooperativeClaim.RecordIndex(),
-        cooperativeClaim.Phase()
+        cooperativeClaim.Binding()->RecordIndex,
+        cooperativeClaim.Binding()->Phase
     );
 
     assert(
@@ -615,8 +615,8 @@ int main() {
     );
 
     const auto cooperativeOutcome = facility.Invoke(
-        cooperativeClaim.RecordIndex(),
-        cooperativeClaim.Phase()
+        cooperativeClaim.Binding()->RecordIndex,
+        cooperativeClaim.Binding()->Phase
     );
 
     assert(
@@ -624,27 +624,27 @@ int main() {
     );
 
     facility.PublishInvocationOutcome(
-        cooperativeClaim.RecordIndex(),
-        cooperativeClaim.Phase(),
+        cooperativeClaim.Binding()->RecordIndex,
+        cooperativeClaim.Binding()->Phase,
         cooperativeOutcome
     );
 
     assert(
         facility.PublicState(
-            cooperativeClaim.RecordIndex(),
-            cooperativeClaim.Phase()
+            cooperativeClaim.Binding()->RecordIndex,
+            cooperativeClaim.Binding()->Phase
         ) == ESPressio::Threading::TaskState::Cancelled
     );
 
     facility.ReleaseOwner(
-        cooperativeClaim.RecordIndex(),
-        cooperativeClaim.Phase()
+        cooperativeClaim.Binding()->RecordIndex,
+        cooperativeClaim.Binding()->Phase
     );
 
     assert(
         facility.Reclaim(
-            cooperativeClaim.RecordIndex(),
-            cooperativeClaim.Phase()
+            cooperativeClaim.Binding()->RecordIndex,
+            cooperativeClaim.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReclaimResult::Reclaimed
     );
 
@@ -661,26 +661,26 @@ int main() {
 
     assert(
         facility.ReleaseOwner(
-            abandonedRunningClaim.RecordIndex(),
-            abandonedRunningClaim.Phase()
+            abandonedRunningClaim.Binding()->RecordIndex,
+            abandonedRunningClaim.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReleaseEffect::OwnershipReleased
     );
 
     const auto abandonedRunningOutcome = facility.Invoke(
-        abandonedRunningClaim.RecordIndex(),
-        abandonedRunningClaim.Phase()
+        abandonedRunningClaim.Binding()->RecordIndex,
+        abandonedRunningClaim.Binding()->Phase
     );
 
     facility.PublishInvocationOutcome(
-        abandonedRunningClaim.RecordIndex(),
-        abandonedRunningClaim.Phase(),
+        abandonedRunningClaim.Binding()->RecordIndex,
+        abandonedRunningClaim.Binding()->Phase,
         abandonedRunningOutcome
     );
 
     assert(
         facility.Reclaim(
-            abandonedRunningClaim.RecordIndex(),
-            abandonedRunningClaim.Phase()
+            abandonedRunningClaim.Binding()->RecordIndex,
+            abandonedRunningClaim.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReclaimResult::Reclaimed
     );
 
