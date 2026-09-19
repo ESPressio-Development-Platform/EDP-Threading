@@ -109,8 +109,8 @@ namespace ESPressio::Threading {
 
         static_assert(
             TRecordCapacity::Value == 0U ||
-            (TCallableCapacity::Value > 0U && TResultCapacity::Value > 0U),
-            "An active TaskExecutionFacility requires positive callable and result capacities"
+            TCallableCapacity::Value > 0U,
+            "An active TaskExecutionFacility requires positive callable capacity; result capacity may be zero for void-only work"
         );
 
         using PoolIdentity = TPoolIdentity;
