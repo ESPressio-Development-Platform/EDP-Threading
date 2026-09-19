@@ -16,6 +16,12 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    enum class TaskInvocationOutcome : std::uint8_t {
+        Completed = 0,
+        Cancelled = 1
+    };
+
+
     template<std::size_t TCapacity>
     struct SmallestIndex {
 
@@ -178,8 +184,8 @@ namespace ESPressio::Threading::Detail {
 
         // Payload lifecycle.
 
-        /// Executes the callable and publishes its result into the record payload.
-        void (*Invoke)(TTaskRecord&);
+        /// Executes the callable and establishes any result payload without publishing terminal lifecycle state.
+        TaskInvocationOutcome (*Invoke)(TTaskRecord&);
 
         /// Destroys the currently live callable/result payload.
         void (*Destroy)(TTaskRecord&) noexcept;
