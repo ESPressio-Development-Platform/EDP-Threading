@@ -16,18 +16,24 @@ namespace Test {
 
                 private:
 
+                    /// Test-owned byte value.
                     std::uint8_t _value = 0U;
 
                 public:
 
+                    /// Reads the test byte.
                     std::uint8_t LoadRelaxed() const noexcept { return _value; }
 
+                    /// Reads the test byte with acquire-equivalent test semantics.
                     std::uint8_t LoadAcquire() const noexcept { return _value; }
 
+                    /// Stores the test byte.
                     void StoreRelaxed(std::uint8_t value) noexcept { _value = value; }
 
+                    /// Stores the test byte with release-equivalent test semantics.
                     void StoreRelease(std::uint8_t value) noexcept { _value = value; }
 
+                    /// Replaces the byte when the expected value matches.
                     bool CompareExchangeAcqRel(
                         std::uint8_t& expected,
                         std::uint8_t desired
