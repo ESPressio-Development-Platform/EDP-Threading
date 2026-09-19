@@ -90,22 +90,18 @@ namespace ESPressio::Threading::Detail {
             }
         }
 
-        /// Destroys the currently published callable/result payload.
-        ///
-        /// This operation must not be called during the short Worker-owned interval after Invoke
-        /// has replaced the callable payload but before the facility publishes terminal state.
-        static void Destroy(
+        /// Destroys a callable payload which has not been consumed by execution.
+        static void DestroyCallable(
             TRecord& record
         ) noexcept {
-            if (record.Control.State() == TaskOperationalState::Completed) {
-                reinterpret_cast<TResult*>(record.Payload)->~TResult();
-            } else if (
-                record.Control.State() == TaskOperationalState::Queued ||
-                record.Control.State() == TaskOperationalState::Running ||
-                record.Control.State() == TaskOperationalState::RunningCancelRequested
-            ) {
-                reinterpret_cast<TCallable*>(record.Payload)->~TCallable();
-            }
+            reinterpret_cast<TCallable*>(record.Payload)->~TCallable();
+        }
+
+        /// Destroys a completed result payload which will not be consumed by an owner.
+        static void DestroyResult(
+            TRecord& record
+        ) noexcept {
+            reinterpret_cast<TResult*>(record.Payload)->~TResult();
         }
 
         /// Moves the completed result into caller-provided typed storage and destroys the in-record result.
@@ -125,7 +121,8 @@ namespace ESPressio::Threading::Detail {
         /// Shared immutable operation table for this callable/result pairing.
         inline static const TaskPayloadOperations<TRecord> Operations {
             &Invoke,
-            &Destroy,
+            &DestroyCallable,
+            &DestroyResult,
             &MoveResult
         };
 
@@ -196,21 +193,17 @@ namespace ESPressio::Threading::Detail {
             }
         }
 
-        /// Destroys a live callable payload when execution has not consumed it.
-        ///
-        /// This operation must not be called during the short Worker-owned interval after Invoke
-        /// has consumed the callable but before the facility publishes terminal state.
-        static void Destroy(
+        /// Destroys a callable payload which has not been consumed by execution.
+        static void DestroyCallable(
             TRecord& record
         ) noexcept {
-            if (
-                record.Control.State() == TaskOperationalState::Queued ||
-                record.Control.State() == TaskOperationalState::Running ||
-                record.Control.State() == TaskOperationalState::RunningCancelRequested
-            ) {
-                reinterpret_cast<TCallable*>(record.Payload)->~TCallable();
-            }
+            reinterpret_cast<TCallable*>(record.Payload)->~TCallable();
         }
+
+        /// Void Tasks have no result payload to destroy.
+        static void DestroyResult(
+            TRecord&
+        ) noexcept {}
 
         /// Void Tasks have no result payload to move.
         static void MoveResult(
@@ -221,7 +214,8 @@ namespace ESPressio::Threading::Detail {
         /// Shared immutable operation table for this callable/void pairing.
         inline static const TaskPayloadOperations<TRecord> Operations {
             &Invoke,
-            &Destroy,
+            &DestroyCallable,
+            &DestroyResult,
             &MoveResult
         };
 
