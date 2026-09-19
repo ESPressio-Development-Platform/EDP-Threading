@@ -586,6 +586,39 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Indicates whether one Task incarnation has ever won a Worker Lease.
+            ///
+            /// Queued cancellation/abandonment normalizes scratch to the invalid context sentinel,
+            /// while every granted Task retains its valid executing context index through terminal
+            /// publication. This lets dispatch timeout distinguish "never granted" Cancelled from
+            /// "grant already won, then later Cancelled" without another control bit.
+            bool HasWorkerGrant(
+                Index recordIndex,
+                bool phase
+            ) const noexcept {
+                if (!IsCurrentIncarnation(
+                    recordIndex,
+                    phase
+                )) {
+                    return false;
+                }
+
+                const auto& record = _records[recordIndex];
+                const auto state = record.Control.State();
+
+                if (state == TaskOperationalState::Queued) {
+                    return false;
+                }
+
+                if (state == TaskOperationalState::Cancelled) {
+                    return record.CurrentExecutionContextIndex() !=
+                        Record::InvalidExecutionContextIndex;
+                }
+
+                return true;
+            }
+
+
             // Task cancellation.
 
             /// Applies cooperative cancellation semantics to one Task owner request.
@@ -619,6 +652,10 @@ namespace ESPressio::Threading::Detail {
 
                         record.PayloadOperations->DestroyCallable(
                             record
+                        );
+
+                        record.SetExecutionContextIndex(
+                            Record::InvalidExecutionContextIndex
                         );
 
                         record.Control.SetState(
@@ -694,6 +731,10 @@ namespace ESPressio::Threading::Detail {
 
                         record.PayloadOperations->DestroyCallable(
                             record
+                        );
+
+                        record.SetExecutionContextIndex(
+                            Record::InvalidExecutionContextIndex
                         );
 
                         record.Control.SetState(
