@@ -290,14 +290,17 @@ namespace ESPressio::Threading::Detail {
 
             // Internal validation.
 
-            /// Indicates whether the supplied index and Phase identify the current record incarnation.
+            /// Indicates whether the supplied index and Phase identify the same record incarnation.
+            ///
+            /// This check intentionally reads only atomic record control. Worker execution and
+            /// public handle observation may occur outside the facility lock, while the byte-level
+            /// availability bitmap is mutated under that lock and therefore must not be read here.
             bool IsCurrentIncarnation(
                 Index recordIndex,
                 bool phase
             ) const noexcept {
                 return recordIndex < static_cast<Index>(TRecordCapacity) &&
-                    _records[recordIndex].Control.Phase() == phase &&
-                    !_availability.IsAvailable(recordIndex);
+                    _records[recordIndex].Control.Phase() == phase;
             }
 
         public:
@@ -741,10 +744,13 @@ namespace ESPressio::Threading::Detail {
                 Index recordIndex,
                 bool phase
             ) noexcept {
-                if (!IsOwnerlessTerminal(
-                    recordIndex,
-                    phase
-                )) {
+                if (
+                    !IsOwnerlessTerminal(
+                        recordIndex,
+                        phase
+                    ) ||
+                    _availability.IsAvailable(recordIndex)
+                ) {
                     return TaskReclaimResult::NotEligible;
                 }
 
