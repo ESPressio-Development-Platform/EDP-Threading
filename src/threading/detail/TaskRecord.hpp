@@ -30,12 +30,17 @@ namespace ESPressio::Threading::Detail {
             "A bounded index requires a positive capacity"
         );
 
+        static_assert(
+            TCapacity <= static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()),
+            "A bounded index capacity must fit within the largest supported 32-bit index plus its sentinel"
+        );
+
         /// Smallest unsigned index type able to represent every record plus an invalid sentinel.
         using Type = std::conditional_t<
-            (TCapacity < static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())),
+            (TCapacity <= static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())),
             std::uint8_t,
             std::conditional_t<
-                (TCapacity < static_cast<std::size_t>(std::numeric_limits<std::uint16_t>::max())),
+                (TCapacity <= static_cast<std::size_t>(std::numeric_limits<std::uint16_t>::max())),
                 std::uint16_t,
                 std::uint32_t
             >
