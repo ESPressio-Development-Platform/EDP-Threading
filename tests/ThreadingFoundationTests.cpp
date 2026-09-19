@@ -7,6 +7,7 @@
 #include "../src/threading/detail/DedicatedThreadControl.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/TaskRecord.hpp"
+#include "../src/threading/detail/WaitRegistration.hpp"
 
 namespace Test {
 
@@ -149,6 +150,24 @@ namespace Test {
     static_assert(
         TestTaskRecord::PayloadCapacity == 32U,
         "Task record payload must use the larger callable/result capacity"
+    );
+
+    using ContextIndex = ESPressio::Threading::Detail::ExecutionContextIndexTraits<4U>::Type;
+
+    using TaskRegistration = ESPressio::Threading::Detail::TaskWaitRegistration<
+        ESPressio::Threading::Detail::SmallestIndex<8U>::Type,
+        ContextIndex
+    >;
+
+    static_assert(
+        sizeof(ContextIndex) == 1U,
+        "Four managed execution contexts must use a one-byte wake-routing index"
+    );
+
+    static_assert(
+        sizeof(ESPressio::Threading::Detail::RegistrationSet<TaskRegistration, 4U>) ==
+        sizeof(TaskRegistration) * 4U,
+        "RegistrationSet must contain only target-owned registration records"
     );
 
 } // Test
@@ -326,6 +345,100 @@ int main() {
 
     assert(
         activationPhase != firstActivationPhase
+    );
+
+
+    using RegistrationSet = ESPressio::Threading::Detail::RegistrationSet<
+        Test::TaskRegistration,
+        2U
+    >;
+
+    RegistrationSet registrations;
+    std::size_t registrationIndex = 0U;
+
+    Test::TaskRegistration firstRegistration;
+    firstRegistration.RecordIndex = 3U;
+    firstRegistration.Phase = true;
+    firstRegistration.WaitingContextIndex = 1U;
+
+    assert(
+        registrations.Register(
+            firstRegistration,
+            registrationIndex
+        ) == ESPressio::Threading::Detail::WaitRegistrationStatus::Registered
+    );
+
+    assert(
+        registrationIndex == 0U
+    );
+
+    Test::TaskRegistration secondRegistration;
+    secondRegistration.RecordIndex = 3U;
+    secondRegistration.Phase = true;
+    secondRegistration.WaitingContextIndex = 2U;
+
+    assert(
+        registrations.Register(
+            secondRegistration,
+            registrationIndex
+        ) == ESPressio::Threading::Detail::WaitRegistrationStatus::Registered
+    );
+
+    assert(
+        registrationIndex == 1U
+    );
+
+    assert(
+        registrations.ActiveCount() == 2U
+    );
+
+    Test::TaskRegistration thirdRegistration;
+    thirdRegistration.RecordIndex = 4U;
+    thirdRegistration.WaitingContextIndex = 3U;
+
+    assert(
+        registrations.Register(
+            thirdRegistration,
+            registrationIndex
+        ) == ESPressio::Threading::Detail::WaitRegistrationStatus::CapacityUnavailable
+    );
+
+    std::size_t matchingRegistrationCount = 0U;
+
+    registrations.VisitActive(
+        [&matchingRegistrationCount](
+            const Test::TaskRegistration& registration
+        ) {
+            if (
+                registration.RecordIndex == 3U &&
+                registration.Phase
+            ) {
+                ++matchingRegistrationCount;
+            }
+        }
+    );
+
+    assert(
+        matchingRegistrationCount == 2U
+    );
+
+    registrations.Unregister(
+        0U
+    );
+
+    assert(
+        registrations.ActiveCount() == 1U
+    );
+
+    assert(
+        registrations.Register(
+            thirdRegistration,
+            registrationIndex
+        ) == ESPressio::Threading::Detail::WaitRegistrationStatus::Registered
+    );
+
+    assert(
+        registrationIndex == 0U
     );
 
     return 0;
