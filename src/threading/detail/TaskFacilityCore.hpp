@@ -233,7 +233,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, class TAtomicWord8Provider>
+    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider>
     class TaskFacilityCore final {
 
         static_assert(
@@ -246,6 +246,11 @@ namespace ESPressio::Threading::Detail {
             "TaskFacilityCore requires positive callable capacity"
         );
 
+        static_assert(
+            TExecutionContextCapacity > 0U,
+            "TaskFacilityCore requires positive managed execution-context capacity"
+        );
+
         private:
 
             // Internal Types.
@@ -255,11 +260,15 @@ namespace ESPressio::Threading::Detail {
                 TCallableCapacity,
                 TResultCapacity,
                 TRecordCapacity,
+                TExecutionContextCapacity,
                 TAtomicWord8Provider
             >;
 
             /// Smallest record-index Type satisfying the configured facility capacity.
             using IndexType = typename RecordType::Index;
+
+            /// Smallest managed execution-context index Type satisfying the topology capacity.
+            using ExecutionContextIndexType = typename RecordType::ExecutionContextIndex;
 
 
             // Bounded facility storage.
@@ -304,6 +313,9 @@ namespace ESPressio::Threading::Detail {
 
             /// Structured Worker-claim outcome for this facility.
             using WorkerClaimResult = TaskWorkerClaimResult<Index>;
+
+            /// Dense managed execution-context index Type used for targeted wake routing.
+            using ExecutionContextIndex = ExecutionContextIndexType;
 
 
             // Admission.
@@ -413,7 +425,9 @@ namespace ESPressio::Threading::Detail {
             /// Claims the oldest queued Task for Worker execution.
             ///
             /// The owning facility runtime must serialize this operation with queue mutation.
-            WorkerClaimResult ClaimNextForWorker() noexcept {
+            WorkerClaimResult ClaimNextForWorker(
+                ExecutionContextIndex contextIndex
+            ) noexcept {
                 const auto recordIndex = _queue.Pop(
                     _records
                 );
@@ -423,6 +437,10 @@ namespace ESPressio::Threading::Detail {
                 }
 
                 auto& record = _records[recordIndex];
+
+                record.SetExecutionContextIndex(
+                    contextIndex
+                );
 
                 record.Control.SetState(
                     TaskOperationalState::Running
@@ -757,7 +775,9 @@ namespace ESPressio::Threading::Detail {
 
                 auto& record = _records[recordIndex];
                 record.PayloadOperations = nullptr;
-                record.QueueNext = IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex;
+                record.SetQueueNext(
+                    IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex
+                );
 
                 _availability.Release(
                     recordIndex
@@ -798,10 +818,61 @@ namespace ESPressio::Threading::Detail {
 
                 while (current != IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex) {
                     ++queued;
-                    current = _records[current].QueueNext;
+                    current = _records[current].QueueNext();
                 }
 
                 return queued;
+            }
+
+
+            // Managed-context interruption discovery.
+
+            /// Returns the Worker execution-context index for one Running Task incarnation.
+            std::optional<ExecutionContextIndex> ExecutionContextFor(
+                Index recordIndex,
+                bool phase
+            ) const noexcept {
+                if (!IsCurrentIncarnation(
+                    recordIndex,
+                    phase
+                )) {
+                    return std::nullopt;
+                }
+
+                const auto& record = _records[recordIndex];
+                const auto state = record.Control.State();
+
+                if (
+                    state != TaskOperationalState::Running &&
+                    state != TaskOperationalState::RunningCancelRequested
+                ) {
+                    return std::nullopt;
+                }
+
+                return record.CurrentExecutionContextIndex();
+            }
+
+            /// Indicates whether the supplied managed Worker context is executing a cancellation-requested Task.
+            ///
+            /// The owning facility runtime must serialize this bounded scan with Worker claim and
+            /// terminal publication because the scratch field is non-atomic and lifecycle-reused.
+            bool IsCancellationRequestedForContext(
+                ExecutionContextIndex contextIndex
+            ) const noexcept {
+                for (std::size_t index = 0U; index < TRecordCapacity; ++index) {
+                    const auto& record = _records[index];
+
+                    if (
+                        record.Control.State() != TaskOperationalState::RunningCancelRequested ||
+                        record.CurrentExecutionContextIndex() != contextIndex
+                    ) {
+                        continue;
+                    }
+
+                    return true;
+                }
+
+                return false;
             }
 
     };
