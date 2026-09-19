@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <new>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -39,6 +40,18 @@ namespace ESPressio::Threading::Detail {
 
 
     template<class TIndex>
+    struct TaskRecordBinding final {
+
+        /// Bound Task record index.
+        TIndex RecordIndex;
+
+        /// Bound record incarnation Phase.
+        bool Phase;
+
+    };
+
+
+    template<class TIndex>
     class TaskAdmissionCoreResult final {
 
         private:
@@ -48,11 +61,18 @@ namespace ESPressio::Threading::Detail {
             /// Operational admission status.
             TaskAdmissionCoreStatus _status;
 
-            /// Admitted record index; valid only when Status is Admitted.
-            TIndex _recordIndex;
+            /// Admitted record binding, present only after successful admission.
+            std::optional<TaskRecordBinding<TIndex>> _binding;
 
-            /// Admitted record Phase; valid only when Status is Admitted.
-            bool _phase;
+            // Internal construction.
+
+            /// Creates one normalized admission outcome.
+            TaskAdmissionCoreResult(
+                TaskAdmissionCoreStatus status,
+                std::optional<TaskRecordBinding<TIndex>> binding
+            ) noexcept :
+                _status(status),
+                _binding(std::move(binding)) {}
 
         public:
 
@@ -62,8 +82,7 @@ namespace ESPressio::Threading::Detail {
             static TaskAdmissionCoreResult CapacityUnavailable() noexcept {
                 return TaskAdmissionCoreResult(
                     TaskAdmissionCoreStatus::CapacityUnavailable,
-                    TIndex{},
-                    false
+                    std::nullopt
                 );
             }
 
@@ -74,8 +93,10 @@ namespace ESPressio::Threading::Detail {
             ) noexcept {
                 return TaskAdmissionCoreResult(
                     TaskAdmissionCoreStatus::Admitted,
-                    recordIndex,
-                    phase
+                    TaskRecordBinding<TIndex>{
+                        recordIndex,
+                        phase
+                    }
                 );
             }
 
@@ -89,32 +110,14 @@ namespace ESPressio::Threading::Detail {
 
             /// Indicates whether a record was admitted.
             bool IsAdmitted() const noexcept {
-                return _status == TaskAdmissionCoreStatus::Admitted;
+                return _status == TaskAdmissionCoreStatus::Admitted &&
+                    _binding.has_value();
             }
 
-            /// Returns the admitted record index.
-            TIndex RecordIndex() const noexcept {
-                return _recordIndex;
+            /// Returns the admitted record binding when admission succeeded.
+            const std::optional<TaskRecordBinding<TIndex>>& Binding() const noexcept {
+                return _binding;
             }
-
-            /// Returns the admitted record incarnation Phase.
-            bool Phase() const noexcept {
-                return _phase;
-            }
-
-        private:
-
-            // Internal construction.
-
-            /// Creates one normalized admission outcome.
-            TaskAdmissionCoreResult(
-                TaskAdmissionCoreStatus status,
-                TIndex recordIndex,
-                bool phase
-            ) noexcept :
-                _status(status),
-                _recordIndex(recordIndex),
-                _phase(phase) {}
 
     };
 
@@ -129,11 +132,18 @@ namespace ESPressio::Threading::Detail {
             /// Operational Worker claim status.
             TaskWorkerClaimStatus _status;
 
-            /// Claimed record index; valid only when Status is Claimed.
-            TIndex _recordIndex;
+            /// Claimed record binding, present only after successful claim.
+            std::optional<TaskRecordBinding<TIndex>> _binding;
 
-            /// Claimed record Phase; valid only when Status is Claimed.
-            bool _phase;
+            // Internal construction.
+
+            /// Creates one normalized Worker claim outcome.
+            TaskWorkerClaimResult(
+                TaskWorkerClaimStatus status,
+                std::optional<TaskRecordBinding<TIndex>> binding
+            ) noexcept :
+                _status(status),
+                _binding(std::move(binding)) {}
 
         public:
 
@@ -143,8 +153,7 @@ namespace ESPressio::Threading::Detail {
             static TaskWorkerClaimResult QueueEmpty() noexcept {
                 return TaskWorkerClaimResult(
                     TaskWorkerClaimStatus::QueueEmpty,
-                    TIndex{},
-                    false
+                    std::nullopt
                 );
             }
 
@@ -155,8 +164,10 @@ namespace ESPressio::Threading::Detail {
             ) noexcept {
                 return TaskWorkerClaimResult(
                     TaskWorkerClaimStatus::Claimed,
-                    recordIndex,
-                    phase
+                    TaskRecordBinding<TIndex>{
+                        recordIndex,
+                        phase
+                    }
                 );
             }
 
@@ -170,32 +181,14 @@ namespace ESPressio::Threading::Detail {
 
             /// Indicates whether one queued record was claimed for execution.
             bool IsClaimed() const noexcept {
-                return _status == TaskWorkerClaimStatus::Claimed;
+                return _status == TaskWorkerClaimStatus::Claimed &&
+                    _binding.has_value();
             }
 
-            /// Returns the claimed record index.
-            TIndex RecordIndex() const noexcept {
-                return _recordIndex;
+            /// Returns the claimed record binding when Worker claim succeeded.
+            const std::optional<TaskRecordBinding<TIndex>>& Binding() const noexcept {
+                return _binding;
             }
-
-            /// Returns the claimed record incarnation Phase.
-            bool Phase() const noexcept {
-                return _phase;
-            }
-
-        private:
-
-            // Internal construction.
-
-            /// Creates one normalized Worker claim outcome.
-            TaskWorkerClaimResult(
-                TaskWorkerClaimStatus status,
-                TIndex recordIndex,
-                bool phase
-            ) noexcept :
-                _status(status),
-                _recordIndex(recordIndex),
-                _phase(phase) {}
 
     };
 
@@ -253,12 +246,12 @@ namespace ESPressio::Threading::Detail {
             "TaskFacilityCore requires positive callable capacity"
         );
 
-        public:
+        private:
 
-            // Core Types.
+            // Internal Types.
 
             /// Concrete bounded Task record owned by this facility.
-            using Record = TaskRecord<
+            using RecordType = TaskRecord<
                 TCallableCapacity,
                 TResultCapacity,
                 TRecordCapacity,
@@ -266,20 +259,13 @@ namespace ESPressio::Threading::Detail {
             >;
 
             /// Smallest record-index Type satisfying the configured facility capacity.
-            using Index = typename Record::Index;
+            using IndexType = typename RecordType::Index;
 
-            /// Structured admission outcome for this facility.
-            using AdmissionResult = TaskAdmissionCoreResult<Index>;
-
-            /// Structured Worker-claim outcome for this facility.
-            using WorkerClaimResult = TaskWorkerClaimResult<Index>;
-
-        private:
 
             // Bounded facility storage.
 
             /// Statically provisioned Task records.
-            Record _records[TRecordCapacity];
+            RecordType _records[TRecordCapacity];
 
             /// Structural free-record publication bitmap.
             AvailabilityBitmap<TRecordCapacity> _availability;
@@ -296,14 +282,29 @@ namespace ESPressio::Threading::Detail {
             /// public handle observation may occur outside the facility lock, while the byte-level
             /// availability bitmap is mutated under that lock and therefore must not be read here.
             bool IsCurrentIncarnation(
-                Index recordIndex,
+                IndexType recordIndex,
                 bool phase
             ) const noexcept {
-                return recordIndex < static_cast<Index>(TRecordCapacity) &&
+                return recordIndex < static_cast<IndexType>(TRecordCapacity) &&
                     _records[recordIndex].Control.Phase() == phase;
             }
 
         public:
+
+            // Core Types.
+
+            /// Concrete bounded Task record owned by this facility.
+            using Record = RecordType;
+
+            /// Smallest record-index Type satisfying the configured facility capacity.
+            using Index = IndexType;
+
+            /// Structured admission outcome for this facility.
+            using AdmissionResult = TaskAdmissionCoreResult<Index>;
+
+            /// Structured Worker-claim outcome for this facility.
+            using WorkerClaimResult = TaskWorkerClaimResult<Index>;
+
 
             // Admission.
 
@@ -774,6 +775,8 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Returns the number of currently structurally allocated Task records.
+            ///
+            /// The owning facility runtime must serialize this scan with admission/reclamation.
             std::size_t RecordsInUse() const noexcept {
                 std::size_t inUse = 0U;
 
@@ -787,6 +790,8 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Returns the number of currently queued Tasks.
+            ///
+            /// The owning facility runtime must serialize this traversal with queue mutation.
             std::size_t QueuedTasks() const noexcept {
                 std::size_t queued = 0U;
                 auto current = _queue.Head();
