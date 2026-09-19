@@ -502,6 +502,383 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Dispatch waiting.
+
+            /// Removes one pre-admission waiter registration.
+            void UnregisterAdmissionWaiter(
+                std::size_t registrationIndex
+            ) noexcept {
+                _admissionWaiters.Unregister(
+                    registrationIndex
+                );
+            }
+
+            /// Waits until structural Task-record capacity becomes available.
+            TaskDispatchStatus WaitForAdmissionCapacity(
+                ContextIndex contextIndex,
+                const MonotonicWaitBudget& budget
+            ) {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return TaskDispatchStatus::Interrupted;
+                }
+
+                if (_core.HasRecordCapacity()) {
+                    ReleaseLock();
+                    return TaskDispatchStatus::Succeeded;
+                }
+
+                AdmissionWaitRegistrationType registration;
+                registration.WaitingContextIndex = contextIndex;
+
+                std::size_t registrationIndex = 0U;
+
+                if (
+                    _admissionWaiters.Register(
+                        registration,
+                        registrationIndex
+                    ) != WaitRegistrationStatus::Registered
+                ) {
+                    ReleaseLock();
+                    return TaskDispatchStatus::Interrupted;
+                }
+
+                // Re-observe under the same lock even though all current capacity mutation is
+                // serialized here; preserving the explicit protocol keeps the waiter correct if
+                // the underlying capacity representation later becomes independently publishable.
+                if (_core.HasRecordCapacity()) {
+                    UnregisterAdmissionWaiter(
+                        registrationIndex
+                    );
+                    ReleaseLock();
+                    return TaskDispatchStatus::Succeeded;
+                }
+
+                ReleaseLock();
+
+                for (;;) {
+                    const auto remaining = budget.Remaining();
+
+                    if (remaining.IsNoWait()) {
+                        if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                            return TaskDispatchStatus::Interrupted;
+                        }
+
+                        const auto capacityAvailable = _core.HasRecordCapacity();
+
+                        UnregisterAdmissionWaiter(
+                            registrationIndex
+                        );
+                        ReleaseLock();
+
+                        return capacityAvailable
+                            ? TaskDispatchStatus::Succeeded
+                            : TaskDispatchStatus::TimedOut;
+                    }
+
+                    const auto waitResult = _router->Wait(
+                        contextIndex,
+                        remaining
+                    );
+
+                    if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                        return TaskDispatchStatus::Interrupted;
+                    }
+
+                    if (_core.HasRecordCapacity()) {
+                        UnregisterAdmissionWaiter(
+                            registrationIndex
+                        );
+                        ReleaseLock();
+                        return TaskDispatchStatus::Succeeded;
+                    }
+
+                    ReleaseLock();
+
+                    if (_router->IsInterrupted(
+                        contextIndex
+                    )) {
+                        if (AcquireLock() == TaskFacilityLockResult::Acquired) {
+                            UnregisterAdmissionWaiter(
+                                registrationIndex
+                            );
+                            ReleaseLock();
+                        }
+
+                        return TaskDispatchStatus::Interrupted;
+                    }
+
+                    if (
+                        waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::ProviderFailure
+                    ) {
+                        if (AcquireLock() == TaskFacilityLockResult::Acquired) {
+                            UnregisterAdmissionWaiter(
+                                registrationIndex
+                            );
+                            ReleaseLock();
+                        }
+
+                        return TaskDispatchStatus::Interrupted;
+                    }
+
+                    if (
+                        waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut &&
+                        budget.Remaining().IsNoWait()
+                    ) {
+                        if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                            return TaskDispatchStatus::Interrupted;
+                        }
+
+                        const auto capacityAvailable = _core.HasRecordCapacity();
+
+                        UnregisterAdmissionWaiter(
+                            registrationIndex
+                        );
+                        ReleaseLock();
+
+                        return capacityAvailable
+                            ? TaskDispatchStatus::Succeeded
+                            : TaskDispatchStatus::TimedOut;
+                    }
+                }
+            }
+
+            /// Withdraws one admitted but never-returned dispatch after timeout/interruption wins.
+            ///
+            /// The facility lock must be held and Worker grant must not have won.
+            void WithdrawUnreturnedDispatch(
+                Index recordIndex,
+                bool phase
+            ) noexcept {
+                static_cast<void>(
+                    _core.ReleaseOwner(
+                        recordIndex,
+                        phase
+                    )
+                );
+
+                static_cast<void>(
+                    ReclaimIfQuiescent(
+                        recordIndex,
+                        phase
+                    )
+                );
+            }
+
+            /// Waits for Worker-Lease grant after Task admission using the original dispatch budget.
+            TaskDispatchStatus WaitForWorkerGrant(
+                ContextIndex contextIndex,
+                Index recordIndex,
+                bool phase,
+                const MonotonicWaitBudget& budget
+            ) {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return TaskDispatchStatus::Interrupted;
+                }
+
+                if (_core.HasWorkerGrant(
+                    recordIndex,
+                    phase
+                )) {
+                    ReleaseLock();
+                    return TaskDispatchStatus::Succeeded;
+                }
+
+                WaitRegistration registration;
+                registration.RecordIndex = recordIndex;
+                registration.Phase = phase;
+                registration.WaitingContextIndex = contextIndex;
+
+                std::size_t registrationIndex = 0U;
+
+                if (
+                    _waiters.Register(
+                        registration,
+                        registrationIndex
+                    ) != WaitRegistrationStatus::Registered
+                ) {
+                    WithdrawUnreturnedDispatch(
+                        recordIndex,
+                        phase
+                    );
+                    ReleaseLock();
+                    return TaskDispatchStatus::Interrupted;
+                }
+
+                if (_core.HasWorkerGrant(
+                    recordIndex,
+                    phase
+                )) {
+                    UnregisterWaiter(
+                        registrationIndex,
+                        recordIndex,
+                        phase
+                    );
+                    ReleaseLock();
+                    return TaskDispatchStatus::Succeeded;
+                }
+
+                ReleaseLock();
+
+                for (;;) {
+                    const auto remaining = budget.Remaining();
+
+                    if (remaining.IsNoWait()) {
+                        if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                            return TaskDispatchStatus::Interrupted;
+                        }
+
+                        if (_core.HasWorkerGrant(
+                            recordIndex,
+                            phase
+                        )) {
+                            UnregisterWaiter(
+                                registrationIndex,
+                                recordIndex,
+                                phase
+                            );
+                            ReleaseLock();
+                            return TaskDispatchStatus::Succeeded;
+                        }
+
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+
+                        WithdrawUnreturnedDispatch(
+                            recordIndex,
+                            phase
+                        );
+
+                        ReleaseLock();
+                        return TaskDispatchStatus::TimedOut;
+                    }
+
+                    const auto waitResult = _router->Wait(
+                        contextIndex,
+                        remaining
+                    );
+
+                    if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                        return TaskDispatchStatus::Interrupted;
+                    }
+
+                    if (_core.HasWorkerGrant(
+                        recordIndex,
+                        phase
+                    )) {
+                        UnregisterWaiter(
+                            registrationIndex,
+                            recordIndex,
+                            phase
+                        );
+                        ReleaseLock();
+                        return TaskDispatchStatus::Succeeded;
+                    }
+
+                    ReleaseLock();
+
+                    if (_router->IsInterrupted(
+                        contextIndex
+                    )) {
+                        if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                            return TaskDispatchStatus::Interrupted;
+                        }
+
+                        if (_core.HasWorkerGrant(
+                            recordIndex,
+                            phase
+                        )) {
+                            UnregisterWaiter(
+                                registrationIndex,
+                                recordIndex,
+                                phase
+                            );
+                            ReleaseLock();
+                            return TaskDispatchStatus::Succeeded;
+                        }
+
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+
+                        WithdrawUnreturnedDispatch(
+                            recordIndex,
+                            phase
+                        );
+
+                        ReleaseLock();
+                        return TaskDispatchStatus::Interrupted;
+                    }
+
+                    if (
+                        waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::ProviderFailure
+                    ) {
+                        if (AcquireLock() == TaskFacilityLockResult::Acquired) {
+                            if (_core.HasWorkerGrant(
+                                recordIndex,
+                                phase
+                            )) {
+                                UnregisterWaiter(
+                                    registrationIndex,
+                                    recordIndex,
+                                    phase
+                                );
+                                ReleaseLock();
+                                return TaskDispatchStatus::Succeeded;
+                            }
+
+                            _waiters.Unregister(
+                                registrationIndex
+                            );
+
+                            WithdrawUnreturnedDispatch(
+                                recordIndex,
+                                phase
+                            );
+
+                            ReleaseLock();
+                        }
+
+                        return TaskDispatchStatus::Interrupted;
+                    }
+
+                    if (
+                        waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut &&
+                        budget.Remaining().IsNoWait()
+                    ) {
+                        if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                            return TaskDispatchStatus::Interrupted;
+                        }
+
+                        if (_core.HasWorkerGrant(
+                            recordIndex,
+                            phase
+                        )) {
+                            UnregisterWaiter(
+                                registrationIndex,
+                                recordIndex,
+                                phase
+                            );
+                            ReleaseLock();
+                            return TaskDispatchStatus::Succeeded;
+                        }
+
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+
+                        WithdrawUnreturnedDispatch(
+                            recordIndex,
+                            phase
+                        );
+
+                        ReleaseLock();
+                        return TaskDispatchStatus::TimedOut;
+                    }
+                }
+            }
+
+
             // Task handle operation thunks.
 
             /// Reads Task state through the type-erased public handle operation table.
@@ -624,6 +1001,20 @@ namespace ESPressio::Threading::Detail {
             /// Structured deterministic Worker claim result.
             using WorkerClaimResult = typename Core::WorkerClaimResult;
 
+            /// Public Task handle Type produced by one callable Type.
+            template<class TCallable>
+            using TaskForCallable = Task<
+                CallableResultT<
+                    std::decay_t<TCallable>
+                >
+            >;
+
+            /// Structured public dispatch result produced for one callable Type.
+            template<class TCallable>
+            using DispatchResultFor = TaskDispatchResult<
+                TaskForCallable<TCallable>
+            >;
+
 
             // Construction.
 
@@ -651,6 +1042,203 @@ namespace ESPressio::Threading::Detail {
                 return releaseResult == ESPressio::Platform::Synchronization::LockReleaseResult::Released
                     ? TaskFacilitySynchronizationResult::Ready
                     : TaskFacilitySynchronizationResult::ProviderFailure;
+            }
+
+
+            // Dispatch.
+
+            /// Dispatches one finite Task according to the caller-selected contention policy.
+            ///
+            /// Queue returns after bounded record admission, whether the Task is immediately Running
+            /// or remains Queued. QueueWithTimeout retains one canonical Clock budget from method
+            /// entry until Worker-Lease grant. AbandonImmediately succeeds only when both record
+            /// capacity and an eligible Worker are available without queueing.
+            template<class TCallable>
+            DispatchResultFor<TCallable> Dispatch(
+                TCallable&& callable,
+                TaskDispatchPolicy policy,
+                Duration timeout = Duration{}
+            ) {
+                using TaskType = TaskForCallable<TCallable>;
+                using DispatchResult = DispatchResultFor<TCallable>;
+
+                const auto contextIndex = _router->CurrentContextIndex();
+
+                const auto budget =
+                    policy == TaskDispatchPolicy::QueueWithTimeout
+                        ? MonotonicWaitBudget::For(
+                            timeout
+                        )
+                        : MonotonicWaitBudget::Forever();
+
+                for (;;) {
+                    if (
+                        policy == TaskDispatchPolicy::QueueWithTimeout &&
+                        budget.Remaining().IsNoWait()
+                    ) {
+                        return DispatchResult(
+                            TaskDispatchStatus::TimedOut
+                        );
+                    }
+
+                    if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                        return DispatchResult(
+                            TaskDispatchStatus::Interrupted
+                        );
+                    }
+
+                    if (!_core.HasRecordCapacity()) {
+                        ReleaseLock();
+
+                        if (policy == TaskDispatchPolicy::AbandonImmediately) {
+                            return DispatchResult(
+                                TaskDispatchStatus::Unavailable
+                            );
+                        }
+
+                        if (!contextIndex.has_value()) {
+                            return DispatchResult(
+                                TaskDispatchStatus::Interrupted
+                            );
+                        }
+
+                        const auto admissionWaitResult = WaitForAdmissionCapacity(
+                            contextIndex.value(),
+                            budget
+                        );
+
+                        if (admissionWaitResult != TaskDispatchStatus::Succeeded) {
+                            return DispatchResult(
+                                admissionWaitResult
+                            );
+                        }
+
+                        continue;
+                    }
+
+                    if (
+                        policy == TaskDispatchPolicy::AbandonImmediately &&
+                        (
+                            !_workerScheduler.IsAnyAvailable() ||
+                            _core.QueuedTasks() != 0U
+                        )
+                    ) {
+                        ReleaseLock();
+                        return DispatchResult(
+                            TaskDispatchStatus::Unavailable
+                        );
+                    }
+
+                    if (
+                        policy == TaskDispatchPolicy::QueueWithTimeout &&
+                        budget.Remaining().IsNoWait()
+                    ) {
+                        ReleaseLock();
+                        return DispatchResult(
+                            TaskDispatchStatus::TimedOut
+                        );
+                    }
+
+                    auto admission = _core.Admit(
+                        std::forward<TCallable>(
+                            callable
+                        )
+                    );
+
+                    if (!admission.IsAdmitted()) {
+                        ReleaseLock();
+
+                        if (policy == TaskDispatchPolicy::AbandonImmediately) {
+                            return DispatchResult(
+                                TaskDispatchStatus::Unavailable
+                            );
+                        }
+
+                        continue;
+                    }
+
+                    const auto binding = admission.Binding().value();
+
+                    ScheduleAvailableWorkers();
+
+                    const auto workerGranted = _core.HasWorkerGrant(
+                        binding.RecordIndex,
+                        binding.Phase
+                    );
+
+                    if (
+                        policy == TaskDispatchPolicy::AbandonImmediately &&
+                        !workerGranted
+                    ) {
+                        WithdrawUnreturnedDispatch(
+                            binding.RecordIndex,
+                            binding.Phase
+                        );
+                        ReleaseLock();
+                        return DispatchResult(
+                            TaskDispatchStatus::Unavailable
+                        );
+                    }
+
+                    if (
+                        policy != TaskDispatchPolicy::QueueWithTimeout ||
+                        workerGranted
+                    ) {
+                        TaskType task(
+                            this,
+                            static_cast<std::uint32_t>(
+                                binding.RecordIndex
+                            ),
+                            binding.Phase,
+                            HandleOperations()
+                        );
+
+                        ReleaseLock();
+
+                        return DispatchResult(
+                            std::move(task)
+                        );
+                    }
+
+                    if (!contextIndex.has_value()) {
+                        WithdrawUnreturnedDispatch(
+                            binding.RecordIndex,
+                            binding.Phase
+                        );
+                        ReleaseLock();
+                        return DispatchResult(
+                            TaskDispatchStatus::Interrupted
+                        );
+                    }
+
+                    ReleaseLock();
+
+                    const auto grantWaitResult = WaitForWorkerGrant(
+                        contextIndex.value(),
+                        binding.RecordIndex,
+                        binding.Phase,
+                        budget
+                    );
+
+                    if (grantWaitResult != TaskDispatchStatus::Succeeded) {
+                        return DispatchResult(
+                            grantWaitResult
+                        );
+                    }
+
+                    TaskType task(
+                        this,
+                        static_cast<std::uint32_t>(
+                            binding.RecordIndex
+                        ),
+                        binding.Phase,
+                        HandleOperations()
+                    );
+
+                    return DispatchResult(
+                        std::move(task)
+                    );
+                }
             }
 
 
