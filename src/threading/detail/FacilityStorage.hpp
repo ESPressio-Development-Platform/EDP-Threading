@@ -189,7 +189,7 @@ namespace ESPressio::Threading::Detail {
                 TRecords& records,
                 Index recordIndex
             ) noexcept {
-                records[recordIndex].QueueNext = InvalidIndex;
+                records[recordIndex].SetQueueNext(InvalidIndex);
 
                 if (_tail == InvalidIndex) {
                     _head = recordIndex;
@@ -197,7 +197,7 @@ namespace ESPressio::Threading::Detail {
                     return;
                 }
 
-                records[_tail].QueueNext = recordIndex;
+                records[_tail].SetQueueNext(recordIndex);
                 _tail = recordIndex;
             }
 
@@ -211,13 +211,13 @@ namespace ESPressio::Threading::Detail {
                 }
 
                 const auto recordIndex = _head;
-                _head = records[recordIndex].QueueNext;
+                _head = records[recordIndex].QueueNext();
 
                 if (_head == InvalidIndex) {
                     _tail = InvalidIndex;
                 }
 
-                records[recordIndex].QueueNext = InvalidIndex;
+                records[recordIndex].SetQueueNext(InvalidIndex);
                 return recordIndex;
             }
 
@@ -232,24 +232,24 @@ namespace ESPressio::Threading::Detail {
 
                 while (current != InvalidIndex) {
                     if (current == recordIndex) {
-                        const auto next = records[current].QueueNext;
+                        const auto next = records[current].QueueNext();
 
                         if (previous == InvalidIndex) {
                             _head = next;
                         } else {
-                            records[previous].QueueNext = next;
+                            records[previous].SetQueueNext(next);
                         }
 
                         if (_tail == current) {
                             _tail = previous;
                         }
 
-                        records[current].QueueNext = InvalidIndex;
+                        records[current].SetQueueNext(InvalidIndex);
                         return true;
                     }
 
                     previous = current;
-                    current = records[current].QueueNext;
+                    current = records[current].QueueNext();
                 }
 
                 return false;
