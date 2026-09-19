@@ -187,8 +187,11 @@ namespace ESPressio::Threading::Detail {
         /// Executes the callable and establishes any result payload without publishing terminal lifecycle state.
         TaskInvocationOutcome (*Invoke)(TTaskRecord&);
 
-        /// Destroys the currently live callable/result payload.
-        void (*Destroy)(TTaskRecord&) noexcept;
+        /// Destroys the callable payload before execution has consumed it.
+        void (*DestroyCallable)(TTaskRecord&) noexcept;
+
+        /// Destroys a completed result payload when one exists.
+        void (*DestroyResult)(TTaskRecord&) noexcept;
 
         /// Moves a completed result into caller-provided typed storage.
         void (*MoveResult)(
