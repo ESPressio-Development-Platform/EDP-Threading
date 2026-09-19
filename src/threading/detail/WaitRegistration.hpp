@@ -191,6 +191,27 @@ namespace ESPressio::Threading::Detail {
                 return activeCount;
             }
 
+            /// Returns the number of active registrations satisfying one bounded predicate.
+            template<class TPredicate>
+            std::size_t MatchingCount(
+                TPredicate&& predicate
+            ) const {
+                std::size_t matchingCount = 0U;
+
+                for (std::size_t index = 0U; index < TCapacity; ++index) {
+                    if (
+                        _registrations[index].IsActive() &&
+                        predicate(
+                            _registrations[index]
+                        )
+                    ) {
+                        ++matchingCount;
+                    }
+                }
+
+                return matchingCount;
+            }
+
 
             // Iteration.
 
