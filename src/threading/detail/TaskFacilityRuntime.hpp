@@ -304,33 +304,25 @@ namespace ESPressio::Threading::Detail {
                     return TaskWaitResult::Interrupted;
                 }
 
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return TaskWaitResult::Interrupted;
+                }
+
                 // An already-terminal target satisfies Wait immediately even when the calling
                 // context also has a pending cooperative interruption request.
                 if (_core.IsTerminal(
                     recordIndex,
                     phase
                 )) {
+                    ReleaseLock();
                     return TaskWaitResult::Finished;
                 }
 
                 if (_router->IsInterrupted(
                     contextIndex.value()
                 )) {
-                    return TaskWaitResult::Interrupted;
-                }
-
-                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
-                    return TaskWaitResult::Interrupted;
-                }
-
-                // Re-observe after entering the target-resource serialization boundary because
-                // terminal publication may have won between the first observation and this lock.
-                if (_core.IsTerminal(
-                    recordIndex,
-                    phase
-                )) {
                     ReleaseLock();
-                    return TaskWaitResult::Finished;
+                    return TaskWaitResult::Interrupted;
                 }
 
                 WaitRegistration registration;
