@@ -144,6 +144,12 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TIdentity Semantic identity Type being located.
     /// @tparam TFirstResource First topology resource Type in the recursive lookup.
     /// @tparam TIndex Compile-time topology resource index.
+    /// Recursively locates a topology resource whose semantic identity satisfies the supplied matcher.
+    /// @tparam TMatcher Compile-time identity matcher applied to each resource.
+    /// @tparam TIdentity Semantic identity Type being searched for.
+    /// @tparam TFirstResource First topology resource Type inspected by this recursion step.
+    /// @tparam TRestResources Remaining topology resource Types searched when the first does not match.
+    /// @tparam TIndex Compile-time topology index corresponding to the first resource in this recursion step.
     template<template<class, class> class TMatcher, class TIdentity, class TFirstResource, class... TRestResources, std::size_t TIndex>
     struct TopologyResourceIndex<
         TMatcher,
