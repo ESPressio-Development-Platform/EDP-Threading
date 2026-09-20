@@ -15,6 +15,7 @@ namespace ESPressio::Threading::Detail {
 
             // Shared sleep implementation.
 
+            /// Sleeps the current managed context against one canonical non-restarting monotonic budget.
             static SleepResult SleepWithBudget(
                 TManagedContextRouter& router,
                 const MonotonicWaitBudget& budget
