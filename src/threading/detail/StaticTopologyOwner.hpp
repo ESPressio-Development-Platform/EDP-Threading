@@ -235,6 +235,23 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            StaticTopologyOwner(
+                const StaticTopologyOwner&
+            ) = delete;
+
+            StaticTopologyOwner& operator =(
+                const StaticTopologyOwner&
+            ) = delete;
+
+            StaticTopologyOwner(
+                StaticTopologyOwner&&
+            ) = delete;
+
+            StaticTopologyOwner& operator =(
+                StaticTopologyOwner&&
+            ) = delete;
+
+
             explicit StaticTopologyOwner(
                 TBindings bindings
             ) :
