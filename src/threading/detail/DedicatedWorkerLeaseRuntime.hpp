@@ -43,6 +43,12 @@ namespace ESPressio::Threading::Detail {
 
             using TaskIdentity = TTaskIdentity;
 
+            template<class TCallable>
+            using TaskForCallable = typename Facility::template TaskForCallable<TCallable>;
+
+            template<class TCallable>
+            using DispatchResultFor = typename Facility::template DispatchResultFor<TCallable>;
+
             static constexpr std::size_t WorkerCount = 1U;
 
 
