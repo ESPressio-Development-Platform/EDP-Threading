@@ -634,8 +634,9 @@ namespace Test {
             }
 
             /// Records one cooperative infrastructure termination request.
-            void RequestInfrastructureTermination() noexcept {
+            ESPressio::Platform::Synchronization::SignalNotifyResult RequestInfrastructureTermination() noexcept {
                 ++TerminationWakeCount;
+                return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
             }
 
             /// Records one infrastructure Join and reports success.
@@ -2861,7 +2862,9 @@ int main() {
         successfulLifecycle.ShouldTerminate()
     );
 
-    successfulResource.RequestInfrastructureTermination();
+    static_cast<void>(
+        successfulResource.RequestInfrastructureTermination()
+    );
 
     assert(
         successfulResource.JoinInfrastructure(
