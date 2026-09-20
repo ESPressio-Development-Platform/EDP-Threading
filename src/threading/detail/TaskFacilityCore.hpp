@@ -349,6 +349,11 @@ namespace ESPressio::Threading::Detail {
                 );
 
                 static_assert(
+                    std::is_nothrow_destructible_v<StoredCallable>,
+                    "Task callable teardown from deterministic Task storage must be no-throw"
+                );
+
+                static_assert(
                     !std::is_reference_v<Result>,
                     "Task results must not be reference Types"
                 );
@@ -377,6 +382,11 @@ namespace ESPressio::Threading::Detail {
                     static_assert(
                         std::is_nothrow_move_constructible_v<Result>,
                         "Task result transfer into deterministic storage must be no-throw"
+                    );
+
+                    static_assert(
+                        std::is_nothrow_destructible_v<Result>,
+                        "Task result teardown from deterministic Task storage must be no-throw"
                     );
 
                     static_assert(
