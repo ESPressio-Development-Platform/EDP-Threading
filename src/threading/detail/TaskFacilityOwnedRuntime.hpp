@@ -85,8 +85,9 @@ namespace ESPressio::Threading::Detail {
                 TManagedContextRouter
             >;
 
+            /// Tuple Type containing persistent Worker execution contexts selected by compile-time index.
+            /// @tparam TIndices Worker indices expanded into the tuple Type.
             template<std::size_t... TIndices>
-            /// Tuple Type containing all persistent Worker execution contexts.
             using WorkerTuple = std::tuple<
                 WorkerContext<TIndices>...
             >;
@@ -111,6 +112,8 @@ namespace ESPressio::Threading::Detail {
                 };
             }
 
+            /// Direct-constructs the heterogeneous Worker tuple in final storage order.
+            /// @tparam TIndices Worker indices expanded into direct Worker construction.
             template<std::size_t... TIndices>
             static WorkerTuple<TIndices...> MakeWorkers(
                 Facility& facility,
