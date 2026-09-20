@@ -154,6 +154,76 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            template<std::size_t TIndex>
+            bool InitializeResourceAt(
+                std::size_t targetIndex
+            ) noexcept {
+                if constexpr (
+                    TIndex == TTopology::ResourceCount
+                ) {
+                    return false;
+                } else {
+                    if (TIndex == targetIndex) {
+                        return _resources.template Get<TIndex>().Initialize() ==
+                            WorkerExecutionInitializationResult::Succeeded;
+                    }
+
+                    return InitializeResourceAt<TIndex + 1U>(
+                        targetIndex
+                    );
+                }
+            }
+
+            template<std::size_t TIndex>
+            void DestroyResourceAt(
+                std::size_t targetIndex
+            ) noexcept {
+                if constexpr (
+                    TIndex < TTopology::ResourceCount
+                ) {
+                    if (TIndex == targetIndex) {
+                        static_cast<void>(
+                            _resources.template Get<TIndex>().DestroyInfrastructure()
+                        );
+                        return;
+                    }
+
+                    DestroyResourceAt<TIndex + 1U>(
+                        targetIndex
+                    );
+                }
+            }
+
+            template<std::size_t TOrderIndex, std::size_t TOrderCount>
+            ThreadingInitializationResult InitializeInRuntimeOrder(
+                const std::array<std::size_t, TOrderCount>& order
+            ) noexcept {
+                if constexpr (
+                    TOrderIndex == TOrderCount
+                ) {
+                    return ThreadingInitializationResult::Succeeded;
+                } else {
+                    if (!InitializeResourceAt<0U>(order[TOrderIndex])) {
+                        DestroyResourceAt<0U>(
+                            order[TOrderIndex]
+                        );
+
+                        for (std::size_t rollback = TOrderIndex; rollback > 0U; --rollback) {
+                            DestroyResourceAt<0U>(
+                                order[rollback - 1U]
+                            );
+                        }
+
+                        return ThreadingInitializationResult::ProviderFailure;
+                    }
+
+                    return InitializeInRuntimeOrder<TOrderIndex + 1U>(
+                        order
+                    );
+                }
+            }
+
+
             template<std::size_t... TIndices>
             ThreadingStartResult StartAll(
                 std::index_sequence<TIndices...>
@@ -217,6 +287,61 @@ namespace ESPressio::Threading::Detail {
 
                 if (resourceResult != ThreadingInitializationResult::Succeeded) {
                     return resourceResult;
+                }
+
+                return _bootstrap.CommitInitialization();
+            }
+
+            template<std::size_t... TResourceIndices>
+            ThreadingInitializationResult InitializeInOrder() noexcept {
+                static_assert(
+                    sizeof...(TResourceIndices) == TTopology::ResourceCount,
+                    "InitializeInOrder must name every topology resource exactly once"
+                );
+
+                constexpr std::array<std::size_t, TTopology::ResourceCount> order{
+                    TResourceIndices...
+                };
+
+                constexpr bool unique = []() constexpr {
+                    constexpr std::array<std::size_t, TTopology::ResourceCount> values{
+                        TResourceIndices...
+                    };
+
+                    for (std::size_t left = 0U; left < values.size(); ++left) {
+                        for (std::size_t right = left + 1U; right < values.size(); ++right) {
+                            if (values[left] == values[right]) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    return true;
+                }();
+
+                static_assert(
+                    (
+                        (TResourceIndices < TTopology::ResourceCount) &&
+                        ... &&
+                        true
+                    ) &&
+                    unique,
+                    "InitializeInOrder must name every topology resource exactly once"
+                );
+
+                if (
+                    _wakeSet.Validate() !=
+                    ManagedContextWakeValidationResult::Ready
+                ) {
+                    return ThreadingInitializationResult::ProviderFailure;
+                }
+
+                const auto result = InitializeInRuntimeOrder<0U>(
+                    order
+                );
+
+                if (result != ThreadingInitializationResult::Succeeded) {
+                    return result;
                 }
 
                 return _bootstrap.CommitInitialization();
