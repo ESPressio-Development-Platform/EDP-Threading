@@ -164,8 +164,8 @@ namespace ESPressio::Threading::Detail {
 
 
             /// Applies terminal shutdown cancellation semantics to the isolated Task facility.
-            void BeginShutdownCancellation() noexcept {
-                _runtime.BeginShutdownCancellation();
+            TaskFacilityShutdownCancellationResult BeginShutdownCancellation() noexcept {
+                return _runtime.BeginShutdownCancellation();
             }
 
             /// Indicates whether this Dedicated Worker resource has no executable Task work remaining.
