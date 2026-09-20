@@ -103,6 +103,12 @@ namespace Test {
 
         public:
 
+            ExecutionContextProvider() noexcept = default;
+            ExecutionContextProvider(const ExecutionContextProvider&) = delete;
+            ExecutionContextProvider& operator =(const ExecutionContextProvider&) = delete;
+            ExecutionContextProvider(ExecutionContextProvider&&) = delete;
+            ExecutionContextProvider& operator =(ExecutionContextProvider&&) = delete;
+
             ESPressio::Platform::Execution::ExecutionInitializationResult Initialize(
                 const ESPressio::Platform::Execution::ExecutionStorage& storage,
                 const ESPressio::Platform::Execution::ExecutionConfiguration&,
