@@ -832,23 +832,23 @@ namespace ESPressio::Threading::Detail {
                         }
 
                         if (_core.HasWorkerGrant(
-                    recordIndex,
-                    phase
-                )) {
+                            recordIndex,
+                            phase
+                        )) {
                             UnregisterWaiter(
-                    registrationIndex,
-                    recordIndex,
-                    phase
-                );
+                                registrationIndex,
+                                recordIndex,
+                                phase
+                            );
                             ReleaseLock();
                             return TaskDispatchStatus::Succeeded;
                         }
 
                         _waiters.Unregister(registrationIndex);
                         WithdrawUnreturnedDispatch(
-                    recordIndex,
-                    phase
-                );
+                            recordIndex,
+                            phase
+                        );
                         ReleaseLock();
                         return TaskDispatchStatus::TimedOut;
                     }
@@ -863,14 +863,14 @@ namespace ESPressio::Threading::Detail {
                     }
 
                     if (_core.HasWorkerGrant(
-                    recordIndex,
-                    phase
-                )) {
+                        recordIndex,
+                        phase
+                    )) {
                         UnregisterWaiter(
-                    registrationIndex,
-                    recordIndex,
-                    phase
-                );
+                            registrationIndex,
+                            recordIndex,
+                            phase
+                        );
                         ReleaseLock();
                         return TaskDispatchStatus::Succeeded;
                     }
@@ -883,9 +883,9 @@ namespace ESPressio::Threading::Detail {
                     if (interrupted || expired || providerFailed) {
                         _waiters.Unregister(registrationIndex);
                         WithdrawUnreturnedDispatch(
-                    recordIndex,
-                    phase
-                );
+                            recordIndex,
+                            phase
+                        );
                         ReleaseLock();
 
                         if (interrupted || providerFailed) {
