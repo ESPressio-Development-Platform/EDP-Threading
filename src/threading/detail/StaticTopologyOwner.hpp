@@ -178,11 +178,15 @@ namespace ESPressio::Threading::Detail {
                         std::make_index_sequence<TTopology::ResourceCount>{}
                     )
                 ) {
-                _router.BindTopology(
-                    &_resolver,
-                    &Resolver::ResolveCurrentThunk,
-                    &Resolver::IsInterruptedThunk
-                );
+                if constexpr (
+                    ContextCapacity > 0U
+                ) {
+                    _router.BindTopology(
+                        &_resolver,
+                        &Resolver::ResolveCurrentThunk,
+                        &Resolver::IsInterruptedThunk
+                    );
+                }
             }
 
 
