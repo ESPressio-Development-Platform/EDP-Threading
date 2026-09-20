@@ -21,9 +21,7 @@ done
 OUTPUT="${ROOT}/tests/.threading-foundation-tests"
 
 SANITIZER_FLAGS=()
-echo "EDP-Threading host foundation tests: executing"
-
-if [[ "${EDP_THREADING_SANITIZERS:-1}" != "0" ]]; then
+if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" ]]; then
     SANITIZER_FLAGS=(
         -g
         -fno-omit-frame-pointer
@@ -36,7 +34,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "EDP-Threading host foundation tests: compiling"
+if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" ]]; then
+    echo "EDP-Threading host foundation tests: compiling (ASan+UBSan)"
+else
+    echo "EDP-Threading host foundation tests: compiling"
+fi
 
 c++ \
     -std=c++17 \
@@ -52,7 +54,9 @@ c++ \
     "${ROOT}/tests/ThreadingFoundationTests.cpp" \
     -o "${OUTPUT}"
 
-if [[ "${EDP_THREADING_SANITIZERS:-1}" != "0" ]]; then
+echo "EDP-Threading host foundation tests: executing"
+
+if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" ]]; then
     ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0:abort_on_error=1}" \
     UBSAN_OPTIONS="${UBSAN_OPTIONS:-halt_on_error=1:print_stacktrace=1}" \
         "${OUTPUT}"
