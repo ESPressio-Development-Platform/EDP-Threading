@@ -8,6 +8,58 @@
 
 namespace ESPressio::Threading::Detail {
 
+    template<class TSignalProvider>
+    class ManagedContextRouter<0U, TSignalProvider> final {
+
+        public:
+
+            using WakeSet = ManagedContextWakeSet<
+                0U,
+                TSignalProvider
+            >;
+
+            using ContextIndex =
+                typename ExecutionContextIndexTraits<0U>::Type;
+
+            static constexpr std::size_t ContextCapacity = 0U;
+
+
+            explicit ManagedContextRouter(
+                WakeSet&
+            ) noexcept {}
+
+
+            template<class... TArguments>
+            void BindTopology(
+                TArguments&&...
+            ) noexcept = delete;
+
+            bool IsTopologyBound() const noexcept {
+                return false;
+            }
+
+            std::optional<ContextIndex> CurrentContextIndex() const noexcept {
+                return std::nullopt;
+            }
+
+            bool IsInterrupted(
+                ContextIndex
+            ) const noexcept {
+                return true;
+            }
+
+            auto Wake(
+                ContextIndex
+            ) noexcept = delete;
+
+            auto Wait(
+                ContextIndex,
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept = delete;
+
+    };
+
+
     template<std::size_t TContextCapacity, class TSignalProvider>
     class ManagedContextRouter final {
 
