@@ -122,6 +122,19 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            // Provider contract.
+
+            using ProviderTraits =
+                ESPressio::Platform::Execution::Detail::ExecutionContextProviderTraits<
+                    TExecutionContextProvider
+                >;
+
+            static_assert(
+                sizeof(ProviderTraits) > 0U,
+                "Task Worker requires a valid Platform ExecutionContext provider"
+            );
+
+
             // Provider and deterministic backing.
 
             /// Concrete Platform execution-context provider.
