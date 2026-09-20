@@ -225,6 +225,69 @@ namespace ESPressio::Threading {
         };
 
 
+        template<class TProperty>
+        struct TaskRecordCapacityValue {
+
+            static constexpr std::size_t Value = 0U;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct TaskRecordCapacityValue<TaskRecordCapacity<TCapacity>> {
+
+            static constexpr std::size_t Value = TCapacity;
+
+        };
+
+
+        template<class TProperty>
+        struct CallableCapacityValue {
+
+            static constexpr std::size_t Value = 0U;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct CallableCapacityValue<CallableCapacity<TCapacity>> {
+
+            static constexpr std::size_t Value = TCapacity;
+
+        };
+
+
+        template<class TProperty>
+        struct ResultCapacityValue {
+
+            static constexpr std::size_t Value = 0U;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct ResultCapacityValue<ResultCapacity<TCapacity>> {
+
+            static constexpr std::size_t Value = TCapacity;
+
+        };
+
+
+        template<class... TProperties>
+        struct ResolvedDedicatedWorkerStorage {
+
+            static constexpr std::size_t RecordCapacity =
+                (TaskRecordCapacityValue<TProperties>::Value + ... + 0U);
+
+            static constexpr std::size_t CallableCapacity =
+                (CallableCapacityValue<TProperties>::Value + ... + 0U);
+
+            static constexpr std::size_t ResultCapacity =
+                (ResultCapacityValue<TProperties>::Value + ... + 0U);
+
+        };
+
+
         template<class... TProperties>
         struct ResolvedExecutionResourceProperties {
 
@@ -324,6 +387,17 @@ namespace ESPressio::Threading {
         using Properties = ResourceProperties<TWorkerProperties...>;
 
         static constexpr std::size_t WorkerCount = 1U;
+        static constexpr std::size_t RecordCapacity =
+            Detail::ResolvedDedicatedWorkerStorage<TWorkerProperties...>::RecordCapacity;
+        static constexpr std::size_t CallableStorageCapacity =
+            Detail::ResolvedDedicatedWorkerStorage<TWorkerProperties...>::CallableCapacity;
+        static constexpr std::size_t ResultStorageCapacity =
+            Detail::ResolvedDedicatedWorkerStorage<TWorkerProperties...>::ResultCapacity;
+
+        static_assert(
+            RecordCapacity > 0U && CallableStorageCapacity > 0U,
+            "DedicatedWorkerLease requires positive TaskRecordCapacity and CallableCapacity"
+        );
 
     };
 
