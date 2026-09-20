@@ -2355,11 +2355,13 @@ int main() {
         currentWorkerBinding->Phase
     );
 
-    currentWorkerFacility.CompleteWorkerTask(
-        0U,
-        currentWorkerBinding->RecordIndex,
-        currentWorkerBinding->Phase,
-        currentWorkerOutcome
+    assert(
+        currentWorkerFacility.CompleteWorkerTask(
+                0U,
+                currentWorkerBinding->RecordIndex,
+                currentWorkerBinding->Phase,
+                currentWorkerOutcome
+        ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
     assert(
@@ -2713,11 +2715,13 @@ int main() {
         immediateBinding->Phase
     );
 
-    runtime.CompleteWorkerTask(
-        1U,
-        immediateBinding->RecordIndex,
-        immediateBinding->Phase,
-        immediateOutcome
+    assert(
+        runtime.CompleteWorkerTask(
+                1U,
+                immediateBinding->RecordIndex,
+                immediateBinding->Phase,
+                immediateOutcome
+        ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
     assert(
@@ -2777,11 +2781,13 @@ int main() {
         firstQueuedBinding->Phase
     );
 
-    runtime.CompleteWorkerTask(
-        1U,
-        firstQueuedBinding->RecordIndex,
-        firstQueuedBinding->Phase,
-        firstQueuedOutcome
+    assert(
+        runtime.CompleteWorkerTask(
+                1U,
+                firstQueuedBinding->RecordIndex,
+                firstQueuedBinding->Phase,
+                firstQueuedOutcome
+        ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
     assert(
@@ -2801,11 +2807,13 @@ int main() {
         secondQueuedBinding->Phase
     );
 
-    runtime.CompleteWorkerTask(
-        1U,
-        secondQueuedBinding->RecordIndex,
-        secondQueuedBinding->Phase,
-        secondQueuedOutcome
+    assert(
+        runtime.CompleteWorkerTask(
+                1U,
+                secondQueuedBinding->RecordIndex,
+                secondQueuedBinding->Phase,
+                secondQueuedOutcome
+        ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
     {
@@ -2855,11 +2863,13 @@ int main() {
             Test::LifetimeCallable::DestructionCount == 1U
         );
 
-        runtime.CompleteWorkerTask(
-            1U,
-            lifetimeBinding->RecordIndex,
-            lifetimeBinding->Phase,
-            lifetimeOutcome
+        assert(
+            runtime.CompleteWorkerTask(
+                        1U,
+                        lifetimeBinding->RecordIndex,
+                        lifetimeBinding->Phase,
+                        lifetimeOutcome
+            ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
         );
 
         assert(
@@ -2927,11 +2937,13 @@ int main() {
         occupyingBinding->Phase
     );
 
-    runtime.CompleteWorkerTask(
-        1U,
-        occupyingBinding->RecordIndex,
-        occupyingBinding->Phase,
-        occupyingOutcome
+    assert(
+        runtime.CompleteWorkerTask(
+                1U,
+                occupyingBinding->RecordIndex,
+                occupyingBinding->Phase,
+                occupyingOutcome
+        ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
     {
