@@ -141,20 +141,6 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
-            /// Finalizes terminal shutdown across all supplied infrastructure resources and shutdown wait state.
-            /// @tparam TShutdownWaitRuntime Shutdown-wait runtime Type used for terminal completion observation.
-            /// @tparam TInfrastructureResources Concrete infrastructure resource Types finalized during shutdown.
-            template<class TShutdownWaitRuntime, class... TInfrastructureResources>
-            void FinalizeShutdown(
-                TShutdownWaitRuntime& shutdownWaitRuntime,
-                TInfrastructureResources&... resources
-            ) noexcept {
-                _lifecycle.FinalizeShutdown(
-                    shutdownWaitRuntime,
-                    resources...
-                );
-            }
-
     };
 
 } // ESPressio::Threading::Detail
