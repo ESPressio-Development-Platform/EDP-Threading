@@ -34,6 +34,7 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     /// @tparam TFirstContextIndex First dense topology execution-context index assigned to the resource.
     /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
+    /// @tparam TWorkers Worker declaration Types owned by this Task facility.
     template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class... TWorkers, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
     class TaskFacilityOwnedRuntime<
         TaskExecutionFacility<
