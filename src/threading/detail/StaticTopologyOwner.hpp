@@ -244,11 +244,11 @@ namespace ESPressio::Threading::Detail {
                     "StartInOrder contains a topology resource index outside the declared range"
                 );
 
-                constexpr std::array<std::size_t, TTopology::ResourceCount> order{
-                    TResourceIndices...
-                };
-
                 constexpr bool unique = []() constexpr {
+                    constexpr std::array<std::size_t, TTopology::ResourceCount> order{
+                        TResourceIndices...
+                    };
+
                     for (std::size_t left = 0U; left < order.size(); ++left) {
                         for (std::size_t right = left + 1U; right < order.size(); ++right) {
                             if (order[left] == order[right]) {
