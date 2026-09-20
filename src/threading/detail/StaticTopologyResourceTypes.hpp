@@ -19,6 +19,7 @@ namespace ESPressio::Threading::Detail {
     template<class TThreadIdentity, class TBinding>
     struct IsDedicatedThreadBindingFor {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = false;
 
     };
@@ -33,6 +34,7 @@ namespace ESPressio::Threading::Detail {
         DedicatedThreadBinding<TThreadIdentity, TCallable>
     > {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -43,6 +45,7 @@ namespace ESPressio::Threading::Detail {
     template<class TThreadIdentity, class... TBindings>
     struct DedicatedThreadBindingCount {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr std::size_t Value =
             (
                 static_cast<std::size_t>(
@@ -79,6 +82,7 @@ namespace ESPressio::Threading::Detail {
         std::tuple<TBindings...>
     > {
 
+        /// Resolved Type produced by this compile-time helper.
         using Type = typename DedicatedThreadBindingType<
             TThreadIdentity,
             TBindings...
@@ -92,6 +96,7 @@ namespace ESPressio::Threading::Detail {
     template<class TThreadIdentity>
     struct DedicatedThreadBindingType<TThreadIdentity> {
 
+        /// Resolved Type produced by this compile-time helper.
         using Type = void;
 
     };
@@ -107,6 +112,7 @@ namespace ESPressio::Threading::Detail {
         TRestBindings...
     > {
 
+        /// Resolved Type produced by this compile-time helper.
         using Type = std::conditional_t<
             IsDedicatedThreadBindingFor<
                 TThreadIdentity,
@@ -127,6 +133,7 @@ namespace ESPressio::Threading::Detail {
     template<class TResource, class... TBindings>
     struct ResourceBindingIsValid {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -140,6 +147,7 @@ namespace ESPressio::Threading::Detail {
         TBindings...
     > {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value =
             DedicatedThreadBindingCount<
                 TThreadIdentity,
@@ -154,6 +162,7 @@ namespace ESPressio::Threading::Detail {
     template<class TBinding, class... TResources>
     struct BindingMatchesDeclaredThread {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = false;
 
     };
@@ -168,6 +177,7 @@ namespace ESPressio::Threading::Detail {
         TResources...
     > {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value =
             (
                 IsDedicatedThreadIdentity<
@@ -186,6 +196,7 @@ namespace ESPressio::Threading::Detail {
     template<class TResource>
     struct IsTaskExecutionResource {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = false;
 
     };
@@ -208,6 +219,7 @@ namespace ESPressio::Threading::Detail {
         >
     > {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -223,6 +235,7 @@ namespace ESPressio::Threading::Detail {
         >
     > {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -233,6 +246,7 @@ namespace ESPressio::Threading::Detail {
     template<class TBinding>
     struct IsDedicatedThreadBinding {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = false;
 
     };
@@ -246,6 +260,7 @@ namespace ESPressio::Threading::Detail {
         DedicatedThreadBinding<TThreadIdentity, TCallable>
     > {
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -264,6 +279,7 @@ namespace ESPressio::Threading::Detail {
         std::tuple<TBindings...>
     > {
 
+        /// Whether every declared Dedicated Thread has exactly one matching binding.
         static constexpr bool EveryThreadBound =
             (
                 ResourceBindingIsValid<
@@ -274,6 +290,7 @@ namespace ESPressio::Threading::Detail {
                 true
             );
 
+        /// Whether every supplied Dedicated Thread binding targets a declared thread.
         static constexpr bool EveryBindingDeclared =
             (
                 (
@@ -287,6 +304,7 @@ namespace ESPressio::Threading::Detail {
                 true
             );
 
+        /// Compile-time result or index produced by this trait/specialization.
         static constexpr bool Value =
             EveryThreadBound &&
             EveryBindingDeclared;
@@ -334,6 +352,7 @@ namespace ESPressio::Threading::Detail {
         TExecutionContextCapacity
     > {
 
+        /// Resolved Type produced by this compile-time helper.
         using Type = TaskFacilityOwnedRuntime<
             TaskExecutionFacility<
                 TPoolIdentity,
@@ -370,6 +389,7 @@ namespace ESPressio::Threading::Detail {
         TExecutionContextCapacity
     > {
 
+        /// Resolved Type produced by this compile-time helper.
         using Type = DedicatedWorkerOwnedRuntime<
             DedicatedWorkerLease<
                 TTaskIdentity,
@@ -411,11 +431,13 @@ namespace ESPressio::Threading::Detail {
             "Every DedicatedThread declaration requires exactly one matching DedicatedThreadBinding"
         );
 
+        /// Application callable-binding Type matched to a Dedicated Thread.
         using Binding = typename DedicatedThreadBindingType<
             TThreadIdentity,
             TBindings...
         >::Type;
 
+        /// Resolved Type produced by this compile-time helper.
         using Type = DedicatedThreadOwnedRuntime<
             DedicatedThread<
                 TThreadIdentity,
@@ -461,6 +483,7 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider>
+    /// Tuple Type containing all concrete resource runtime Types for a topology.
     using OwnedResourceTuple = decltype(
         OwnedResourceTupleType<
             TTopology,
