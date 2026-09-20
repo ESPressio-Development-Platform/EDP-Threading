@@ -189,6 +189,24 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    template<class TBinding>
+    struct IsDedicatedThreadBinding {
+
+        static constexpr bool Value = false;
+
+    };
+
+
+    template<class TThreadIdentity, class TCallable>
+    struct IsDedicatedThreadBinding<
+        DedicatedThreadBinding<TThreadIdentity, TCallable>
+    > {
+
+        static constexpr bool Value = true;
+
+    };
+
+
     template<class TTopology, class TBindings>
     struct ValidDedicatedThreadBindings;
 
@@ -211,10 +229,13 @@ namespace ESPressio::Threading::Detail {
 
         static constexpr bool EveryBindingDeclared =
             (
-                BindingMatchesDeclaredThread<
-                    TBindings,
-                    TResources...
-                >::Value &&
+                (
+                    IsDedicatedThreadBinding<TBindings>::Value &&
+                    BindingMatchesDeclaredThread<
+                        TBindings,
+                        TResources...
+                    >::Value
+                ) &&
                 ... &&
                 true
             );
