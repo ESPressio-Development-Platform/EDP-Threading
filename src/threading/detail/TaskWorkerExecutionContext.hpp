@@ -262,9 +262,18 @@ namespace ESPressio::Threading::Detail {
                     this
                 );
 
-                return result == ESPressio::Platform::Execution::ExecutionInitializationResult::Succeeded
-                    ? WorkerExecutionInitializationResult::Succeeded
-                    : WorkerExecutionInitializationResult::ProviderFailure;
+                if (
+                    result !=
+                    ESPressio::Platform::Execution::ExecutionInitializationResult::Succeeded
+                ) {
+                    static_cast<void>(
+                        _provider.Destroy()
+                    );
+
+                    return WorkerExecutionInitializationResult::ProviderFailure;
+                }
+
+                return WorkerExecutionInitializationResult::Succeeded;
             }
 
             /// Starts the already initialized persistent Worker trampoline.
