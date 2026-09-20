@@ -31,8 +31,10 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Compact Type used to identify one managed execution context.
             using ContextIndex = typename SmallestIndex<1U>::Type;
 
+            /// Number of managed execution contexts represented by this runtime.
             static constexpr std::size_t ContextCapacity = 0U;
 
 
