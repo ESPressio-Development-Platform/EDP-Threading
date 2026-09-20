@@ -182,6 +182,11 @@ namespace ESPressio::Threading {
     template<class... TWorkerProperties>
     struct Worker final {
 
+        static_assert(
+            Detail::ValidExecutionResourceProperties<TWorkerProperties...>::Value,
+            "Worker contains duplicate StackCapacity, Priority or affinity properties"
+        );
+
         using Properties = ResourceProperties<TWorkerProperties...>;
 
     };
@@ -222,6 +227,11 @@ namespace ESPressio::Threading {
     template<class TTaskIdentity, class... TWorkerProperties>
     struct DedicatedWorkerLease final {
 
+        static_assert(
+            Detail::ValidExecutionResourceProperties<TWorkerProperties...>::Value,
+            "DedicatedWorkerLease contains duplicate StackCapacity, Priority or affinity properties"
+        );
+
         using TaskIdentity = TTaskIdentity;
         using Properties = ResourceProperties<TWorkerProperties...>;
 
@@ -232,6 +242,11 @@ namespace ESPressio::Threading {
 
     template<class TThreadIdentity, class... TThreadProperties>
     struct DedicatedThread final {
+
+        static_assert(
+            Detail::ValidExecutionResourceProperties<TThreadProperties...>::Value,
+            "DedicatedThread contains duplicate StackCapacity, Priority or affinity properties"
+        );
 
         using ThreadIdentity = TThreadIdentity;
         using Properties = ResourceProperties<TThreadProperties...>;
