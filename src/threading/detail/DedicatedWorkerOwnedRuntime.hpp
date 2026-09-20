@@ -38,11 +38,13 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            /// Static topology declaration Type realized by this owned resource.
             using Declaration = DedicatedWorkerLease<
                 TTaskIdentity,
                 TProperties...
             >;
 
+            /// Concrete runtime Type realized from the static declaration.
             using Runtime = DedicatedWorkerLeaseRuntime<
                 TTaskIdentity,
                 Declaration::RecordCapacity,
@@ -60,17 +62,21 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Semantic identity Type of this Dedicated Worker task.
             using TaskIdentity = TTaskIdentity;
+            /// Public alias exposing the concrete owned runtime Type.
             using RuntimeType = Runtime;
 
             /// Defines the compile-time contract for `TaskForCallable`.
             /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
+            /// Concrete Task handle Type produced for the supplied callable.
             using TaskForCallable = typename Runtime::template TaskForCallable<TCallable>;
 
             /// Defines the compile-time contract for `DispatchResultFor`.
             /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
+            /// Typed dispatch-result Type produced for the supplied callable.
             using DispatchResultFor = typename Runtime::template DispatchResultFor<TCallable>;
 
 
