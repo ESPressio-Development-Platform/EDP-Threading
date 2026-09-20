@@ -3,54 +3,81 @@
 #include <tuple>
 #include <utility>
 
-#ifdef ARDUINO
-#include <Arduino.h>
-#endif
-
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-
 #include <ESPressio_Platform_FreeRTOS.hpp>
 #include <ESPressio_Platform_ESP_IDF.hpp>
 #include <ESPressio_Threading.hpp>
 
 namespace Demo {
 
-    void Print(
-        const char* message
-    ) noexcept {
-#ifdef ARDUINO
-        Serial.println(
-            message
-        );
-#else
-        std::printf(
-            "%s\n",
-            message
-        );
-#endif
-    }
-
-
     namespace Threading = ESPressio::Threading;
 
+
+    /// Outcome of running the basic Threading demonstration.
+    enum class DemonstrationResult : std::uint8_t {
+        Succeeded = 0,
+        InitializationFailed = 1,
+        InfrastructureStartFailed = 2,
+        TaskDispatchFailed = 3,
+        TaskResultMismatch = 4,
+        ThreadActivationFailed = 5,
+        ThreadStopRequestFailed = 6,
+        ShutdownInitiationFailed = 7,
+        FinalizationFailed = 8,
+        TerminalWaitFailed = 9
+    };
+
+
+    // Concrete Platform providers selected by this target surface.
+
+    /// Targeted-wake provider used by managed Threading contexts.
+    using SignalProvider =
+        ESPressio::Platform::FreeRTOS::Synchronization::SignalProvider;
+
+#ifdef ARDUINO
+    /// Native execution-context provider selected by the Arduino-ESP32 surface.
+    using ExecutionContextProvider =
+        ESPressio::Platform::FreeRTOS::Execution::ExecutionContextProvider;
+#else
+    /// Native execution-context provider selected by the ESP-IDF surface.
+    using ExecutionContextProvider =
+        ESPressio::Platform::ESPIDF::Execution::ExecutionContextProvider;
+#endif
+
+    /// Topology lifecycle SpinLock provider.
+    using SpinLockProvider =
+        ESPressio::Platform::ESPIDF::Synchronization::SpinLockProvider;
+
+    /// Resource-local Mutex provider.
+    using MutexProvider =
+        ESPressio::Platform::FreeRTOS::Synchronization::MutexProvider;
+
+
+    // Demonstration topology identities and behavior.
+
+    /// Semantic identity of the ordinary Task execution facility.
     struct WorkPool final {};
+
+    /// Semantic identity of the persistent Dedicated Thread.
     struct HeartbeatThread final {};
 
+    /// Stateful callable bound to the Dedicated Thread.
     struct Heartbeat final {
 
+        /// Runs one semantic Dedicated Thread activation until cooperative stop is requested.
         void operator ()(
             Threading::ThreadContext& context
         ) noexcept {
             while (!context.IsStopRequested()) {
-                vTaskDelay(
-                    pdMS_TO_TICKS(10U)
-                );
+                ExecutionContextProvider::Yield();
             }
         }
 
     };
 
+
+    // Static Threading topology.
+
+    /// Complete compile-time Threading resource topology used by the demonstration.
     using Topology = Threading::ThreadingTopology<
         Threading::TaskExecutionFacility<
             WorkPool,
@@ -73,25 +100,24 @@ namespace Demo {
         >
     >;
 
-    using SignalProvider =
-        ESPressio::Platform::FreeRTOS::Synchronization::SignalProvider;
 
-#ifdef ARDUINO
-    using ExecutionContextProvider =
-        ESPressio::Platform::FreeRTOS::Execution::ExecutionContextProvider;
-#else
-    using ExecutionContextProvider =
-        ESPressio::Platform::ESPIDF::Execution::ExecutionContextProvider;
-#endif
+    // Diagnostic output.
 
-    using SpinLockProvider =
-        ESPressio::Platform::ESPIDF::Synchronization::SpinLockProvider;
-
-    using MutexProvider =
-        ESPressio::Platform::FreeRTOS::Synchronization::MutexProvider;
+    /// Writes one human-readable demonstration status line using portable Standard C output.
+    void Print(
+        const char* message
+    ) noexcept {
+        std::printf(
+            "%s\n",
+            message
+        );
+    }
 
 
-    bool Run() {
+    // Demonstration lifecycle.
+
+    /// Executes the basic Threading lifecycle and reports the first operational failure encountered.
+    DemonstrationResult Run() {
         auto bindings = std::make_tuple(
             Threading::BindDedicatedThread<HeartbeatThread>(
                 Heartbeat{}
@@ -119,7 +145,7 @@ namespace Demo {
             Threading::ThreadingInitializationResult::Succeeded
         ) {
             Print("EDP-Threading demo: initialization failed");
-            return false;
+            return DemonstrationResult::InitializationFailed;
         }
 
         if (
@@ -127,12 +153,8 @@ namespace Demo {
             Threading::ThreadingStartResult::Succeeded
         ) {
             Print("EDP-Threading demo: infrastructure start failed");
-            return false;
+            return DemonstrationResult::InfrastructureStartFailed;
         }
-
-        vTaskDelay(
-            pdMS_TO_TICKS(25U)
-        );
 
         auto dispatch = runtime.Dispatch<WorkPool>(
             []() noexcept {
@@ -143,15 +165,13 @@ namespace Demo {
 
         if (!dispatch.IsSucceeded()) {
             Print("EDP-Threading demo: Task dispatch failed");
-            return false;
+            return DemonstrationResult::TaskDispatchFailed;
         }
 
         auto task = dispatch.TakeTask();
 
         while (!task.IsFinished()) {
-            vTaskDelay(
-                pdMS_TO_TICKS(1U)
-            );
+            ExecutionContextProvider::Yield();
         }
 
         auto result = task.TakeResult();
@@ -161,7 +181,7 @@ namespace Demo {
             result.TakeResult() != 42
         ) {
             Print("EDP-Threading demo: Task result mismatch");
-            return false;
+            return DemonstrationResult::TaskResultMismatch;
         }
 
         auto thread = runtime.ThreadHandle<HeartbeatThread>();
@@ -171,25 +191,19 @@ namespace Demo {
             Threading::ThreadStartResult::Started
         ) {
             Print("EDP-Threading demo: Dedicated Thread activation failed");
-            return false;
+            return DemonstrationResult::ThreadActivationFailed;
         }
-
-        vTaskDelay(
-            pdMS_TO_TICKS(25U)
-        );
 
         if (
             thread.RequestStop() !=
             Threading::ThreadStopRequestResult::Accepted
         ) {
             Print("EDP-Threading demo: Dedicated Thread stop request failed");
-            return false;
+            return DemonstrationResult::ThreadStopRequestFailed;
         }
 
         while (thread.State() == Threading::ThreadState::Running) {
-            vTaskDelay(
-                pdMS_TO_TICKS(1U)
-            );
+            ExecutionContextProvider::Yield();
         }
 
         if (
@@ -197,13 +211,11 @@ namespace Demo {
             Threading::ThreadingShutdownResult::Accepted
         ) {
             Print("EDP-Threading demo: shutdown initiation failed");
-            return false;
+            return DemonstrationResult::ShutdownInitiationFailed;
         }
 
         while (!runtime.IsExecutionQuiescent()) {
-            vTaskDelay(
-                pdMS_TO_TICKS(1U)
-            );
+            ExecutionContextProvider::Yield();
         }
 
         if (
@@ -211,7 +223,7 @@ namespace Demo {
             Threading::ThreadingFinalizationResult::Completed
         ) {
             Print("EDP-Threading demo: finalization failed");
-            return false;
+            return DemonstrationResult::FinalizationFailed;
         }
 
         if (
@@ -219,17 +231,35 @@ namespace Demo {
             Threading::ShutdownWaitResult::Completed
         ) {
             Print("EDP-Threading demo: terminal wait failed");
-            return false;
+            return DemonstrationResult::TerminalWaitFailed;
         }
 
         Print("EDP-Threading demo: PASS");
-        return true;
+        return DemonstrationResult::Succeeded;
     }
 
 } // Demo
 
+
+#ifdef ARDUINO
+
+/// Runs the Arduino demonstration once after framework startup.
+void setup() {
+    static_cast<void>(
+        Demo::Run()
+    );
+}
+
+/// Leaves the Arduino demonstration idle after its one-shot run.
+void loop() {}
+
+#else
+
+/// Runs the ESP-IDF demonstration once from the framework application entry.
 extern "C" void app_main() {
     static_cast<void>(
         Demo::Run()
     );
 }
+
+#endif
