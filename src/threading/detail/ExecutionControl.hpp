@@ -5,6 +5,9 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `ExecutionControl`.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
     template<class TExecutionContextProvider, class TManagedContextRouter>
     class ExecutionControl final {
 
