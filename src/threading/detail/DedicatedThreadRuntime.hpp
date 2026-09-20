@@ -13,13 +13,67 @@
 
 namespace ESPressio::Threading::Detail {
 
+    template<class TCallable, class = void>
+    struct IsVoidThreadCallableWithoutContext final {
+
+        static constexpr bool Value = false;
+
+    };
+
+
+    template<class TCallable>
+    struct IsVoidThreadCallableWithoutContext<
+        TCallable,
+        std::void_t<
+            std::invoke_result_t<TCallable&>
+        >
+    > final {
+
+        static constexpr bool Value = std::is_same_v<
+            std::invoke_result_t<TCallable&>,
+            void
+        >;
+
+    };
+
+
+    template<class TCallable, class = void>
+    struct IsVoidThreadCallableWithContext final {
+
+        static constexpr bool Value = false;
+
+    };
+
+
+    template<class TCallable>
+    struct IsVoidThreadCallableWithContext<
+        TCallable,
+        std::void_t<
+            std::invoke_result_t<
+                TCallable&,
+                ThreadContext&
+            >
+        >
+    > final {
+
+        static constexpr bool Value = std::is_same_v<
+            std::invoke_result_t<
+                TCallable&,
+                ThreadContext&
+            >,
+            void
+        >;
+
+    };
+
+
     template<class TThreadIdentity, class TCallable, std::size_t TStackCapacity, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider, class TMutexProvider, class TExecutionContextProvider, class TManagedContextRouter>
     class DedicatedThreadRuntime final {
 
         static_assert(
-            std::is_invocable_r_v<void, TCallable&, ThreadContext&> ||
-            std::is_invocable_r_v<void, TCallable&>,
-            "Dedicated Thread callable must return void and accept either ThreadContext& or no arguments"
+            IsVoidThreadCallableWithContext<TCallable>::Value ||
+            IsVoidThreadCallableWithoutContext<TCallable>::Value,
+            "Dedicated Thread callable must return exactly void and accept either ThreadContext& or no arguments"
         );
 
         private:
