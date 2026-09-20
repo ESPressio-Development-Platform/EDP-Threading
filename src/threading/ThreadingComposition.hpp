@@ -484,8 +484,42 @@ namespace ESPressio::Threading {
     struct DedicatedWorkerLease final {
 
         static_assert(
-            Detail::ValidExecutionResourceProperties<TWorkerProperties...>::Value,
-            "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
+            (
+                (
+                    Detail::IsExecutionResourceProperty<TWorkerProperties>::Value ||
+                    Detail::IsTaskRecordCapacityProperty<TWorkerProperties>::Value ||
+                    Detail::IsCallableCapacityProperty<TWorkerProperties>::Value ||
+                    Detail::IsResultCapacityProperty<TWorkerProperties>::Value
+                ) &&
+                ... &&
+                true
+            ),
+            "DedicatedWorkerLease contains an unrecognized execution/storage property"
+        );
+
+        static_assert(
+            (
+                static_cast<std::size_t>(
+                    Detail::IsStackCapacityProperty<TWorkerProperties>::Value
+                ) +
+                ... +
+                0U
+            ) <= 1U &&
+            (
+                static_cast<std::size_t>(
+                    Detail::IsPriorityProperty<TWorkerProperties>::Value
+                ) +
+                ... +
+                0U
+            ) <= 1U &&
+            (
+                static_cast<std::size_t>(
+                    Detail::IsAffinityProperty<TWorkerProperties>::Value
+                ) +
+                ... +
+                0U
+            ) <= 1U,
+            "DedicatedWorkerLease contains duplicate StackCapacity, Priority or affinity properties"
         );
 
         static_assert(
