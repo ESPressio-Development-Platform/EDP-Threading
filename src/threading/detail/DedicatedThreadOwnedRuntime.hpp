@@ -67,6 +67,7 @@ namespace ESPressio::Threading::Detail {
             using RuntimeType = Runtime;
 
 
+            /// Constructs the owned Dedicated Thread runtime from its bound callable and topology services.
             DedicatedThreadOwnedRuntime(
                 TCallable callable,
                 TManagedContextRouter& router,
@@ -92,6 +93,7 @@ namespace ESPressio::Threading::Detail {
                 ) {}
 
 
+            /// Initializes the persistent Platform execution context without starting it.
             WorkerExecutionInitializationResult Initialize() noexcept {
                 return _runtime.Initialize(
                     Declaration::Properties::Priority,
@@ -99,14 +101,17 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Starts the persistent Platform execution context after global initialization commits.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
                 return _runtime.StartInfrastructure();
             }
 
+            /// Wakes the persistent context so rollback or shutdown termination can be observed.
             void RequestInfrastructureTermination() noexcept {
                 _runtime.RequestInfrastructureTermination();
             }
 
+            /// Joins the persistent Platform execution context using the supplied Platform wait budget.
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
@@ -115,19 +120,23 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Destroys the initialized Platform execution context and its provider-owned native state.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return _runtime.DestroyInfrastructure();
             }
 
 
+            /// Creates a non-owning control handle for this topology-owned Dedicated Thread.
             Thread<TThreadIdentity> Handle() noexcept {
                 return _runtime.Handle();
             }
 
+            /// Starts one semantic Dedicated Thread activation when lifecycle state permits it.
             ThreadStartResult StartActivation() noexcept {
                 return _runtime.StartActivation();
             }
 
+            /// Requests cooperative stop of the currently active Dedicated Thread activation.
             ThreadStopRequestResult RequestStop() noexcept {
                 return _runtime.RequestStop();
             }
@@ -138,6 +147,7 @@ namespace ESPressio::Threading::Detail {
                 return _runtime.CurrentContextIndex();
             }
 
+            /// Indicates whether the addressed managed context currently carries a stop or shutdown interruption.
             bool IsContextInterrupted(
                 typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type contextIndex
             ) noexcept {
@@ -147,11 +157,13 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Indicates whether this Dedicated Thread has no active semantic execution remaining.
             bool IsExecutionQuiescent() noexcept {
                 return _runtime.IsExecutionQuiescent();
             }
 
 
+            /// Exposes the owned concrete runtime to internal topology coordination.
             Runtime& RuntimeState() noexcept {
                 return _runtime;
             }
