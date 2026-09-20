@@ -46,8 +46,9 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `StructuralContextResolver`.
+    /// Resolves managed-context identity and interruption structurally across topology-owned runtime resources.
     /// @tparam TContextCapacity Number of managed execution contexts represented by the topology.
+    /// @tparam TResources Concrete topology-owned runtime resource Types searched by the resolver.
     template<std::size_t TContextCapacity, class... TResources>
     class StructuralContextResolver final {
 
@@ -59,6 +60,9 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            // Structural resource bindings.
+
+            /// Non-owning pointers to the topology-owned runtime resources searched for context identity/interruption.
             std::tuple<TResources*...> _resources;
 
 
