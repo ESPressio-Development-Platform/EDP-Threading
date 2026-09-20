@@ -380,7 +380,8 @@ namespace ESPressio::Threading::Detail {
                 if (
                     _wakeSet.Validate() !=
                     ManagedContextWakeValidationResult::Ready ||
-                    !_shutdownWait.ValidateSynchronization()
+                    _shutdownWait.ValidateSynchronization() !=
+                    ShutdownWaitSynchronizationResult::Ready
                 ) {
                     return ThreadingInitializationResult::ProviderFailure;
                 }
@@ -441,7 +442,8 @@ namespace ESPressio::Threading::Detail {
                 if (
                     _wakeSet.Validate() !=
                     ManagedContextWakeValidationResult::Ready ||
-                    !_shutdownWait.ValidateSynchronization()
+                    _shutdownWait.ValidateSynchronization() !=
+                    ShutdownWaitSynchronizationResult::Ready
                 ) {
                     return ThreadingInitializationResult::ProviderFailure;
                 }
