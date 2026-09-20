@@ -28,31 +28,38 @@ namespace ESPressio::Threading::Detail {
 
             // Provider-declared backing requirements.
 
+            /// Composition capability set exposed by the execution-context provider.
             using Capabilities = typename TExecutionContextProvider::CompositionCapabilities;
+            /// Resolved capability-property set for the execution-context provider.
             using Properties = typename Capabilities::template PropertiesFor<
                 ESPressio::Platform::Execution::ExecutionContext
             >;
 
+            /// Caller-owned native execution-control backing bytes required by the provider.
             static constexpr std::size_t ControlBytes =
                 Properties::template Value<
                     ESPressio::Platform::Execution::ControlStorageBytes
                 >;
 
+            /// Required alignment of caller-owned execution-control backing.
             static constexpr std::size_t ControlAlignment =
                 Properties::template Value<
                     ESPressio::Platform::Execution::ControlStorageAlignment
                 >;
 
+            /// Required alignment of caller-owned execution stack backing.
             static constexpr std::size_t StackAlignment =
                 Properties::template Value<
                     ESPressio::Platform::Execution::StackStorageAlignment
                 >;
 
+            /// Provider allocation granularity used when reserving stack bytes.
             static constexpr std::size_t StackGranularity =
                 Properties::template Value<
                     ESPressio::Platform::Execution::StackAllocationGranularityBytes
                 >;
 
+            /// Physical stack reservation after rounding the semantic request to provider granularity.
             static constexpr std::size_t RoundedStackBytes =
                 (
                     (
@@ -132,6 +139,7 @@ namespace ESPressio::Threading::Detail {
 
             // Provider contract.
 
+            /// Validated Platform execution-context provider contract traits.
             using ProviderTraits =
                 ESPressio::Platform::Execution::Detail::ExecutionContextProviderTraits<
                     TExecutionContextProvider
