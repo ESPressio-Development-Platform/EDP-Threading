@@ -245,26 +245,29 @@ namespace ESPressio::Threading::Detail {
                     _tail.IsExecutionQuiescent();
             }
 
-            bool FinalizeShutdown() noexcept {
+            ThreadingFinalizationResult FinalizeShutdown() noexcept {
                 _resource.RequestInfrastructureTermination();
 
-                const bool joined =
-                    _resource.JoinInfrastructure(
-                        ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                    ) ==
-                    ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
+                const auto joinResult = _resource.JoinInfrastructure(
+                    ESPressio::Platform::Synchronization::WaitTimeout::Forever()
+                );
 
-                const bool destroyed =
-                    joined &&
-                    _resource.DestroyInfrastructure() ==
-                    ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
+                const auto destroyResult =
+                    joinResult == ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded
+                    ? _resource.DestroyInfrastructure()
+                    : ESPressio::Platform::Execution::ExecutionDestroyResult::ProviderFailure;
 
-                const bool tailFinalized =
-                    _tail.FinalizeShutdown();
+                const auto tailResult = _tail.FinalizeShutdown();
 
-                return joined &&
-                    destroyed &&
-                    tailFinalized;
+                if (
+                    joinResult != ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded ||
+                    destroyResult != ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded ||
+                    tailResult != ThreadingFinalizationResult::Completed
+                ) {
+                    return ThreadingFinalizationResult::ProviderFailure;
+                }
+
+                return ThreadingFinalizationResult::Completed;
             }
 
 
@@ -325,8 +328,8 @@ namespace ESPressio::Threading::Detail {
                 return true;
             }
 
-            bool FinalizeShutdown() noexcept {
-                return true;
+            ThreadingFinalizationResult FinalizeShutdown() noexcept {
+                return ThreadingFinalizationResult::Completed;
             }
 
     };
