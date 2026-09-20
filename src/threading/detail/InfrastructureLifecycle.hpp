@@ -84,46 +84,54 @@ namespace ESPressio::Threading::Detail {
             }
 
             template<std::size_t TIndex, class TTuple>
-            static void JoinStarted(
+            static bool JoinStarted(
                 TTuple& resources,
                 std::size_t startedCount
             ) noexcept {
                 if constexpr (
-                    TIndex < std::tuple_size_v<TTuple>
+                    TIndex == std::tuple_size_v<TTuple>
                 ) {
+                    return true;
+                } else {
+                    bool joined = true;
+
                     if (TIndex < startedCount) {
-                        static_cast<void>(
+                        joined =
                             std::get<TIndex>(
                                 resources
                             ).JoinInfrastructure(
                                 ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                            )
-                        );
+                            ) ==
+                            ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
                     }
 
-                    JoinStarted<TIndex + 1U>(
+                    return JoinStarted<TIndex + 1U>(
                         resources,
                         startedCount
-                    );
+                    ) &&
+                        joined;
                 }
             }
 
             template<std::size_t TIndex, class TTuple>
-            static void DestroyAll(
+            static bool DestroyAll(
                 TTuple& resources
             ) noexcept {
                 if constexpr (
-                    TIndex < std::tuple_size_v<TTuple>
+                    TIndex == std::tuple_size_v<TTuple>
                 ) {
-                    static_cast<void>(
+                    return true;
+                } else {
+                    const bool destroyed =
                         std::get<TIndex>(
                             resources
-                        ).DestroyInfrastructure()
-                    );
+                        ).DestroyInfrastructure() ==
+                        ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
 
-                    DestroyAll<TIndex + 1U>(
+                    return DestroyAll<TIndex + 1U>(
                         resources
-                    );
+                    ) &&
+                        destroyed;
                 }
             }
 
@@ -231,13 +239,21 @@ namespace ESPressio::Threading::Detail {
                         startedCount
                     );
 
-                    JoinStarted<0U>(
+                    const bool joined = JoinStarted<0U>(
                         resourceTuple,
                         startedCount
                     );
 
-                    DestroyAll<0U>(
+                    const bool destroyed = DestroyAll<0U>(
                         resourceTuple
+                    );
+
+                    static_cast<void>(
+                        joined
+                    );
+
+                    static_cast<void>(
+                        destroyed
                     );
 
                     return ThreadingStartResult::ProviderFailure;
