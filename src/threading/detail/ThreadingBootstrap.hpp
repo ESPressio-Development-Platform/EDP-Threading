@@ -8,6 +8,8 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `ThreadingBootstrap`.
+    /// @tparam TSpinLockProvider Concrete Platform SpinLock provider Type protecting lifecycle publication.
     template<class TSpinLockProvider>
     class ThreadingBootstrap final {
 
@@ -59,6 +61,9 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle-gated Task dispatch.
 
+            /// Defines the compile-time contract for `Dispatch`.
+            /// @tparam TFacility Task facility Type receiving lifecycle-gated dispatch.
+            /// @tparam TCallable Callable Type being dispatched.
             template<class TFacility, class TCallable>
             auto Dispatch(
                 TFacility& facility,
@@ -86,6 +91,8 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle-gated Dedicated Thread activation.
 
+            /// Defines the compile-time contract for `StartThread`.
+            /// @tparam TDedicatedThreadRuntime Dedicated Thread runtime Type being lifecycle-gated.
             template<class TDedicatedThreadRuntime>
             ThreadStartResult StartThread(
                 TDedicatedThreadRuntime& thread
@@ -100,6 +107,9 @@ namespace ESPressio::Threading::Detail {
 
             // Terminal shutdown.
 
+            /// Defines the compile-time contract for `BeginShutdown`.
+            /// @tparam TTaskResourceTuple Tuple Type containing Task-execution resources.
+            /// @tparam TDedicatedThreadTuple Tuple Type containing Dedicated Thread resources.
             template<class TTaskResourceTuple, class TDedicatedThreadTuple>
             ThreadingShutdownResult BeginShutdown(
                 TTaskResourceTuple& taskResources,
@@ -112,6 +122,9 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Defines the compile-time contract for `IsExecutionQuiescent`.
+            /// @tparam TTaskResourceTuple Tuple Type containing Task-execution resources.
+            /// @tparam TDedicatedThreadTuple Tuple Type containing Dedicated Thread resources.
             template<class TTaskResourceTuple, class TDedicatedThreadTuple>
             bool IsExecutionQuiescent(
                 TTaskResourceTuple& taskResources,
@@ -123,6 +136,8 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Defines the compile-time contract for `FinalizeShutdown`.
+            /// @tparam TShutdownWaitRuntime Shutdown-wait runtime Type used for terminal completion observation.
             template<class TShutdownWaitRuntime, class... TInfrastructureResources>
             void FinalizeShutdown(
                 TShutdownWaitRuntime& shutdownWaitRuntime,
