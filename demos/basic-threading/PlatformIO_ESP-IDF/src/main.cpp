@@ -12,6 +12,9 @@
 
 #include <ESPressio_Platform_FreeRTOS.hpp>
 #include <ESPressio_Platform_Portable.hpp>
+#ifndef ARDUINO
+#include <ESPressio_Platform_ESP_IDF.hpp>
+#endif
 #include <ESPressio_Threading.hpp>
 
 namespace Demo {
@@ -76,8 +79,13 @@ namespace Demo {
     using SignalProvider =
         ESPressio::Platform::FreeRTOS::Synchronization::SignalProvider;
 
+#ifdef ARDUINO
     using ExecutionContextProvider =
         ESPressio::Platform::FreeRTOS::Execution::ExecutionContextProvider;
+#else
+    using ExecutionContextProvider =
+        ESPressio::Platform::ESPIDF::Execution::ExecutionContextProvider;
+#endif
 
     using AtomicWord8Provider =
         ESPressio::Platform::Portable::Concurrency::AtomicWord8Provider;
