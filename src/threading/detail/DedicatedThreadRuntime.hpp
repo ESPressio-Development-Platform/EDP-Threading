@@ -17,8 +17,21 @@ namespace ESPressio::Threading::Detail {
     class DedicatedThreadRuntime final {
 
         static_assert(
-            std::is_invocable_r_v<void, TCallable&>,
-            "Dedicated Thread callable must be invocable with no arguments and return void"
+            (
+                std::is_invocable_v<TCallable&, ThreadContext&> &&
+                std::is_same_v<
+                    std::invoke_result_t<TCallable&, ThreadContext&>,
+                    void
+                >
+            ) ||
+            (
+                std::is_invocable_v<TCallable&> &&
+                std::is_same_v<
+                    std::invoke_result_t<TCallable&>,
+                    void
+                >
+            ),
+            "Dedicated Thread callable must return void and accept either ThreadContext& or no arguments"
         );
 
         private:
@@ -141,6 +154,31 @@ namespace ESPressio::Threading::Detail {
                 return state == DedicatedThreadOperationalState::Stopped;
             }
 
+            static bool IsStopRequestedThunk(
+                const void* resource
+            ) noexcept {
+                return static_cast<const DedicatedThreadRuntime*>(
+                    resource
+                )->IsStopRequested();
+            }
+
+            void InvokeCallable() {
+                if constexpr (
+                    std::is_invocable_v<TCallable&, ThreadContext&>
+                ) {
+                    ThreadContext context(
+                        this,
+                        &IsStopRequestedThunk
+                    );
+
+                    _callable(
+                        context
+                    );
+                } else {
+                    _callable();
+                }
+            }
+
             void PublishStopped(
                 bool activationPhase
             ) noexcept {
@@ -200,7 +238,7 @@ namespace ESPressio::Threading::Detail {
                     }
 
                     if (shouldRun) {
-                        self->_callable();
+                        self->InvokeCallable();
                         self->PublishStopped(
                             activationPhase
                         );
