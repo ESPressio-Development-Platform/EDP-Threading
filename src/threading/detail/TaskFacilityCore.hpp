@@ -914,6 +914,37 @@ namespace ESPressio::Threading::Detail {
                 return inUse;
             }
 
+            /// Indicates whether any admitted Task still has execution work outstanding.
+            ///
+            /// Completed/Cancelled records retained solely by public ownership or waiters do not
+            /// keep Worker infrastructure alive during terminal shutdown.
+            bool HasExecutionWork() const noexcept {
+                for (std::size_t index = 0U; index < TRecordCapacity; ++index) {
+                    const auto recordIndex = static_cast<Index>(
+                        index
+                    );
+
+                    if (_availability.IsAvailable(
+                        recordIndex
+                    )) {
+                        continue;
+                    }
+
+                    const auto state = _records[recordIndex].Control.State();
+
+                    if (
+                        state == TaskOperationalState::Queued ||
+                        state == TaskOperationalState::Running ||
+                        state == TaskOperationalState::RunningCancelRequested
+                    ) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+
             /// Returns the number of currently queued Tasks.
             ///
             /// The owning facility runtime must serialize this traversal with queue mutation.
