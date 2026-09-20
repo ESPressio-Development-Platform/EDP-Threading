@@ -220,11 +220,13 @@ namespace ESPressio::Threading::Detail {
                             binding->Phase
                         );
 
-                        self->_facility->CompleteWorkerTask(
-                            self->_contextIndex,
-                            binding->RecordIndex,
-                            binding->Phase,
-                            outcome
+                        static_cast<void>(
+                            self->_facility->CompleteWorkerTask(
+                                self->_contextIndex,
+                                binding->RecordIndex,
+                                binding->Phase,
+                                outcome
+                            )
                         );
 
                         continue;
