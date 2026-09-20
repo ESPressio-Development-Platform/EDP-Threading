@@ -201,10 +201,7 @@ namespace ESPressio::Threading::Detail {
                     _tail.IsExecutionQuiescent();
             }
 
-            template<class TShutdownWaitRuntime>
-            void FinalizeShutdown(
-                TShutdownWaitRuntime& shutdownWaitRuntime
-            ) noexcept {
+            void FinalizeShutdown() noexcept {
                 _resource.RequestInfrastructureTermination();
 
                 static_cast<void>(
