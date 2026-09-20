@@ -180,8 +180,8 @@ namespace ESPressio::Threading::Detail {
             // Shutdown cooperation.
 
             /// Cancels queued work and requests cooperative cancellation of any running lease Task.
-            void BeginShutdownCancellation() noexcept {
-                _facility.BeginShutdownCancellation();
+            TaskFacilityShutdownCancellationResult BeginShutdownCancellation() noexcept {
+                return _facility.BeginShutdownCancellation();
             }
 
             /// Indicates whether this isolated Worker lease has no remaining executable Task work.
