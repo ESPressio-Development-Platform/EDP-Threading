@@ -13,6 +13,9 @@ namespace ESPressio::Threading::Detail {
     ///
     /// @tparam TContextCapacity Number of managed execution contexts in the topology.
     /// @tparam TResources Concrete statically owned runtime resource Types participating in resolution.
+    /// Resolves current-context identity and interruption state structurally across topology-owned resources.
+    /// @tparam TContextCapacity Total managed execution-context capacity represented by the resolver.
+    /// @tparam TResources Concrete topology-owned runtime resource Types searched structurally.
     template<std::size_t TContextCapacity, class... TResources>
     class StructuralContextResolver;
 
