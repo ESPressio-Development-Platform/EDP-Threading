@@ -35,7 +35,25 @@
 
 namespace Test {
 
-    class AtomicByteProvider final {
+    namespace Framework = ESPressio::System::CompositionFramework;
+
+
+    class AtomicWord32Provider final : public Framework::Provider<
+        ESPressio::Platform::Domain,
+        Framework::Provides<
+            Framework::Offer<
+                ESPressio::Platform::Concurrency::AtomicWord32,
+                Framework::PropertyValue<
+                    ESPressio::Platform::Concurrency::LockFree,
+                    true
+                >,
+                Framework::PropertyValue<
+                    ESPressio::Platform::Concurrency::AtomicWordStorageBytes,
+                    4U
+                >
+            >
+        >
+    > {
 
         public:
 
@@ -45,41 +63,39 @@ namespace Test {
 
                     // Test atomic state.
 
-                    /// Test-owned byte value.
-                    std::uint8_t _value = 0U;
+                    std::uint32_t _value = 0U;
 
                 public:
 
-                    // Test atomic operations.
+                    Word() noexcept = default;
+                    Word(const Word&) = delete;
+                    Word& operator =(const Word&) = delete;
+                    Word(Word&&) = delete;
+                    Word& operator =(Word&&) = delete;
 
-                    /// Reads the test byte without ordering significance.
-                    std::uint8_t LoadRelaxed() const noexcept {
+                    std::uint32_t LoadRelaxed() const noexcept {
                         return _value;
                     }
 
-                    /// Reads the test byte with acquire-equivalent test semantics.
-                    std::uint8_t LoadAcquire() const noexcept {
+                    std::uint32_t LoadAcquire() const noexcept {
                         return _value;
                     }
 
-                    /// Stores the test byte without ordering significance.
                     void StoreRelaxed(
-                        std::uint8_t value
+                        std::uint32_t value
                     ) noexcept {
                         _value = value;
                     }
 
-                    /// Stores the test byte with release-equivalent test semantics.
                     void StoreRelease(
-                        std::uint8_t value
+                        std::uint32_t value
                     ) noexcept {
                         _value = value;
                     }
 
-                    /// Replaces the byte when the expected value matches.
                     bool CompareExchangeAcqRel(
-                        std::uint8_t& expected,
-                        std::uint8_t desired
+                        std::uint32_t& expected,
+                        std::uint32_t desired
                     ) noexcept {
                         if (_value != expected) {
                             expected = _value;
@@ -95,7 +111,13 @@ namespace Test {
     };
 
 
-    namespace Framework = ESPressio::System::CompositionFramework;
+    inline bool CancellationFlag(
+        const void* context
+    ) noexcept {
+        return *static_cast<const bool*>(
+            context
+        );
+    }
 
 
     class ExecutionContextProvider final : public Framework::Provider<
@@ -563,7 +585,6 @@ namespace Test {
             HeterogeneousFacilityDeclaration,
             ManagedContextRouter,
             ExecutionContextProvider,
-            AtomicByteProvider,
             MutexProvider,
             0U,
             ManagedContextRouter::ContextCapacity
@@ -620,16 +641,14 @@ namespace Test {
         32U,
         16U,
         8U,
-        4U,
-        AtomicByteProvider
+        4U
     >;
 
     using TestFacilityCore = ESPressio::Threading::Detail::TaskFacilityCore<
         3U,
         32U,
         16U,
-        4U,
-        AtomicByteProvider
+        4U
     >;
 
 
@@ -814,12 +833,12 @@ namespace Test {
 
 
     static_assert(
-        sizeof(ESPressio::Threading::Detail::TaskControl<AtomicByteProvider>) == 1U,
+        sizeof(ESPressio::Threading::Detail::TaskControl) == 1U,
         "Task intrinsic control must remain one byte"
     );
 
     static_assert(
-        sizeof(ESPressio::Threading::Detail::DedicatedThreadControl<AtomicByteProvider>) == 1U,
+        sizeof(ESPressio::Threading::Detail::DedicatedThreadControl) == 1U,
         "Dedicated Thread intrinsic control must remain one byte"
     );
 
@@ -863,7 +882,6 @@ namespace Test {
         1U,
         1U,
         ManagedContextRouter::ContextCapacity,
-        AtomicByteProvider,
         MutexProvider,
         ManagedContextRouter
     >;
@@ -896,7 +914,6 @@ namespace Test {
         100U,
         1U,
         ManagedContextRouter::ContextCapacity,
-        AtomicByteProvider,
         MutexProvider,
         ExecutionContextProvider,
         ManagedContextRouter
@@ -919,7 +936,6 @@ namespace Test {
         DedicatedCallable,
         100U,
         ManagedContextRouter::ContextCapacity,
-        AtomicByteProvider,
         MutexProvider,
         ExecutionContextProvider,
         ManagedContextRouter
@@ -948,7 +964,6 @@ namespace Test {
             DedicatedWorkerDeclaration,
             ManagedContextRouter,
             ExecutionContextProvider,
-            AtomicByteProvider,
             MutexProvider,
             1U,
             ManagedContextRouter::ContextCapacity
@@ -982,7 +997,6 @@ namespace Test {
             DedicatedCallable,
             ManagedContextRouter,
             ExecutionContextProvider,
-            AtomicByteProvider,
             MutexProvider,
             2U,
             ManagedContextRouter::ContextCapacity
@@ -1026,7 +1040,7 @@ namespace Test {
 
     using EmptyShutdownWait =
         ESPressio::Threading::Detail::ShutdownWaitRuntime<
-            ESPressio::Threading::Detail::InfrastructureLifecycle<AtomicByteProvider>,
+            ESPressio::Threading::Detail::InfrastructureLifecycle<AtomicWord32Provider>,
             0U,
             MutexProvider,
             EmptyRouter
@@ -1044,7 +1058,7 @@ namespace Test {
             EmptyBindings,
             SignalProvider,
             ExecutionContextProvider,
-            AtomicByteProvider,
+            AtomicWord32Provider,
             MutexProvider
         >;
 
@@ -1068,7 +1082,7 @@ namespace Test {
             MixedOwnedBindings,
             SignalProvider,
             ExecutionContextProvider,
-            AtomicByteProvider,
+            AtomicWord32Provider,
             MutexProvider
         >;
 
@@ -1085,7 +1099,6 @@ namespace Test {
             MixedOwnedBindings,
             ManagedContextRouter,
             ExecutionContextProvider,
-            AtomicByteProvider,
             MutexProvider
         >;
 
@@ -1174,7 +1187,7 @@ namespace Test {
             MixedOwnedBindings,
             MixedActualRouter,
             ExecutionContextProvider,
-            AtomicByteProvider,
+            AtomicWord32Provider,
             MutexProvider,
             0U
         >;
@@ -1192,7 +1205,6 @@ namespace Test {
                 DedicatedWorkerDeclaration,
                 ManagedContextRouter,
                 ExecutionContextProvider,
-                AtomicByteProvider,
                 MutexProvider,
                 2U,
                 MixedOwnedTopology::ManagedExecutionContextCount
@@ -1209,7 +1221,6 @@ namespace Test {
                 DedicatedCallable,
                 ManagedContextRouter,
                 ExecutionContextProvider,
-                AtomicByteProvider,
                 MutexProvider,
                 3U,
                 MixedOwnedTopology::ManagedExecutionContextCount
@@ -1323,7 +1334,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicByteProvider
+        Test::AtomicWord32Provider
     > mixedLifecycle;
 
     Test::MixedOwnedBindings mixedBindings(
@@ -1353,7 +1364,7 @@ int main() {
         Test::MixedOwnedBindings,
         Test::SignalProvider,
         Test::ExecutionContextProvider,
-        Test::AtomicByteProvider,
+        Test::AtomicWord32Provider,
         Test::MutexProvider
     > mixedOwner(
         Test::MixedOwnedBindings(
@@ -1417,7 +1428,7 @@ int main() {
         "compact control and queue primitives"
     );
 
-    ESPressio::Threading::Detail::TaskControl<Test::AtomicByteProvider> control;
+    ESPressio::Threading::Detail::TaskControl control;
 
     control.InitializeQueued();
 
@@ -1544,7 +1555,7 @@ int main() {
     );
 
 
-    ESPressio::Threading::Detail::DedicatedThreadControl<Test::AtomicByteProvider> threadControl;
+    ESPressio::Threading::Detail::DedicatedThreadControl threadControl;
     bool activationPhase = false;
 
     assert(
@@ -1590,6 +1601,20 @@ int main() {
     );
 
 
+    bool cancellationNotRequested = false;
+    bool cancellationRequested = true;
+
+    ESPressio::Threading::TaskContext nonCancelledContext(
+        &cancellationNotRequested,
+        &Test::CancellationFlag
+    );
+
+    ESPressio::Threading::TaskContext cancelledContext(
+        &cancellationRequested,
+        &Test::CancellationFlag
+    );
+
+
     Test::TestTaskRecord completedRecord;
     completedRecord.Control.InitializeQueued();
     completedRecord.Control.SetState(
@@ -1607,7 +1632,8 @@ int main() {
 
     assert(
         completedRecord.PayloadOperations->Invoke(
-            completedRecord
+            completedRecord,
+            nonCancelledContext
         ) == ESPressio::Threading::Detail::TaskInvocationOutcome::Completed
     );
 
@@ -1649,7 +1675,8 @@ int main() {
 
     assert(
         cancelledRecord.PayloadOperations->Invoke(
-            cancelledRecord
+            cancelledRecord,
+            cancelledContext
         ) == ESPressio::Threading::Detail::TaskInvocationOutcome::Cancelled
     );
 
@@ -1713,7 +1740,7 @@ int main() {
 
     const auto completedOutcome = facility.Invoke(
         completedClaim.Binding()->RecordIndex,
-        completedClaim.Binding()->Phase
+        nonCancelledContext
     );
 
     assert(
@@ -1836,7 +1863,7 @@ int main() {
 
     const auto cooperativeOutcome = facility.Invoke(
         cooperativeClaim.Binding()->RecordIndex,
-        cooperativeClaim.Binding()->Phase
+        cancelledContext
     );
 
     assert(
@@ -1897,7 +1924,7 @@ int main() {
 
     const auto abandonedRunningOutcome = facility.Invoke(
         abandonedRunningClaim.Binding()->RecordIndex,
-        abandonedRunningClaim.Binding()->Phase
+        nonCancelledContext
     );
 
     facility.PublishInvocationOutcome(
@@ -2472,7 +2499,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicByteProvider
+        Test::AtomicWord32Provider
     > lifecycle;
 
     assert(
@@ -2514,7 +2541,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicByteProvider
+        Test::AtomicWord32Provider
     > successfulLifecycle;
 
     assert(
@@ -2565,7 +2592,7 @@ int main() {
 
 
     ESPressio::Threading::Detail::ThreadingBootstrap<
-        Test::AtomicByteProvider
+        Test::AtomicWord32Provider
     > bootstrap;
 
     auto gatedBeforeStart = bootstrap.Dispatch(
@@ -2609,7 +2636,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicByteProvider
+        Test::AtomicWord32Provider
     > coordinatedLifecycle;
 
     assert(
