@@ -137,6 +137,17 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Context identity and interruption.
+
+            bool IsCurrentContext() const noexcept {
+                return _worker.IsCurrentContext();
+            }
+
+            bool IsInterrupted() noexcept {
+                return _worker.IsInterrupted();
+            }
+
+
             // Bounded observability.
 
             static constexpr std::size_t RecordCapacity() noexcept {
