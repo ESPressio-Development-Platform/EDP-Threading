@@ -6,6 +6,7 @@
 
 #include "../src/threading/detail/DedicatedThreadControl.hpp"
 #include "../src/threading/detail/DedicatedThreadRuntime.hpp"
+#include "../src/threading/detail/DedicatedWorkerLeaseRuntime.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/InfrastructureLifecycle.hpp"
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
@@ -525,6 +526,32 @@ namespace Test {
     static_assert(
         TestWorkerExecutionContext::StackBackingBytes() == 128U,
         "Worker stack backing must round semantic capacity to provider granularity"
+    );
+
+
+    using TestDedicatedWorkerLeaseRuntime = ESPressio::Threading::Detail::DedicatedWorkerLeaseRuntime<
+        ReturningCallable,
+        3U,
+        32U,
+        16U,
+        100U,
+        1U,
+        ManagedContextRouter::ContextCapacity,
+        AtomicByteProvider,
+        MutexProvider,
+        ExecutionContextProvider,
+        ManagedContextRouter
+    >;
+
+
+    static_assert(
+        TestDedicatedWorkerLeaseRuntime::WorkerCount == 1U,
+        "DedicatedWorkerLease cardinality must remain exactly one Worker"
+    );
+
+    static_assert(
+        TestDedicatedWorkerLeaseRuntime::RecordCapacity() == 3U,
+        "DedicatedWorkerLease must retain its explicitly bounded isolated FIFO population"
     );
 
 
