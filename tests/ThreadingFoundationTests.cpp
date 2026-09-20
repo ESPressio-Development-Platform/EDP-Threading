@@ -1249,7 +1249,10 @@ int main() {
         emptyOwner.IsExecutionQuiescent()
     );
 
-    emptyOwner.FinalizeShutdown();
+    assert(
+        emptyOwner.FinalizeShutdown() ==
+        ESPressio::Threading::ThreadingFinalizationResult::Completed
+    );
 
     assert(
         emptyOwner.WaitForShutdown() ==
@@ -2434,34 +2437,20 @@ int main() {
         successfulLifecycle.ShouldTerminate()
     );
 
-    ESPressio::Threading::Detail::ShutdownWaitRuntime<
-        decltype(successfulLifecycle),
-        Test::ManagedContextRouter::ContextCapacity,
-        Test::MutexProvider,
-        Test::ManagedContextRouter
-    > shutdownWaitRuntime(
-        successfulLifecycle,
-        runtimeRouter
-    );
+    successfulResource.RequestInfrastructureTermination();
 
-    successfulLifecycle.FinalizeShutdown(
-        shutdownWaitRuntime,
-        successfulResource
+    assert(
+        successfulResource.JoinInfrastructure(
+            ESPressio::Platform::Synchronization::WaitTimeout::Forever()
+        ) == ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded
     );
 
     assert(
-        successfulResource.TerminationWakeCount == 1U &&
-        successfulResource.JoinCount == 1U &&
-        successfulResource.DestroyCount == 1U
+        successfulResource.DestroyInfrastructure() ==
+        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
     );
 
-    assert(
-        shutdownWaitRuntime.WaitFor(
-            ESPressio::Clock::Duration::FromNanoseconds(
-                0
-            )
-        ) == ESPressio::Threading::ShutdownWaitResult::Completed
-    );
+    successfulLifecycle.PublishShutdownComplete();
 
     assert(
         successfulLifecycle.BeginShutdown() ==
