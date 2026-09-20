@@ -27,7 +27,7 @@ The public vocabulary includes:
 
 1. Construction owns the targeted wake topology, structural router, resource backing, Platform provider objects, bounded shutdown-wait surface and Dedicated Thread callable bindings.
 2. `Initialize()` validates wake providers and initializes every Platform execution provider in declaration order. It starts no managed execution context.
-3. `Start()` starts every declared infrastructure context transactionally in declaration order. Semantic Task dispatch and Dedicated Thread activation remain unavailable until the complete Start succeeds.
+3. `Start()` starts every declared infrastructure context transactionally in declaration order. Applications that need an absolute cross-resource order may use `InitializeInOrder<...>()` and `StartInOrder<...>()`, naming every topology resource exactly once. Semantic Task dispatch and Dedicated Thread activation remain unavailable until the complete Start succeeds.
 4. Task dispatch is addressed by Pool identity. Dedicated Worker dispatch is addressed by its Task identity. Dedicated Threads are addressed by Thread identity.
 5. `BeginShutdown()` is terminal. New Task admission/Thread activation is rejected; queued Tasks are cancelled, running Tasks receive cooperative cancellation, and Dedicated Threads receive stop requests.
 6. Once `IsExecutionQuiescent()` is true, `FinalizeShutdown()` tears down every infrastructure context and publishes terminal completion. Applications can use `WaitForShutdown()`, `WaitForShutdownFor()` or `WaitForShutdownUntil()`.
