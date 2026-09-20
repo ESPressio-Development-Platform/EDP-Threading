@@ -38,75 +38,56 @@ namespace Test {
     namespace Framework = ESPressio::System::CompositionFramework;
 
 
-    class AtomicWord32Provider final : public Framework::Provider<
+    class SpinLockProvider final : public Framework::Provider<
         ESPressio::Platform::Domain,
         Framework::Provides<
             Framework::Offer<
-                ESPressio::Platform::Concurrency::AtomicWord32,
+                ESPressio::Platform::Synchronization::SpinLock,
                 Framework::PropertyValue<
-                    ESPressio::Platform::Concurrency::LockFree,
+                    ESPressio::Platform::Synchronization::SpinLockSupportsInterruptContext,
                     true
-                >,
-                Framework::PropertyValue<
-                    ESPressio::Platform::Concurrency::AtomicWordStorageBytes,
-                    4U
                 >
             >
         >
     > {
 
+        private:
+
+            bool _acquired = false;
+
         public:
 
-            class Word final {
+            SpinLockProvider() noexcept = default;
+            SpinLockProvider(const SpinLockProvider&) = delete;
+            SpinLockProvider& operator =(const SpinLockProvider&) = delete;
+            SpinLockProvider(SpinLockProvider&&) = delete;
+            SpinLockProvider& operator =(SpinLockProvider&&) = delete;
 
-                private:
+            void Acquire() noexcept {
+                assert(
+                    !_acquired
+                );
 
-                    // Test atomic state.
+                _acquired = true;
+            }
 
-                    std::uint32_t _value = 0U;
+            ESPressio::Platform::Synchronization::SpinLockReleaseResult Release() noexcept {
+                assert(
+                    _acquired
+                );
 
-                public:
+                _acquired = false;
+                return ESPressio::Platform::Synchronization::SpinLockReleaseResult::Released;
+            }
 
-                    Word() noexcept = default;
-                    Word(const Word&) = delete;
-                    Word& operator =(const Word&) = delete;
-                    Word(Word&&) = delete;
-                    Word& operator =(Word&&) = delete;
+            ESPressio::Platform::Synchronization::SpinLockAcquireResult AcquireFromInterrupt() noexcept {
+                Acquire();
+                return ESPressio::Platform::Synchronization::SpinLockAcquireResult::Acquired;
+            }
 
-                    std::uint32_t LoadRelaxed() const noexcept {
-                        return _value;
-                    }
-
-                    std::uint32_t LoadAcquire() const noexcept {
-                        return _value;
-                    }
-
-                    void StoreRelaxed(
-                        std::uint32_t value
-                    ) noexcept {
-                        _value = value;
-                    }
-
-                    void StoreRelease(
-                        std::uint32_t value
-                    ) noexcept {
-                        _value = value;
-                    }
-
-                    bool CompareExchangeAcqRel(
-                        std::uint32_t& expected,
-                        std::uint32_t desired
-                    ) noexcept {
-                        if (_value != expected) {
-                            expected = _value;
-                            return false;
-                        }
-
-                        _value = desired;
-                        return true;
-                    }
-
-            };
+            ESPressio::Platform::Synchronization::SpinLockReleaseResult ReleaseFromInterrupt() noexcept {
+                return Release();
+            }
 
     };
 
@@ -1040,7 +1021,7 @@ namespace Test {
 
     using EmptyShutdownWait =
         ESPressio::Threading::Detail::ShutdownWaitRuntime<
-            ESPressio::Threading::Detail::InfrastructureLifecycle<AtomicWord32Provider>,
+            ESPressio::Threading::Detail::InfrastructureLifecycle<SpinLockProvider>,
             0U,
             MutexProvider,
             EmptyRouter
@@ -1058,7 +1039,7 @@ namespace Test {
             EmptyBindings,
             SignalProvider,
             ExecutionContextProvider,
-            AtomicWord32Provider,
+            SpinLockProvider,
             MutexProvider
         >;
 
@@ -1082,7 +1063,7 @@ namespace Test {
             MixedOwnedBindings,
             SignalProvider,
             ExecutionContextProvider,
-            AtomicWord32Provider,
+            SpinLockProvider,
             MutexProvider
         >;
 
@@ -1187,7 +1168,7 @@ namespace Test {
             MixedOwnedBindings,
             MixedActualRouter,
             ExecutionContextProvider,
-            AtomicWord32Provider,
+            SpinLockProvider,
             MutexProvider,
             0U
         >;
@@ -1334,7 +1315,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicWord32Provider
+        Test::SpinLockProvider
     > mixedLifecycle;
 
     Test::MixedOwnedBindings mixedBindings(
@@ -1364,7 +1345,7 @@ int main() {
         Test::MixedOwnedBindings,
         Test::SignalProvider,
         Test::ExecutionContextProvider,
-        Test::AtomicWord32Provider,
+        Test::SpinLockProvider,
         Test::MutexProvider
     > mixedOwner(
         Test::MixedOwnedBindings(
@@ -2499,7 +2480,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicWord32Provider
+        Test::SpinLockProvider
     > lifecycle;
 
     assert(
@@ -2541,7 +2522,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicWord32Provider
+        Test::SpinLockProvider
     > successfulLifecycle;
 
     assert(
@@ -2592,7 +2573,7 @@ int main() {
 
 
     ESPressio::Threading::Detail::ThreadingBootstrap<
-        Test::AtomicWord32Provider
+        Test::SpinLockProvider
     > bootstrap;
 
     auto gatedBeforeStart = bootstrap.Dispatch(
@@ -2636,7 +2617,7 @@ int main() {
     );
 
     ESPressio::Threading::Detail::InfrastructureLifecycle<
-        Test::AtomicWord32Provider
+        Test::SpinLockProvider
     > coordinatedLifecycle;
 
     assert(
