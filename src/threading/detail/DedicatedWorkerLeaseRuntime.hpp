@@ -25,6 +25,7 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            /// Concrete Task-facility runtime Type owned by this resource.
             using Facility = TaskFacilityRuntime<
                 TRecordCapacity,
                 TCallableCapacity,
@@ -36,6 +37,7 @@ namespace ESPressio::Threading::Detail {
                 TManagedContextRouter
             >;
 
+            /// Persistent Worker execution-context Type owned by this resource.
             using WorkerContext = TaskWorkerExecutionContext<
                 TExecutionContextProvider,
                 TStackCapacity,
@@ -51,18 +53,22 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Semantic identity Type of this Dedicated Worker task.
             using TaskIdentity = TTaskIdentity;
 
             /// Defines the compile-time contract for `TaskForCallable`.
             /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
+            /// Concrete Task handle Type produced for the supplied callable.
             using TaskForCallable = typename Facility::template TaskForCallable<TCallable>;
 
             /// Defines the compile-time contract for `DispatchResultFor`.
             /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
+            /// Typed dispatch-result Type produced for the supplied callable.
             using DispatchResultFor = typename Facility::template DispatchResultFor<TCallable>;
 
+            /// Number of Workers owned by this resource.
             static constexpr std::size_t WorkerCount = 1U;
 
 
@@ -202,6 +208,7 @@ namespace ESPressio::Threading::Detail {
 
             // Bounded observability.
 
+            /// Compile-time capacity reported by `RecordCapacity`.
             static constexpr std::size_t RecordCapacity() noexcept {
                 return TRecordCapacity;
             }
@@ -218,14 +225,17 @@ namespace ESPressio::Threading::Detail {
                 return _facility.WorkersInUse();
             }
 
+            /// Deterministic byte count reported for `ProviderObjectBytes`.
             static constexpr std::size_t ProviderObjectBytes() noexcept {
                 return WorkerContext::ProviderObjectBytes();
             }
 
+            /// Deterministic byte count reported for `ControlBackingBytes`.
             static constexpr std::size_t ControlBackingBytes() noexcept {
                 return WorkerContext::ControlBackingBytes();
             }
 
+            /// Deterministic byte count reported for `StackBackingBytes`.
             static constexpr std::size_t StackBackingBytes() noexcept {
                 return WorkerContext::StackBackingBytes();
             }
