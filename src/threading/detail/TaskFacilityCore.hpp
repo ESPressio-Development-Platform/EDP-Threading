@@ -408,9 +408,11 @@ namespace ESPressio::Threading::Detail {
 
                 std::size_t claimedIndex = 0U;
 
-                if (!_availability.TryClaim(
-                    claimedIndex
-                )) {
+                if (
+                    _availability.TryClaim(
+                        claimedIndex
+                    ) != AvailabilityClaimResult::Claimed
+                ) {
                     return AdmissionResult::CapacityUnavailable();
                 }
 
