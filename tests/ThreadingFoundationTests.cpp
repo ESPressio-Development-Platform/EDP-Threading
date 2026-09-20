@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdio>
 #include <cstdint>
 #include <type_traits>
 #include <tuple>
@@ -1230,8 +1231,26 @@ namespace Test {
 } // Test
 
 
+/// Emits one host-validation progress marker so hangs/crashes identify their containing tranche.
+static void HostValidationStage(
+    const char* stage
+) noexcept {
+    std::fprintf(
+        stderr,
+        "[EDP-Threading host] %s\n",
+        stage
+    );
+    std::fflush(
+        stderr
+    );
+}
+
+
 /// Exercises compact Threading foundation primitives.
 int main() {
+    HostValidationStage(
+        "empty topology lifecycle"
+    );
     Test::EmptyOwner emptyOwner(
         Test::EmptyBindings{}
     );
@@ -1263,6 +1282,10 @@ int main() {
     assert(
         emptyOwner.WaitForShutdown() ==
         ESPressio::Threading::ShutdownWaitResult::Completed
+    );
+
+    HostValidationStage(
+        "mixed static topology ownership"
     );
 
     ESPressio::Threading::Detail::ManagedContextWakeSet<
@@ -1363,6 +1386,10 @@ int main() {
 
     assert(
         validThreadHandle.IsValid()
+    );
+
+    HostValidationStage(
+        "compact control and queue primitives"
     );
 
     ESPressio::Threading::Detail::TaskControl<Test::AtomicByteProvider> control;
@@ -1611,6 +1638,10 @@ int main() {
     );
 
 
+    HostValidationStage(
+        "task facility core semantics"
+    );
+
     Test::TestFacilityCore facility;
 
     auto completedAdmission = facility.Admit(
@@ -1858,6 +1889,10 @@ int main() {
     );
 
 
+    HostValidationStage(
+        "worker scheduler and waiter registrations"
+    );
+
     Test::TestWorkerScheduler workerScheduler;
 
     assert(
@@ -2006,6 +2041,10 @@ int main() {
 
 
 
+    HostValidationStage(
+        "structural context routing"
+    );
+
     ESPressio::Threading::Detail::ManagedContextWakeSet<
         3U,
         Test::SignalProvider
@@ -2116,6 +2155,10 @@ int main() {
         Test::ManagedContextRouter
     >::Yield();
 
+
+    HostValidationStage(
+        "task facility runtime"
+    );
 
     Test::TestFacilityRuntime runtime(
         runtimeRouter
@@ -2399,6 +2442,10 @@ int main() {
         );
     }
 
+    HostValidationStage(
+        "infrastructure lifecycle and bootstrap"
+    );
+
     ESPressio::Threading::Detail::InfrastructureLifecycle<
         Test::AtomicByteProvider
     > lifecycle;
@@ -2532,6 +2579,10 @@ int main() {
     );
 
 
+    HostValidationStage(
+        "shutdown coordination"
+    );
+
     ESPressio::Threading::Detail::InfrastructureLifecycle<
         Test::AtomicByteProvider
     > coordinatedLifecycle;
@@ -2581,6 +2632,10 @@ int main() {
     );
 
 
+    HostValidationStage(
+        "dedicated worker runtime"
+    );
+
     bool dedicatedWorkerShutdown = false;
 
     const auto dedicatedWorkerShutdownPredicate = [](
@@ -2620,6 +2675,10 @@ int main() {
         ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
     );
 
+
+    HostValidationStage(
+        "dedicated thread runtime"
+    );
 
     bool dedicatedCanActivate = false;
     bool dedicatedShouldTerminate = false;
@@ -2691,6 +2750,10 @@ int main() {
     );
 
 
+    HostValidationStage(
+        "worker execution context"
+    );
+
     bool shutdownRequested = false;
 
     const auto shutdownPredicate = [](
@@ -2731,6 +2794,10 @@ int main() {
     assert(
         workerExecutionContext.Destroy() ==
         ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+    );
+
+    HostValidationStage(
+        "complete"
     );
 
     return 0;
