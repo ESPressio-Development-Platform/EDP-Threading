@@ -19,6 +19,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `InfrastructureLifecycle`.
+    /// @tparam TSpinLockProvider Concrete Platform SpinLock provider Type protecting lifecycle publication.
     template<class TSpinLockProvider>
     class InfrastructureLifecycle final {
 
@@ -78,6 +80,9 @@ namespace ESPressio::Threading::Detail {
 
             // Transactional Start helpers.
 
+            /// Defines the compile-time contract for `StartNext`.
+            /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
+            /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
             static bool StartNext(
                 TTuple& resources,
@@ -108,6 +113,9 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `WakeStarted`.
+            /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
+            /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
             static void WakeStarted(
                 TTuple& resources,
@@ -129,6 +137,9 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `JoinStarted`.
+            /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
+            /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
             static bool JoinStarted(
                 TTuple& resources,
@@ -159,6 +170,9 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `DestroyAll`.
+            /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
+            /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
             static bool DestroyAll(
                 TTuple& resources
