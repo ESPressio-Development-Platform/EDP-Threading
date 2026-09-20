@@ -752,6 +752,29 @@ namespace ESPressio::Threading::Detail {
                     return ThreadStartResult::ShuttingDown;
                 }
 
+                const auto state = _control.State();
+
+                if (
+                    state == DedicatedThreadOperationalState::Running ||
+                    state == DedicatedThreadOperationalState::RunningStopRequested
+                ) {
+                    static_cast<void>(
+                        ReleaseLock()
+                    );
+                    return ThreadStartResult::AlreadyRunning;
+                }
+
+                if (
+                    _router->Wake(
+                        _contextIndex
+                    ) != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                ) {
+                    static_cast<void>(
+                        ReleaseLock()
+                    );
+                    return ThreadStartResult::ActivationFailed;
+                }
+
                 bool activationPhase = false;
 
                 if (
@@ -759,15 +782,11 @@ namespace ESPressio::Threading::Detail {
                         activationPhase
                     ) != DedicatedThreadControlStartResult::Started
                 ) {
-                    ReleaseLock();
-                    return ThreadStartResult::AlreadyRunning;
+                    static_cast<void>(
+                        ReleaseLock()
+                    );
+                    return ThreadStartResult::ActivationFailed;
                 }
-
-                static_cast<void>(
-                    _router->Wake(
-                        _contextIndex
-                    )
-                );
 
                 static_cast<void>(
                     ReleaseLock()
