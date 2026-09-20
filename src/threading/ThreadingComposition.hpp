@@ -177,6 +177,7 @@ namespace ESPressio::Threading {
         };
 
 
+        /// Classifies the AnyAffinity property as a valid execution-resource affinity declaration.
         template<>
         struct IsAffinityProperty<AnyAffinity> {
 
@@ -304,6 +305,7 @@ namespace ESPressio::Threading {
         };
 
 
+        /// Resolves AnyAffinity to the portable Platform any-processor affinity value.
         template<>
         struct AffinityValue<AnyAffinity> {
 
@@ -1021,10 +1023,12 @@ namespace ESPressio::Threading {
         struct TopologyProviderBase;
 
 
+        /// Empty capability base used when a topology exposes neither Task nor Dedicated Thread execution.
         template<>
         struct TopologyProviderBase<false, false> {};
 
 
+        /// Capability base exposing Task execution only.
         template<>
         struct TopologyProviderBase<true, false> : Framework::Provider<
             Domain,
@@ -1034,6 +1038,7 @@ namespace ESPressio::Threading {
         > {};
 
 
+        /// Capability base exposing Dedicated Thread execution only.
         template<>
         struct TopologyProviderBase<false, true> : Framework::Provider<
             Domain,
@@ -1043,6 +1048,7 @@ namespace ESPressio::Threading {
         > {};
 
 
+        /// Capability base exposing both Task and Dedicated Thread execution.
         template<>
         struct TopologyProviderBase<true, true> : Framework::Provider<
             Domain,
