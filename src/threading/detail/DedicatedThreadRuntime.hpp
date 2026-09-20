@@ -13,6 +13,8 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `IsVoidThreadCallableWithoutContext`.
+    /// @tparam TCallable Callable Type being invoked, stored, or adapted.
     template<class TCallable, class = void>
     struct IsVoidThreadCallableWithoutContext final {
 
@@ -21,6 +23,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `IsVoidThreadCallableWithoutContext`.
+    /// @tparam TCallable Callable Type being invoked, stored, or adapted.
     template<class TCallable>
     struct IsVoidThreadCallableWithoutContext<
         TCallable,
@@ -37,6 +41,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `IsVoidThreadCallableWithContext`.
+    /// @tparam TCallable Callable Type being invoked, stored, or adapted.
     template<class TCallable, class = void>
     struct IsVoidThreadCallableWithContext final {
 
@@ -45,6 +51,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `IsVoidThreadCallableWithContext`.
+    /// @tparam TCallable Callable Type being invoked, stored, or adapted.
     template<class TCallable>
     struct IsVoidThreadCallableWithContext<
         TCallable,
@@ -67,6 +75,14 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `DedicatedThreadRuntime`.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// @tparam TCallable Callable Type being invoked, stored, or adapted.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TStackCapacity Semantic stack-capacity value requested by the topology.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TThreadIdentity, class TCallable, std::size_t TStackCapacity, std::size_t TExecutionContextCapacity, class TMutexProvider, class TExecutionContextProvider, class TManagedContextRouter>
     class DedicatedThreadRuntime final {
 
