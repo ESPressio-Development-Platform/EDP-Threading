@@ -1557,6 +1557,84 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Shutdown cooperation.
+
+            /// Cancels every queued Task and requests cooperative cancellation of every running Task.
+            ///
+            /// Admission gating is owned by the enclosing global lifecycle. This operation only
+            /// transforms work already admitted to this facility and wakes every affected context.
+            void BeginShutdownCancellation() noexcept {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return;
+                }
+
+                _core.VisitAllocated(
+                    [this](
+                        const auto& binding
+                    ) {
+                        const auto before = _core.PublicState(
+                            binding.RecordIndex,
+                            binding.Phase
+                        );
+
+                        const auto cancellation = _core.Cancel(
+                            binding.RecordIndex,
+                            binding.Phase
+                        );
+
+                        if (cancellation.Result() != TaskCancelResult::Accepted) {
+                            return;
+                        }
+
+                        const auto after = _core.PublicState(
+                            binding.RecordIndex,
+                            binding.Phase
+                        );
+
+                        if (
+                            before == TaskState::Queued &&
+                            after == TaskState::Cancelled
+                        ) {
+                            WakeMatchingWaiters(
+                                binding.RecordIndex,
+                                binding.Phase
+                            );
+                            return;
+                        }
+
+                        if (after == TaskState::Running) {
+                            const auto contextIndex = _core.ExecutionContextFor(
+                                binding.RecordIndex,
+                                binding.Phase
+                            );
+
+                            if (contextIndex.has_value()) {
+                                static_cast<void>(
+                                    _router->Wake(
+                                        contextIndex.value()
+                                    )
+                                );
+                            }
+                        }
+                    }
+                );
+
+                WakeAdmissionWaiters();
+                ReleaseLock();
+            }
+
+            /// Indicates whether no admitted Task record remains in this facility.
+            bool IsQuiescent() noexcept {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return false;
+                }
+
+                const auto result = _core.RecordsInUse() == 0U;
+                ReleaseLock();
+                return result;
+            }
+
+
             // Bounded observability.
 
             /// Returns the configured Task-record capacity.
