@@ -1758,6 +1758,13 @@ int main() {
         cooperativeClaim.IsClaimed()
     );
 
+    assert(
+        cooperativeClaim.Binding()->RecordIndex ==
+            cooperativeAdmission.Binding()->RecordIndex &&
+        cooperativeClaim.Binding()->Phase ==
+            cooperativeAdmission.Binding()->Phase
+    );
+
     const auto runningCancellation = facility.Cancel(
         cooperativeClaim.Binding()->RecordIndex,
         cooperativeClaim.Binding()->Phase
@@ -1816,6 +1823,13 @@ int main() {
 
     assert(
         abandonedRunningClaim.IsClaimed()
+    );
+
+    assert(
+        abandonedRunningClaim.Binding()->RecordIndex ==
+            abandonedRunningAdmission.Binding()->RecordIndex &&
+        abandonedRunningClaim.Binding()->Phase ==
+            abandonedRunningAdmission.Binding()->Phase
     );
 
     assert(
