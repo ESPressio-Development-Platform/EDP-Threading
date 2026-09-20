@@ -18,6 +18,6 @@ The Arduino targets use the vanilla FreeRTOS execution, signal and mutex provide
 
 PlatformIO manifests declare every required EDP repository explicitly. The Arduino IDE variant requires those libraries to be installed in the Arduino library search path.
 
-The PlatformIO ESP-IDF surface pins `pioarduino/platform-espressif32` to commit `2f8e8ac3931840b7e9767b79b61184eb29100e3c`, the last revision whose native uploader package is the coherent `esptoolpy 5.3.1` archive while still using ESP-IDF 5.5.5. PlatformIO Core 6.2.x requires SCons 4.11.1, so the demo overrides only `tool-scons` to pioarduino's 4.11.1 package.
+The PlatformIO ESP-IDF surface pins `pioarduino/platform-espressif32` to commit `d41d8383706dc146fd91a0e1d3c59a915a4d493e`. That revision is the compile/link-validated combination for PlatformIO Core 6.2.x, SCons 4.11.1 and ESP-IDF 5.5.5.
 
-This combination is intentional. The later pioarduino SCons-4.11.1 revision changed only `platform.json`; its builder code is identical to the pinned 5.3.1-uploader revision. Keeping the platform's native esptool package avoids the broken mixed-package state where an esptool launcher exists in the shared pioarduino Python environment but the downgraded module itself is not importable.
+Its native esptool 5.4.0 package currently has a host-side progress-rendering regression on this upload path: flashing reaches the ESP32, starts the stub flasher and begins the write, then the Python logger raises `AttributeError: 'EsptoolLogger' object has no attribute '_get_progress_print_file'`. The demo keeps the validated uploader/toolchain package intact and sets `upload_flags = --no-progress`, using esptool's supported `write-flash --no-progress` option to bypass only the broken renderer.
