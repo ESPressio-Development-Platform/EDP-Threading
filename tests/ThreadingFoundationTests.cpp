@@ -7,6 +7,7 @@
 #include "../src/threading/detail/DedicatedThreadControl.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
+#include "../src/threading/detail/TaskFacilityRuntime.hpp"
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
 #include "../src/threading/detail/TaskRecord.hpp"
 #include "../src/threading/detail/WaitRegistration.hpp"
@@ -70,6 +71,126 @@ namespace Test {
                     }
 
             };
+
+    };
+
+
+    class MutexProvider final {
+
+        public:
+
+            ESPressio::Platform::Synchronization::LockAcquireResult Acquire(
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept {
+                return ESPressio::Platform::Synchronization::LockAcquireResult::Acquired;
+            }
+
+            ESPressio::Platform::Synchronization::LockReleaseResult Release() noexcept {
+                return ESPressio::Platform::Synchronization::LockReleaseResult::Released;
+            }
+
+    };
+
+
+    class ManagedContextRouter final {
+
+        public:
+
+            static constexpr std::size_t ContextCapacity = 3U;
+
+        private:
+
+            std::size_t _wakeCount = 0U;
+
+        public:
+
+            std::optional<std::uint8_t> CurrentContextIndex() const noexcept {
+                return static_cast<std::uint8_t>(0U);
+            }
+
+            bool IsInterrupted(
+                std::uint8_t
+            ) const noexcept {
+                return false;
+            }
+
+            ESPressio::Platform::Synchronization::SignalWaitResult Wait(
+                std::uint8_t,
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept {
+                return ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut;
+            }
+
+            ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
+                std::uint8_t
+            ) noexcept {
+                ++_wakeCount;
+                return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+            }
+
+            std::size_t WakeCount() const noexcept {
+                return _wakeCount;
+            }
+
+    };
+
+
+    struct LifetimeResult final {
+
+        inline static std::size_t DestructionCount = 0U;
+
+        bool Active = true;
+
+        LifetimeResult() noexcept = default;
+
+        LifetimeResult(
+            LifetimeResult&& other
+        ) noexcept :
+            Active(other.Active) {
+            other.Active = false;
+        }
+
+        LifetimeResult(const LifetimeResult&) = delete;
+        LifetimeResult& operator =(const LifetimeResult&) = delete;
+        LifetimeResult& operator =(LifetimeResult&&) = delete;
+
+        ~LifetimeResult() {
+            if (Active) {
+                ++DestructionCount;
+            }
+        }
+
+    };
+
+
+    struct LifetimeCallable final {
+
+        inline static std::size_t DestructionCount = 0U;
+
+        bool Active = true;
+
+        LifetimeCallable() noexcept = default;
+
+        LifetimeCallable(
+            LifetimeCallable&& other
+        ) noexcept :
+            Active(other.Active) {
+            other.Active = false;
+        }
+
+        LifetimeCallable(const LifetimeCallable&) = delete;
+        LifetimeCallable& operator =(const LifetimeCallable&) = delete;
+        LifetimeCallable& operator =(LifetimeCallable&&) = delete;
+
+        ~LifetimeCallable() {
+            if (Active) {
+                ++DestructionCount;
+            }
+        }
+
+        LifetimeResult operator ()() noexcept {
+            return LifetimeResult{};
+        }
 
     };
 
@@ -221,6 +342,19 @@ namespace Test {
         sizeof(TaskRegistration) * 4U,
         "RegistrationSet must contain only target-owned registration records"
     );
+
+    using TestFacilityRuntime = ESPressio::Threading::Detail::TaskFacilityRuntime<
+        3U,
+        32U,
+        16U,
+        1U,
+        1U,
+        ManagedContextRouter::ContextCapacity,
+        AtomicByteProvider,
+        MutexProvider,
+        ManagedContextRouter
+    >;
+
 
     using TestWorkerScheduler = ESPressio::Threading::Detail::WorkerLeaseScheduler<
         3U,
@@ -861,6 +995,194 @@ int main() {
 
     assert(
         registrationIndex == 0U
+    );
+
+
+
+    Test::ManagedContextRouter runtimeRouter;
+    Test::TestFacilityRuntime runtime(
+        runtimeRouter
+    );
+
+    assert(
+        runtime.ValidateSynchronization() ==
+        ESPressio::Threading::Detail::TaskFacilitySynchronizationResult::Ready
+    );
+
+    const auto unavailableDispatch = runtime.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        unavailableDispatch.Status() ==
+        ESPressio::Threading::TaskDispatchStatus::Unavailable
+    );
+
+    assert(
+        runtime.WorkerBecameAvailable(
+            1U
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::Available
+    );
+
+    auto immediateDispatch = runtime.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        immediateDispatch.IsSucceeded()
+    );
+
+    auto immediateTask = immediateDispatch.TakeTask();
+
+    assert(
+        immediateTask.State() == ESPressio::Threading::TaskState::Running
+    );
+
+    const auto immediateBinding = runtime.AssignedTaskForContext(
+        1U
+    );
+
+    assert(
+        immediateBinding.has_value()
+    );
+
+    const auto immediateOutcome = runtime.Invoke(
+        immediateBinding->RecordIndex,
+        immediateBinding->Phase
+    );
+
+    runtime.CompleteWorkerTask(
+        1U,
+        immediateBinding->RecordIndex,
+        immediateBinding->Phase,
+        immediateOutcome
+    );
+
+    assert(
+        immediateTask.State() == ESPressio::Threading::TaskState::Completed
+    );
+
+    assert(
+        runtime.WorkerBecameAvailable(
+            1U
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::AlreadyAvailable
+    );
+
+    auto firstQueuedDispatch = runtime.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::Queue
+    );
+
+    auto secondQueuedDispatch = runtime.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::Queue
+    );
+
+    assert(
+        firstQueuedDispatch.IsSucceeded() &&
+        secondQueuedDispatch.IsSucceeded()
+    );
+
+    auto firstQueuedTask = firstQueuedDispatch.TakeTask();
+    auto secondQueuedTask = secondQueuedDispatch.TakeTask();
+
+    assert(
+        firstQueuedTask.State() == ESPressio::Threading::TaskState::Running
+    );
+
+    assert(
+        secondQueuedTask.State() == ESPressio::Threading::TaskState::Queued
+    );
+
+    const auto firstQueuedBinding = runtime.AssignedTaskForContext(
+        1U
+    );
+
+    assert(
+        firstQueuedBinding.has_value()
+    );
+
+    const auto firstQueuedOutcome = runtime.Invoke(
+        firstQueuedBinding->RecordIndex,
+        firstQueuedBinding->Phase
+    );
+
+    runtime.CompleteWorkerTask(
+        1U,
+        firstQueuedBinding->RecordIndex,
+        firstQueuedBinding->Phase,
+        firstQueuedOutcome
+    );
+
+    assert(
+        secondQueuedTask.State() == ESPressio::Threading::TaskState::Running
+    );
+
+    const auto secondQueuedBinding = runtime.AssignedTaskForContext(
+        1U
+    );
+
+    assert(
+        secondQueuedBinding.has_value()
+    );
+
+    const auto secondQueuedOutcome = runtime.Invoke(
+        secondQueuedBinding->RecordIndex,
+        secondQueuedBinding->Phase
+    );
+
+    runtime.CompleteWorkerTask(
+        1U,
+        secondQueuedBinding->RecordIndex,
+        secondQueuedBinding->Phase,
+        secondQueuedOutcome
+    );
+
+    Test::LifetimeCallable::DestructionCount = 0U;
+    Test::LifetimeResult::DestructionCount = 0U;
+
+    auto lifetimeDispatch = runtime.Dispatch(
+        Test::LifetimeCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        lifetimeDispatch.IsSucceeded()
+    );
+
+    auto lifetimeTask = lifetimeDispatch.TakeTask();
+    const auto lifetimeBinding = runtime.AssignedTaskForContext(
+        1U
+    );
+
+    assert(
+        lifetimeBinding.has_value()
+    );
+
+    const auto lifetimeOutcome = runtime.Invoke(
+        lifetimeBinding->RecordIndex,
+        lifetimeBinding->Phase
+    );
+
+    assert(
+        Test::LifetimeCallable::DestructionCount == 1U
+    );
+
+    runtime.CompleteWorkerTask(
+        1U,
+        lifetimeBinding->RecordIndex,
+        lifetimeBinding->Phase,
+        lifetimeOutcome
+    );
+
+    lifetimeTask = decltype(lifetimeTask)(
+        std::move(lifetimeTask)
+    );
+
+    assert(
+        Test::LifetimeResult::DestructionCount == 0U
     );
 
     return 0;
