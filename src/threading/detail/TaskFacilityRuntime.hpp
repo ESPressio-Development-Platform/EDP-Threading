@@ -1623,13 +1623,16 @@ namespace ESPressio::Threading::Detail {
                 ReleaseLock();
             }
 
-            /// Indicates whether no admitted Task record remains in this facility.
-            bool IsQuiescent() noexcept {
+            /// Indicates whether this facility has no queued/running execution work remaining.
+            ///
+            /// Terminal records retained only by public ownership/waiters do not prevent Worker
+            /// infrastructure from terminating during shutdown.
+            bool IsExecutionQuiescent() noexcept {
                 if (AcquireLock() != TaskFacilityLockResult::Acquired) {
                     return false;
                 }
 
-                const auto result = _core.RecordsInUse() == 0U;
+                const auto result = !_core.HasExecutionWork();
                 ReleaseLock();
                 return result;
             }
