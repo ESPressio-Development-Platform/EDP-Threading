@@ -987,6 +987,29 @@ namespace Test {
         >;
 
     static_assert(
+        ESPressio::Threading::Detail::ValidDedicatedThreadBindings<
+            MixedOwnedTopology,
+            MixedOwnedBindings
+        >::Value,
+        "Every Dedicated Thread must have exactly one declared callable binding"
+    );
+
+    static_assert(
+        !ESPressio::Threading::Detail::ValidDedicatedThreadBindings<
+            MixedOwnedTopology,
+            std::tuple<
+                DedicatedThreadBindingType,
+                ESPressio::Threading::DedicatedThreadBinding<
+                    UndeclaredThreadIdentity,
+                    DedicatedCallable
+                >
+            >
+        >::Value,
+        "Callable bindings for undeclared Dedicated Threads must be rejected"
+    );
+
+
+    static_assert(
         ESPressio::Threading::Detail::TaskFacilityResourceIndex<
             MixedOwnedTopology,
             OrdinaryPool
