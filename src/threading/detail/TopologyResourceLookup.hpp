@@ -18,6 +18,7 @@ namespace ESPressio::Threading::Detail {
     template<class TResource, class TPoolIdentity>
     struct IsTaskFacilityIdentity {
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr bool Value = false;
 
     };
@@ -41,6 +42,7 @@ namespace ESPressio::Threading::Detail {
         TPoolIdentity
     > {
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -52,6 +54,7 @@ namespace ESPressio::Threading::Detail {
     template<class TResource, class TTaskIdentity>
     struct IsDedicatedWorkerIdentity {
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr bool Value = false;
 
     };
@@ -68,6 +71,7 @@ namespace ESPressio::Threading::Detail {
         TTaskIdentity
     > {
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -79,6 +83,7 @@ namespace ESPressio::Threading::Detail {
     template<class TResource, class TThreadIdentity>
     struct IsDedicatedThreadIdentity {
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr bool Value = false;
 
     };
@@ -95,6 +100,7 @@ namespace ESPressio::Threading::Detail {
         TThreadIdentity
     > {
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr bool Value = true;
 
     };
@@ -121,6 +127,7 @@ namespace ESPressio::Threading::Detail {
         TIndex
     > {
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr std::size_t Value = TopologyResourceNotFound;
 
     };
@@ -142,6 +149,7 @@ namespace ESPressio::Threading::Detail {
         TIndex
     > {
 
+        /// Recursive lookup result for the remaining topology resource pack.
         static constexpr std::size_t Tail = TopologyResourceIndex<
             TMatcher,
             TIdentity,
@@ -149,6 +157,7 @@ namespace ESPressio::Threading::Detail {
             TIndex + 1U
         >::Value;
 
+        /// Compile-time result or topology index produced by this trait/specialization.
         static constexpr std::size_t Value =
             TMatcher<TFirstResource, TIdentity>::Value
                 ? TIndex
