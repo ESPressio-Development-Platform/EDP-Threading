@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
+#include <tuple>
 
 #include <ESPressio_Threading.hpp>
 
