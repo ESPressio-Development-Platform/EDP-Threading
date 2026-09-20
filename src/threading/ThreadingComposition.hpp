@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <tuple>
+#include <utility>
 
 #include <ESPressio_System.hpp>
 
@@ -490,6 +491,55 @@ namespace ESPressio::Threading {
         );
 
     };
+
+
+    template<class TThreadIdentity, class TCallable>
+    class DedicatedThreadBinding final {
+
+        private:
+
+            TCallable _callable;
+
+        public:
+
+            using ThreadIdentity = TThreadIdentity;
+            using Callable = TCallable;
+
+
+            explicit DedicatedThreadBinding(
+                TCallable callable
+            ) noexcept(
+                std::is_nothrow_move_constructible_v<TCallable>
+            ) :
+                _callable(
+                    std::move(
+                        callable
+                    )
+                ) {}
+
+
+            TCallable&& TakeCallable() noexcept {
+                return std::move(
+                    _callable
+                );
+            }
+
+    };
+
+
+    template<class TThreadIdentity, class TCallable>
+    auto BindDedicatedThread(
+        TCallable&& callable
+    ) {
+        return DedicatedThreadBinding<
+            TThreadIdentity,
+            std::decay_t<TCallable>
+        >(
+            std::forward<TCallable>(
+                callable
+            )
+        );
+    }
 
 
     template<class TThreadIdentity, class... TThreadProperties>
