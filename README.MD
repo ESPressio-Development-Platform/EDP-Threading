@@ -42,15 +42,38 @@ Threading consumes EDP-System, EDP-Platform and EDP-Clock. There are no optional
 
 ## Current implementation status
 
-The v1 source implementation is in its completion tranche. It includes compile-time topology/requirements, bounded Task facilities, FIFO Worker-Lease scheduling, isolated single-Worker `DedicatedWorkerLease` resources, persistent restart-safe Dedicated Threads, dense targeted wake routing, canonical monotonic waits/sleep, transactional infrastructure Start/rollback, terminal cooperative shutdown and static runtime ownership.
+The v1 source implementation includes compile-time topology/requirements, bounded Task facilities, FIFO Worker-Lease scheduling, isolated single-Worker `DedicatedWorkerLease` resources, persistent restart-safe Dedicated Threads, dense targeted wake routing, canonical monotonic waits/sleep, transactional infrastructure Start/rollback, terminal cooperative shutdown and static runtime ownership.
 
-Provider/target compilation, local suite execution and final deterministic resource-layout evidence remain completion gates. Runtime behavior should not be treated as released until those validation gates are recorded. No version mutation is performed during this development.
+Validation completed on 20 September 2026 includes the warnings-as-errors host suite, the UBSan host suite, PlatformIO Arduino compile/link plus physical ESP32 runtime, and PlatformIO ESP-IDF compile/link plus physical ESP32 runtime. ASan on the validating macOS host currently hangs before `main()`; that is recorded as a host sanitizer/runtime limitation rather than a Threading PASS or failure.
+
+Representative deterministic RAM/code-size measurement is the remaining completion activity. No version mutation is performed during this development.
 
 ## Local validation
 
-Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when EDP-System, EDP-Platform and EDP-Clock are cloned beside this repository.
+Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when EDP-System, EDP-Platform and EDP-Clock are cloned beside this repository. Run UBSan with `EDP_THREADING_SANITIZER_MODE=undefined bash tests/run-host-tests.sh`.
+
+Target resource measurements are built without flashing hardware from `tests/resource-measurements` using `bash ./run-resource-measurements.sh`.
 
 A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, Dedicated Thread activation/cooperative stop and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
+
+## Dependencies
+
+```text
+EDP-Threading
+├── EDP-System [mandatory]
+├── EDP-Platform [mandatory]
+│   └── EDP-System [transitive]
+└── EDP-Clock [mandatory]
+    ├── EDP-System [transitive]
+    └── EDP-Platform [transitive]
+```
+
+- `EDP-System` — supplies the compile-time Composition Framework.
+- `EDP-Platform` — supplies substitutable execution-context and synchronization abstractions.
+- `EDP-Clock` — supplies the canonical monotonic timeline used for deadlines, waits and sleeping.
+- Optional ESPressio dependencies: none.
+
+See the [dependency graph](./DEPENDENCY_GRAPH.MD) for the authoritative dependency-direction description.
 
 ## Documentation
 
