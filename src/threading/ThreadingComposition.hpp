@@ -86,8 +86,20 @@ namespace ESPressio::Threading {
     };
 
 
+    template<class... TProperties>
+    struct ResourceProperties final {
+
+        static constexpr std::size_t Count = sizeof...(TProperties);
+
+    };
+
+
     template<class... TWorkerProperties>
-    struct Worker final {};
+    struct Worker final {
+
+        using Properties = ResourceProperties<TWorkerProperties...>;
+
+    };
 
 
     template<class... TWorkers>
@@ -126,6 +138,9 @@ namespace ESPressio::Threading {
     struct DedicatedWorkerLease final {
 
         using TaskIdentity = TTaskIdentity;
+        using Properties = ResourceProperties<TWorkerProperties...>;
+
+        static constexpr std::size_t WorkerCount = 1U;
 
     };
 
@@ -134,6 +149,7 @@ namespace ESPressio::Threading {
     struct DedicatedThread final {
 
         using ThreadIdentity = TThreadIdentity;
+        using Properties = ResourceProperties<TThreadProperties...>;
 
     };
 
