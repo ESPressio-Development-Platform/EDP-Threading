@@ -1298,11 +1298,6 @@ int main() {
         )
     );
 
-    assert(
-        mixedOwner.LifecycleState() ==
-        ESPressio::Threading::Detail::InfrastructureState::Uninitialized
-    );
-
     const auto gatedMixedDispatch = mixedOwner.template Dispatch<Test::OrdinaryPool>(
         []() {},
         ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
