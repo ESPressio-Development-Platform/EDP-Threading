@@ -464,14 +464,6 @@ namespace ESPressio::Threading {
     } // ESPressio::Threading::Detail
 
 
-    template<class TTopology, class TRequirement>
-    inline constexpr bool SatisfiesThreadingRequirement =
-        Detail::RequirementSatisfied<
-            TTopology,
-            TRequirement
-        >::Value;
-
-
     template<std::size_t TBytes>
     struct MinimumStackCapacity final {
 
@@ -502,5 +494,346 @@ namespace ESPressio::Threading {
         using AffinityType = TAffinity;
 
     };
+
+
+    namespace Detail {
+
+        template<std::size_t TMinimum, class... TProperties>
+        struct HasMinimumStackCapacity;
+
+
+        template<std::size_t TMinimum>
+        struct HasMinimumStackCapacity<TMinimum> {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<std::size_t TMinimum, std::size_t TCapacity, class... TRest>
+        struct HasMinimumStackCapacity<
+            TMinimum,
+            StackCapacity<TCapacity>,
+            TRest...
+        > {
+
+            static constexpr bool Value = TCapacity >= TMinimum;
+
+        };
+
+
+        template<std::size_t TMinimum, class TFirst, class... TRest>
+        struct HasMinimumStackCapacity<
+            TMinimum,
+            TFirst,
+            TRest...
+        > : HasMinimumStackCapacity<TMinimum, TRest...> {};
+
+
+        template<ThreadPriority TMinimum, class... TProperties>
+        struct HasMinimumPriority;
+
+
+        template<ThreadPriority TMinimum>
+        struct HasMinimumPriority<TMinimum> {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<ThreadPriority TMinimum, ThreadPriority TValue, class... TRest>
+        struct HasMinimumPriority<
+            TMinimum,
+            Priority<TValue>,
+            TRest...
+        > {
+
+            static constexpr bool Value =
+                static_cast<std::uint8_t>(TValue) >=
+                static_cast<std::uint8_t>(TMinimum);
+
+        };
+
+
+        template<ThreadPriority TMinimum, class TFirst, class... TRest>
+        struct HasMinimumPriority<
+            TMinimum,
+            TFirst,
+            TRest...
+        > : HasMinimumPriority<TMinimum, TRest...> {};
+
+
+        template<class TRequiredAffinity, class... TProperties>
+        struct HasRequiredAffinity;
+
+
+        template<class TRequiredAffinity>
+        struct HasRequiredAffinity<TRequiredAffinity> {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TRequiredAffinity, class TFirst, class... TRest>
+        struct HasRequiredAffinity<
+            TRequiredAffinity,
+            TFirst,
+            TRest...
+        > {
+
+            static constexpr bool Value =
+                std::is_same_v<TRequiredAffinity, TFirst> ||
+                HasRequiredAffinity<TRequiredAffinity, TRest...>::Value;
+
+        };
+
+
+        template<class TWorker, class TConstraint>
+        struct WorkerConstraintSatisfied {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class... TProperties, std::size_t TMinimum>
+        struct WorkerConstraintSatisfied<
+            Worker<TProperties...>,
+            MinimumStackCapacity<TMinimum>
+        > {
+
+            static constexpr bool Value =
+                HasMinimumStackCapacity<TMinimum, TProperties...>::Value;
+
+        };
+
+
+        template<class... TProperties, ThreadPriority TMinimum>
+        struct WorkerConstraintSatisfied<
+            Worker<TProperties...>,
+            MinimumPriority<TMinimum>
+        > {
+
+            static constexpr bool Value =
+                HasMinimumPriority<TMinimum, TProperties...>::Value;
+
+        };
+
+
+        template<class... TProperties, class TAffinity>
+        struct WorkerConstraintSatisfied<
+            Worker<TProperties...>,
+            RequiredAffinity<TAffinity>
+        > {
+
+            static constexpr bool Value =
+                HasRequiredAffinity<TAffinity, TProperties...>::Value;
+
+        };
+
+
+        template<class TWorkers, class TConstraint>
+        struct EveryWorkerSatisfies;
+
+
+        template<class... TWorkers, class TConstraint>
+        struct EveryWorkerSatisfies<
+            Workers<TWorkers...>,
+            TConstraint
+        > {
+
+            static constexpr bool Value =
+                (WorkerConstraintSatisfied<TWorkers, TConstraint>::Value && ... && true);
+
+        };
+
+
+        template<class TResource, class TConstraint>
+        struct ResourceConstraintSatisfied {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers, std::size_t TMinimum>
+        struct ResourceConstraintSatisfied<
+            TaskExecutionFacility<TPoolIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>,
+            MinimumWorkerConcurrency<TMinimum>
+        > {
+
+            static constexpr bool Value = TWorkers::Count >= TMinimum;
+
+        };
+
+
+        template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers, class TConstraint>
+        struct ResourceConstraintSatisfied<
+            TaskExecutionFacility<TPoolIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>,
+            TConstraint
+        > {
+
+            static constexpr bool Value =
+                EveryWorkerSatisfies<TWorkers, TConstraint>::Value;
+
+        };
+
+
+        template<class TTaskIdentity, class... TProperties, std::size_t TMinimum>
+        struct ResourceConstraintSatisfied<
+            DedicatedWorkerLease<TTaskIdentity, TProperties...>,
+            MinimumWorkerConcurrency<TMinimum>
+        > {
+
+            static constexpr bool Value = 1U >= TMinimum;
+
+        };
+
+
+        template<class TTaskIdentity, class... TProperties, std::size_t TMinimum>
+        struct ResourceConstraintSatisfied<
+            DedicatedWorkerLease<TTaskIdentity, TProperties...>,
+            MinimumStackCapacity<TMinimum>
+        > {
+
+            static constexpr bool Value =
+                HasMinimumStackCapacity<TMinimum, TProperties...>::Value;
+
+        };
+
+
+        template<class TTaskIdentity, class... TProperties, ThreadPriority TMinimum>
+        struct ResourceConstraintSatisfied<
+            DedicatedWorkerLease<TTaskIdentity, TProperties...>,
+            MinimumPriority<TMinimum>
+        > {
+
+            static constexpr bool Value =
+                HasMinimumPriority<TMinimum, TProperties...>::Value;
+
+        };
+
+
+        template<class TTaskIdentity, class... TProperties, class TAffinity>
+        struct ResourceConstraintSatisfied<
+            DedicatedWorkerLease<TTaskIdentity, TProperties...>,
+            RequiredAffinity<TAffinity>
+        > {
+
+            static constexpr bool Value =
+                HasRequiredAffinity<TAffinity, TProperties...>::Value;
+
+        };
+
+
+        template<class TThreadIdentity, class... TProperties, std::size_t TMinimum>
+        struct ResourceConstraintSatisfied<
+            DedicatedThread<TThreadIdentity, TProperties...>,
+            MinimumStackCapacity<TMinimum>
+        > {
+
+            static constexpr bool Value =
+                HasMinimumStackCapacity<TMinimum, TProperties...>::Value;
+
+        };
+
+
+        template<class TThreadIdentity, class... TProperties, ThreadPriority TMinimum>
+        struct ResourceConstraintSatisfied<
+            DedicatedThread<TThreadIdentity, TProperties...>,
+            MinimumPriority<TMinimum>
+        > {
+
+            static constexpr bool Value =
+                HasMinimumPriority<TMinimum, TProperties...>::Value;
+
+        };
+
+
+        template<class TThreadIdentity, class... TProperties, class TAffinity>
+        struct ResourceConstraintSatisfied<
+            DedicatedThread<TThreadIdentity, TProperties...>,
+            RequiredAffinity<TAffinity>
+        > {
+
+            static constexpr bool Value =
+                HasRequiredAffinity<TAffinity, TProperties...>::Value;
+
+        };
+
+
+        template<class TResource, class TRequirement>
+        struct ResourceSatisfiesRequirement {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TResource, class TPoolIdentity, class... TConstraints>
+        struct ResourceSatisfiesRequirement<
+            TResource,
+            TaskPoolRequirement<TPoolIdentity, TConstraints...>
+        > {
+
+            static constexpr bool Value =
+                MatchesTaskPoolIdentity<TPoolIdentity, TResource>::Value &&
+                (ResourceConstraintSatisfied<TResource, TConstraints>::Value && ... && true);
+
+        };
+
+
+        template<class TResource, class TThreadIdentity, class... TConstraints>
+        struct ResourceSatisfiesRequirement<
+            TResource,
+            DedicatedThreadRequirement<TThreadIdentity, TConstraints...>
+        > {
+
+            static constexpr bool Value =
+                MatchesDedicatedThreadIdentity<TThreadIdentity, TResource>::Value &&
+                (ResourceConstraintSatisfied<TResource, TConstraints>::Value && ... && true);
+
+        };
+
+
+        template<class TResource, class TTaskIdentity, class... TConstraints>
+        struct ResourceSatisfiesRequirement<
+            TResource,
+            DedicatedWorkerRequirement<TTaskIdentity, TConstraints...>
+        > {
+
+            static constexpr bool Value =
+                MatchesDedicatedWorkerIdentity<TTaskIdentity, TResource>::Value &&
+                (ResourceConstraintSatisfied<TResource, TConstraints>::Value && ... && true);
+
+        };
+
+
+        template<class TTopology, class TRequirement>
+        struct ConstrainedRequirementSatisfied;
+
+
+        template<class... TResources, class TRequirement>
+        struct ConstrainedRequirementSatisfied<
+            ThreadingTopology<TResources...>,
+            TRequirement
+        > {
+
+            static constexpr bool Value =
+                (ResourceSatisfiesRequirement<TResources, TRequirement>::Value || ... || false);
+
+        };
+
+    } // ESPressio::Threading::Detail
+
+
+    template<class TTopology, class TRequirement>
+    inline constexpr bool SatisfiesThreadingRequirement =
+        Detail::ConstrainedRequirementSatisfied<
+            TTopology,
+            TRequirement
+        >::Value;
 
 } // ESPressio::Threading
