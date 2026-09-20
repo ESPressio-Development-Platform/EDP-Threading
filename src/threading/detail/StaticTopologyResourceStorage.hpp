@@ -109,7 +109,6 @@ namespace ESPressio::Threading::Detail {
                 TBindings,
                 TManagedContextRouter,
                 TExecutionContextProvider,
-                TAtomicWord32Provider,
                 TMutexProvider,
                 TResourceIndex
             >;
