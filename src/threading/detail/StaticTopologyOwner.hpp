@@ -644,7 +644,12 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingFinalizationResult::ProviderFailure;
                 }
 
-                _bootstrap.LifecycleState().PublishShutdownComplete();
+                if (
+                    _bootstrap.LifecycleState().PublishShutdownComplete() !=
+                    ESPressio::Platform::Synchronization::SpinLockReleaseResult::Released
+                ) {
+                    return ThreadingFinalizationResult::ProviderFailure;
+                }
 
                 if (
                     _shutdownWait.WakeCompleted() !=
