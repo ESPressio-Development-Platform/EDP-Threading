@@ -1321,6 +1321,75 @@ int main() {
 
 
 
+    auto occupyingDispatch = runtime.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        occupyingDispatch.IsSucceeded()
+    );
+
+    auto occupyingTask = occupyingDispatch.TakeTask();
+
+    Test::LifetimeCallable::DestructionCount = 0U;
+
+    auto cancelledQueuedDispatch = runtime.Dispatch(
+        Test::LifetimeCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::Queue
+    );
+
+    assert(
+        cancelledQueuedDispatch.IsSucceeded()
+    );
+
+    auto cancelledQueuedTask = cancelledQueuedDispatch.TakeTask();
+
+    assert(
+        cancelledQueuedTask.State() == ESPressio::Threading::TaskState::Queued
+    );
+
+    assert(
+        cancelledQueuedTask.Cancel() ==
+        ESPressio::Threading::TaskCancelResult::Accepted
+    );
+
+    assert(
+        cancelledQueuedTask.State() == ESPressio::Threading::TaskState::Cancelled
+    );
+
+    assert(
+        Test::LifetimeCallable::DestructionCount == 1U
+    );
+
+    const auto occupyingBinding = runtime.AssignedTaskForContext(
+        1U
+    );
+
+    assert(
+        occupyingBinding.has_value()
+    );
+
+    const auto occupyingOutcome = runtime.Invoke(
+        occupyingBinding->RecordIndex,
+        occupyingBinding->Phase
+    );
+
+    runtime.CompleteWorkerTask(
+        1U,
+        occupyingBinding->RecordIndex,
+        occupyingBinding->Phase,
+        occupyingOutcome
+    );
+
+    {
+        auto result = occupyingTask.TakeResult();
+
+        assert(
+            result.IsSucceeded()
+        );
+    }
+
     bool shutdownRequested = false;
 
     const auto shutdownPredicate = [](
