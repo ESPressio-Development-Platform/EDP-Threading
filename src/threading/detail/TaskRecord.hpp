@@ -73,6 +73,13 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            TaskControl() noexcept {
+                _value.StoreRelaxed(
+                    0U
+                );
+            }
+
+
             // State inspection.
 
             /// Returns the internal operational state.
