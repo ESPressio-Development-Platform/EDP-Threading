@@ -1075,7 +1075,7 @@ int main() {
     assert(
         runtime.WorkerBecameAvailable(
             1U
-        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::AlreadyAvailable
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::Available
     );
 
     auto firstQueuedDispatch = runtime.Dispatch(
