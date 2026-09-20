@@ -346,31 +346,26 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            /// Defines the compile-time contract for `CurrentContextIndexNext`.
-            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
+            /// Returns the current Worker's dense context index when one Worker in this facility owns the current Platform context.
+            /// @tparam TIndex Compile-time Worker index currently inspected by the recursive lookup.
             template<std::size_t TIndex>
-            bool CurrentContextIndexNext(
-                typename Facility::ManagedContextIndex& contextIndex
-            ) const noexcept {
+            std::optional<typename Facility::ManagedContextIndex> CurrentContextIndexNext() const noexcept {
                 if constexpr (
                     TIndex == sizeof...(TWorkers)
                 ) {
-                    return false;
+                    return std::nullopt;
                 } else {
                     if (
                         std::get<TIndex>(
                             _workers
                         ).IsCurrentContext()
                     ) {
-                        contextIndex = static_cast<typename Facility::ManagedContextIndex>(
+                        return static_cast<typename Facility::ManagedContextIndex>(
                             TFirstContextIndex + TIndex
                         );
-                        return true;
                     }
 
-                    return CurrentContextIndexNext<TIndex + 1U>(
-                        contextIndex
-                    );
+                    return CurrentContextIndexNext<TIndex + 1U>();
                 }
             }
 
