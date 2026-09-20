@@ -149,6 +149,33 @@ namespace ESPressio::Threading::Detail {
                 return AvailabilityClaimResult::Unavailable;
             }
 
+            /// Attempts to claim one specific bounded entry when it is currently available.
+            AvailabilityClaimResult TryClaimSpecific(
+                std::size_t recordIndex
+            ) noexcept {
+                if (
+                    recordIndex >= TCapacity ||
+                    !IsAvailable(
+                        recordIndex
+                    )
+                ) {
+                    return AvailabilityClaimResult::Unavailable;
+                }
+
+                const auto byteIndex = recordIndex / ByteBits;
+                const auto bitIndex = recordIndex % ByteBits;
+                const auto mask = static_cast<std::uint8_t>(
+                    1U << bitIndex
+                );
+
+                _bytes[byteIndex] = static_cast<std::uint8_t>(
+                    _bytes[byteIndex] &
+                    static_cast<std::uint8_t>(~mask)
+                );
+
+                return AvailabilityClaimResult::Claimed;
+            }
+
             /// Republishes one fully reclaimed record as available.
             ///
             /// The owning Task facility must serialize this operation with admission and reclamation.
