@@ -4,6 +4,7 @@
 #include <tuple>
 
 #include "../ThreadingTypes.hpp"
+#include "TaskFacilityRuntime.hpp"
 
 namespace ESPressio::Threading::Detail {
 
@@ -15,19 +16,26 @@ namespace ESPressio::Threading::Detail {
             /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
             /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
-            static void CancelTaskResources(
+            static TaskFacilityShutdownCancellationResult CancelTaskResources(
                 TTuple& resources
             ) noexcept {
                 if constexpr (
-                    TIndex < std::tuple_size_v<TTuple>
+                    TIndex == std::tuple_size_v<TTuple>
                 ) {
-                    std::get<TIndex>(
+                    return TaskFacilityShutdownCancellationResult::Applied;
+                } else {
+                    const auto result = std::get<TIndex>(
                         resources
                     ).BeginShutdownCancellation();
 
-                    CancelTaskResources<TIndex + 1U>(
+                    const auto tailResult = CancelTaskResources<TIndex + 1U>(
                         resources
                     );
+
+                    return result == TaskFacilityShutdownCancellationResult::ProviderFailure ||
+                        tailResult == TaskFacilityShutdownCancellationResult::ProviderFailure
+                        ? TaskFacilityShutdownCancellationResult::ProviderFailure
+                        : TaskFacilityShutdownCancellationResult::Applied;
                 }
             }
 
@@ -113,8 +121,10 @@ namespace ESPressio::Threading::Detail {
                     return result;
                 }
 
-                CancelTaskResources<0U>(
-                    taskResources
+                static_cast<void>(
+                    CancelTaskResources<0U>(
+                        taskResources
+                    )
                 );
 
                 StopDedicatedThreads<0U>(
