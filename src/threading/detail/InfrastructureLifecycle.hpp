@@ -129,6 +129,15 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            InfrastructureLifecycle() noexcept {
+                _state.StoreRelaxed(
+                    static_cast<std::uint8_t>(
+                        InfrastructureState::Uninitialized
+                    )
+                );
+            }
+
+
             // State observation.
 
             InfrastructureState State() const noexcept {
