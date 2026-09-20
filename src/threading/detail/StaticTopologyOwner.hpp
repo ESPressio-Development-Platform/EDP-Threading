@@ -290,11 +290,10 @@ namespace ESPressio::Threading::Detail {
                     return;
                 }
 
-                _resources.FinalizeShutdown(
-                    shutdownWaitRuntime
-                );
+                _resources.FinalizeShutdown();
 
                 _bootstrap.LifecycleState().PublishShutdownComplete();
+                shutdownWaitRuntime.WakeCompleted();
             }
 
 
