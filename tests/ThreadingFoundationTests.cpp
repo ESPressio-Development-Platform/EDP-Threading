@@ -2357,10 +2357,10 @@ int main() {
 
     assert(
         currentWorkerFacility.CompleteWorkerTask(
-                0U,
-                currentWorkerBinding->RecordIndex,
-                currentWorkerBinding->Phase,
-                currentWorkerOutcome
+            0U,
+            currentWorkerBinding->RecordIndex,
+            currentWorkerBinding->Phase,
+            currentWorkerOutcome
         ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
@@ -2717,10 +2717,10 @@ int main() {
 
     assert(
         runtime.CompleteWorkerTask(
-                1U,
-                immediateBinding->RecordIndex,
-                immediateBinding->Phase,
-                immediateOutcome
+            1U,
+            immediateBinding->RecordIndex,
+            immediateBinding->Phase,
+            immediateOutcome
         ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
@@ -2783,10 +2783,10 @@ int main() {
 
     assert(
         runtime.CompleteWorkerTask(
-                1U,
-                firstQueuedBinding->RecordIndex,
-                firstQueuedBinding->Phase,
-                firstQueuedOutcome
+            1U,
+            firstQueuedBinding->RecordIndex,
+            firstQueuedBinding->Phase,
+            firstQueuedOutcome
         ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
@@ -2809,10 +2809,10 @@ int main() {
 
     assert(
         runtime.CompleteWorkerTask(
-                1U,
-                secondQueuedBinding->RecordIndex,
-                secondQueuedBinding->Phase,
-                secondQueuedOutcome
+            1U,
+            secondQueuedBinding->RecordIndex,
+            secondQueuedBinding->Phase,
+            secondQueuedOutcome
         ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
@@ -2865,10 +2865,10 @@ int main() {
 
         assert(
             runtime.CompleteWorkerTask(
-                        1U,
-                        lifetimeBinding->RecordIndex,
-                        lifetimeBinding->Phase,
-                        lifetimeOutcome
+                1U,
+                lifetimeBinding->RecordIndex,
+                lifetimeBinding->Phase,
+                lifetimeOutcome
             ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
         );
 
@@ -2939,10 +2939,10 @@ int main() {
 
     assert(
         runtime.CompleteWorkerTask(
-                1U,
-                occupyingBinding->RecordIndex,
-                occupyingBinding->Phase,
-                occupyingOutcome
+            1U,
+            occupyingBinding->RecordIndex,
+            occupyingBinding->Phase,
+            occupyingOutcome
         ) == ESPressio::Threading::Detail::TaskFacilityCompletionResult::Completed
     );
 
