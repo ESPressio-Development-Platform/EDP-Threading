@@ -1070,6 +1070,14 @@ namespace Test {
         >;
 
     static_assert(
+        !ESPressio::Threading::Detail::ValidDedicatedThreadBindings<
+            MixedOwnedTopology,
+            std::tuple<UnknownExecutionProperty>
+        >::Value,
+        "Dedicated Thread binding tuples must reject arbitrary non-binding Types"
+    );
+
+    static_assert(
         ESPressio::Threading::Detail::ValidDedicatedThreadBindings<
             MixedOwnedTopology,
             MixedOwnedBindings
