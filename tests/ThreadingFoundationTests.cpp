@@ -1571,6 +1571,38 @@ int main() {
     ESPressio::Threading::Detail::ManagedContextRouter<
         3U,
         Test::SignalProvider
+    > unboundStructuralRouter(
+        structuralWakeSet
+    );
+
+    assert(
+        !unboundStructuralRouter.IsTopologyBound()
+    );
+
+    assert(
+        !unboundStructuralRouter.CurrentContextIndex().has_value()
+    );
+
+    assert(
+        unboundStructuralRouter.IsInterrupted(
+            0U
+        )
+    );
+
+    unboundStructuralRouter.BindTopology(
+        nullptr,
+        currentContextResolver,
+        interruptionResolver
+    );
+
+    assert(
+        !unboundStructuralRouter.IsTopologyBound()
+    );
+
+
+    ESPressio::Threading::Detail::ManagedContextRouter<
+        3U,
+        Test::SignalProvider
     > structuralRouter(
         structuralWakeSet,
         nullptr,
