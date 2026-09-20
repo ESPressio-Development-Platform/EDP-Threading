@@ -413,6 +413,10 @@ namespace Test {
 
     struct DedicatedThreadIdentity final {};
 
+    struct UndeclaredThreadIdentity final {};
+
+    struct UnknownExecutionProperty final {};
+
 
     struct DedicatedCallable final {
 
@@ -1055,6 +1059,23 @@ namespace Test {
         >::Value,
         "Every Dedicated Thread must have exactly one declared callable binding"
     );
+
+    static_assert(
+        !ESPressio::Threading::Detail::ValidExecutionResourceProperties<
+            UnknownExecutionProperty
+        >::Value,
+        "Unknown execution resource properties must be rejected"
+    );
+
+    static_assert(
+        ESPressio::Threading::Detail::ValidExecutionResourceProperties<
+            ESPressio::Threading::StackCapacity<2048U>,
+            ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::High>,
+            ESPressio::Threading::Affinity<1U>
+        >::Value,
+        "Known execution resource properties must remain valid"
+    );
+
 
     static_assert(
         !ESPressio::Threading::Detail::ValidDedicatedThreadBindings<
