@@ -14,6 +14,7 @@
 #include "../src/threading/detail/ManagedContextRouter.hpp"
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
 #include "../src/threading/detail/ShutdownCoordinator.hpp"
+#include "../src/threading/detail/StaticTopologyPlan.hpp"
 #include "../src/threading/detail/ThreadingBootstrap.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
@@ -553,6 +554,26 @@ namespace Test {
             ESPressio::Threading::Affinity<0U>
         >::Value,
         "Conflicting affinity declarations must be rejected"
+    );
+
+
+    using TopologyPlan = ESPressio::Threading::Detail::StaticTopologyPlan<Topology>;
+
+    static_assert(
+        TopologyPlan::Resource<0U>::FirstContextIndex == 0U &&
+        TopologyPlan::Resource<0U>::ContextCount == 1U,
+        "First Task facility must own the first dense managed-context range"
+    );
+
+    static_assert(
+        TopologyPlan::Resource<1U>::FirstContextIndex == 1U &&
+        TopologyPlan::Resource<1U>::ContextCount == 1U,
+        "Dedicated Thread must follow the preceding facility range without a runtime registry"
+    );
+
+    static_assert(
+        TopologyPlan::ManagedExecutionContextCount == 2U,
+        "Static topology plan must preserve the topology-wide managed-context count"
     );
 
 
