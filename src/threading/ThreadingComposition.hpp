@@ -716,6 +716,7 @@ namespace ESPressio::Threading {
             using Callable = TCallable;
 
 
+            /// Stores the application callable bound to this Dedicated Thread identity.
             explicit DedicatedThreadBinding(
                 TCallable callable
             ) noexcept(
@@ -728,6 +729,7 @@ namespace ESPressio::Threading {
                 ) {}
 
 
+            /// Transfers the bound callable into the statically owned Dedicated Thread runtime.
             TCallable&& TakeCallable() noexcept {
                 return std::move(
                     _callable
