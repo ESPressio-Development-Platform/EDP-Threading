@@ -8,6 +8,7 @@
 #include "../src/threading/detail/DedicatedThreadRuntime.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/InfrastructureLifecycle.hpp"
+#include "../src/threading/detail/ShutdownWaitRuntime.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
@@ -1548,7 +1549,34 @@ int main() {
         successfulLifecycle.ShouldTerminate()
     );
 
-    successfulLifecycle.PublishShutdownComplete();
+    ESPressio::Threading::Detail::ShutdownWaitRuntime<
+        decltype(successfulLifecycle),
+        Test::ManagedContextRouter::ContextCapacity,
+        Test::MutexProvider,
+        Test::ManagedContextRouter
+    > shutdownWaitRuntime(
+        successfulLifecycle,
+        runtimeRouter
+    );
+
+    successfulLifecycle.FinalizeShutdown(
+        shutdownWaitRuntime,
+        successfulResource
+    );
+
+    assert(
+        successfulResource.TerminationWakeCount == 1U &&
+        successfulResource.JoinCount == 1U &&
+        successfulResource.DestroyCount == 1U
+    );
+
+    assert(
+        shutdownWaitRuntime.WaitFor(
+            ESPressio::Clock::Duration::FromNanoseconds(
+                0
+            )
+        ) == ESPressio::Threading::ShutdownWaitResult::Completed
+    );
 
     assert(
         successfulLifecycle.BeginShutdown() ==
