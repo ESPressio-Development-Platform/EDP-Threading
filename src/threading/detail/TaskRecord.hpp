@@ -5,6 +5,8 @@
 #include <limits>
 #include <type_traits>
 
+#include "../ThreadingTypes.hpp"
+
 namespace ESPressio::Threading::Detail {
 
     enum class TaskOperationalState : std::uint8_t {
