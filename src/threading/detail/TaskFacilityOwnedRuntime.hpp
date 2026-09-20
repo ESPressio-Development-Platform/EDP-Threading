@@ -137,12 +137,6 @@ namespace ESPressio::Threading::Detail {
                     );
 
                     if (result != WorkerExecutionInitializationResult::Succeeded) {
-                        static_cast<void>(
-                            std::get<TIndex>(
-                                _workers
-                            ).Destroy()
-                        );
-
                         DestroyInitializedPrefix<TIndex>();
 
                         return result;
