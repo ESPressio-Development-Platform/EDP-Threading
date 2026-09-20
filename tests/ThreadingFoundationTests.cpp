@@ -1593,7 +1593,8 @@ int main() {
     assert(
         threadControl.TryStart(
             activationPhase
-        )
+        ) ==
+        ESPressio::Threading::Detail::DedicatedThreadControlStartResult::Started
     );
 
     assert(
