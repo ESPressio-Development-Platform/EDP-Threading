@@ -528,7 +528,9 @@ namespace ESPressio::Threading {
         );
 
         using TaskIdentity = TTaskIdentity;
-        using Properties = ResourceProperties<TWorkerProperties...>;
+
+        /// Resolved execution-only properties; bounded Task storage declarations are handled separately below.
+        using Properties = Detail::ResolvedExecutionResourceProperties<TWorkerProperties...>;
 
         static constexpr std::size_t WorkerCount = 1U;
         static constexpr std::size_t RecordCapacity =
