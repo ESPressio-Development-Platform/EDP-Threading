@@ -2056,18 +2056,32 @@ int main() {
     );
 
 
+    const auto* structuralTopologyContext =
+        static_cast<const void*>(&structuralWakeSet);
+
     ESPressio::Threading::Detail::ManagedContextRouter<
         3U,
         Test::SignalProvider
     > structuralRouter(
         structuralWakeSet,
-        nullptr,
+        structuralTopologyContext,
         currentContextResolver,
         interruptionResolver
     );
 
     assert(
-        structuralRouter.CurrentContextIndex().value() == 0U
+        structuralRouter.IsTopologyBound()
+    );
+
+    const auto structuralContextIndex =
+        structuralRouter.CurrentContextIndex();
+
+    assert(
+        structuralContextIndex.has_value()
+    );
+
+    assert(
+        structuralContextIndex.value() == 0U
     );
 
     assert(
