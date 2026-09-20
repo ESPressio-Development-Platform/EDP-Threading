@@ -66,6 +66,24 @@ namespace ESPressio::Threading::Detail {
                 WorkerContext<TIndices>...
             >;
 
+            template<std::size_t TWorkerIndex>
+            static typename WorkerContext<TWorkerIndex>::ConstructionArguments WorkerArguments(
+                Facility& facility,
+                TManagedContextRouter& router,
+                const void* shutdownContext,
+                bool (*isShutdownRequested)(const void*) noexcept
+            ) noexcept {
+                return typename WorkerContext<TWorkerIndex>::ConstructionArguments {
+                    &facility,
+                    &router,
+                    static_cast<typename Facility::ManagedContextIndex>(
+                        TFirstContextIndex + TWorkerIndex
+                    ),
+                    shutdownContext,
+                    isShutdownRequested
+                };
+            }
+
             template<std::size_t... TIndices>
             static WorkerTuple<TIndices...> MakeWorkers(
                 Facility& facility,
@@ -75,12 +93,9 @@ namespace ESPressio::Threading::Detail {
                 std::index_sequence<TIndices...>
             ) noexcept {
                 return WorkerTuple<TIndices...>(
-                    WorkerContext<TIndices>(
+                    WorkerArguments<TIndices>(
                         facility,
                         router,
-                        static_cast<typename Facility::ManagedContextIndex>(
-                            TFirstContextIndex + TIndices
-                        ),
                         shutdownContext,
                         isShutdownRequested
                     )...
