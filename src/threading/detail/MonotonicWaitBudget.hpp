@@ -32,6 +32,21 @@ namespace ESPressio::Threading::Detail {
             /// Canonical absolute deadline for deadline-based waits.
             ESPressio::Clock::MonotonicTimestamp _deadline;
 
+
+            // Construction.
+
+            /// Creates a normalized monotonic wait budget from its complete internal representation.
+            constexpr MonotonicWaitBudget(
+                MonotonicWaitMode mode,
+                ESPressio::Clock::MonotonicTimestamp start,
+                ESPressio::Clock::Duration duration,
+                ESPressio::Clock::MonotonicTimestamp deadline
+            ) noexcept :
+                _mode(mode),
+                _start(start),
+                _duration(duration),
+                _deadline(deadline) {}
+
         public:
 
             // Construction.
