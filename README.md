@@ -30,7 +30,7 @@ The public vocabulary includes:
 3. `Start()` starts every declared infrastructure context transactionally in declaration order. Semantic Task dispatch and Dedicated Thread activation remain unavailable until the complete Start succeeds.
 4. Task dispatch is addressed by Pool identity. Dedicated Worker dispatch is addressed by its Task identity. Dedicated Threads are addressed by Thread identity.
 5. `BeginShutdown()` is terminal. New Task admission/Thread activation is rejected; queued Tasks are cancelled, running Tasks receive cooperative cancellation, and Dedicated Threads receive stop requests.
-6. Once `IsExecutionQuiescent()` is true, `FinalizeShutdown(shutdownWaitRuntime)` tears down every infrastructure context and publishes terminal completion.
+6. Once `IsExecutionQuiescent()` is true, `FinalizeShutdown(shutdownWaitRuntime)` tears down every infrastructure context and publishes terminal completion. The supplied wait runtime is the bounded shutdown-completion wait surface used by the application/bootstrap layer.
 
 The empty `ThreadingTopology<>` is valid and its context wake/router/resolver storage compiles away.
 
