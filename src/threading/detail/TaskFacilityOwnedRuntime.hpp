@@ -143,8 +143,12 @@ namespace ESPressio::Threading::Detail {
                 )
             );
 
+            // Owned facility and Worker topology.
+
+            /// Deterministic Task facility state owned directly by this topology resource.
             Facility _facility;
 
+            /// Persistent Worker execution contexts owned directly by this topology resource.
             WorkersTuple _workers;
 
 
@@ -430,6 +434,7 @@ namespace ESPressio::Threading::Detail {
 
             // Construction.
 
+            /// Constructs the facility and every persistent Worker against the stable topology router.
             TaskFacilityOwnedRuntime(
                 TManagedContextRouter& router,
                 const void* shutdownContext,
@@ -449,6 +454,7 @@ namespace ESPressio::Threading::Detail {
 
             // Infrastructure lifecycle.
 
+            /// Validates facility synchronization and initializes every persistent Worker context.
             WorkerExecutionInitializationResult Initialize() noexcept {
                 if (
                     _facility.ValidateSynchronization() !=
@@ -460,6 +466,7 @@ namespace ESPressio::Threading::Detail {
                 return InitializeNext<0U>();
             }
 
+            /// Starts every initialized Worker transactionally in declaration order.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
                 std::size_t startedCount = 0U;
 
@@ -468,10 +475,12 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Wakes every Worker so rollback or terminal infrastructure termination can be observed.
             ESPressio::Platform::Synchronization::SignalNotifyResult RequestInfrastructureTermination() noexcept {
                 return RequestTerminationNext<0U>();
             }
 
+            /// Joins every persistent Worker using the supplied Platform wait budget.
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
@@ -480,6 +489,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Destroys every initialized Worker execution context after successful join.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return DestroyNext<0U>();
             }
@@ -507,10 +517,12 @@ namespace ESPressio::Threading::Detail {
 
             // Facility access.
 
+            /// Returns mutable access to the owned Task facility runtime for topology coordination.
             Facility& FacilityState() noexcept {
                 return _facility;
             }
 
+            /// Returns read-only access to the owned Task facility runtime.
             const Facility& FacilityState() const noexcept {
                 return _facility;
             }
@@ -523,6 +535,7 @@ namespace ESPressio::Threading::Detail {
                 return CurrentContextIndexNext<0U>();
             }
 
+            /// Indicates whether the supplied dense Worker context currently observes Task cancellation.
             bool IsContextInterrupted(
                 typename Facility::ManagedContextIndex contextIndex
             ) noexcept {
@@ -545,10 +558,12 @@ namespace ESPressio::Threading::Detail {
 
             // Shutdown cooperation.
 
+            /// Applies terminal-shutdown cancellation semantics to queued and running Tasks in this facility.
             void BeginShutdownCancellation() noexcept {
                 _facility.BeginShutdownCancellation();
             }
 
+            /// Indicates whether this facility has no queued or actively executing Task work.
             bool IsExecutionQuiescent() noexcept {
                 return _facility.IsExecutionQuiescent();
             }
