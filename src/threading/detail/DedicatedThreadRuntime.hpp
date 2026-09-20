@@ -519,6 +519,15 @@ namespace ESPressio::Threading::Detail {
                 return _provider.Start();
             }
 
+            /// Wakes the persistent trampoline so rollback/shutdown termination is re-evaluated.
+            void RequestInfrastructureTermination() noexcept {
+                static_cast<void>(
+                    _router->Wake(
+                        _contextIndex
+                    )
+                );
+            }
+
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
