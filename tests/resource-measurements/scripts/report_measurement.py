@@ -104,9 +104,9 @@ def parse_measurement_symbols(elf_path):
     return sizes
 
 
-def report_measurement(source, target, build_env):
+def report_measurement(target, source, env):
     elf_path = target[0].get_abspath()
-    environment = build_env.subst(
+    environment = env.subst(
         "$PIOENV"
     )
 
