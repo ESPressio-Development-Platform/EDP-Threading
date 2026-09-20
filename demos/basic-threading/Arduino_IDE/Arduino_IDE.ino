@@ -11,10 +11,7 @@
 #include <freertos/task.h>
 
 #include <ESPressio_Platform_FreeRTOS.hpp>
-#include <ESPressio_Platform_Portable.hpp>
-#ifndef ARDUINO
 #include <ESPressio_Platform_ESP_IDF.hpp>
-#endif
 #include <ESPressio_Threading.hpp>
 
 namespace Demo {
@@ -87,8 +84,8 @@ namespace Demo {
         ESPressio::Platform::ESPIDF::Execution::ExecutionContextProvider;
 #endif
 
-    using AtomicWord8Provider =
-        ESPressio::Platform::Portable::Concurrency::AtomicWord8Provider;
+    using AtomicWord32Provider =
+        ESPressio::Platform::ESPIDF::Concurrency::AtomicWord32Provider;
 
     using MutexProvider =
         ESPressio::Platform::FreeRTOS::Synchronization::MutexProvider;
@@ -107,7 +104,7 @@ namespace Demo {
             Bindings,
             SignalProvider,
             ExecutionContextProvider,
-            AtomicWord8Provider,
+            AtomicWord32Provider,
             MutexProvider
         >;
 
