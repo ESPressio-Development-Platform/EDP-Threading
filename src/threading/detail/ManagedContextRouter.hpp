@@ -43,10 +43,9 @@ namespace ESPressio::Threading::Detail {
             ) noexcept {}
 
 
-            /// Forwards arbitrary construction arguments when the empty-router specialization has no state to initialize.
-    /// @tparam TArguments Constructor argument Types accepted and intentionally ignored by the zero-context router.
-    template<class... TArguments>
-            /// Binds the completed structural resolver after topology resource construction.
+            /// Rejects structural binding for an empty topology because no managed context can be resolved.
+            /// @tparam TArguments Constructor argument Types that would otherwise describe a structural resolver binding.
+            template<class... TArguments>
             void BindTopology(
                 TArguments&&...
             ) noexcept = delete;
@@ -88,39 +87,50 @@ namespace ESPressio::Threading::Detail {
     template<std::size_t TContextCapacity, class TSignalProvider>
     class ManagedContextRouter final {
 
-        public:
+        private:
 
-            /// Targeted-wake set Type used by this router.
-            using WakeSet = ManagedContextWakeSet<
+            // Internal routing Types.
+
+            /// Internal targeted-wake set Type used by this router.
+            using WakeSetStorage = ManagedContextWakeSet<
                 TContextCapacity,
                 TSignalProvider
             >;
 
-            /// Compact Type used to identify one managed execution context.
-            using ContextIndex =
+            /// Internal compact Type used to identify one managed execution context.
+            using ContextIndexStorage =
                 typename ExecutionContextIndexTraits<TContextCapacity>::Type;
 
-            /// Number of managed execution contexts represented by this runtime.
-            static constexpr std::size_t ContextCapacity = TContextCapacity;
 
-        private:
+            // Structural routing state.
 
             /// Topology-owned dense targeted wake mechanisms.
-            WakeSet* _wakeSet;
+            WakeSetStorage* _wakeSet;
 
             /// Non-owning topology realization used for structural current-context/interruption scans.
             const void* _topologyContext;
 
             /// Structural resolver for the currently executing managed context.
-            std::optional<ContextIndex> (*_currentContextIndex)(const void*) noexcept;
+            std::optional<ContextIndexStorage> (*_currentContextIndex)(const void*) noexcept;
 
             /// Structural authoritative interruption resolver for one managed context.
             bool (*_isInterrupted)(
                 const void*,
-                ContextIndex
+                ContextIndexStorage
             ) noexcept;
 
         public:
+
+            // Public routing vocabulary.
+
+            /// Targeted-wake set Type used by this router.
+            using WakeSet = WakeSetStorage;
+
+            /// Compact Type used to identify one managed execution context.
+            using ContextIndex = ContextIndexStorage;
+
+            /// Number of managed execution contexts represented by this runtime.
+            static constexpr std::size_t ContextCapacity = TContextCapacity;
 
             /// Constructs a router bound only to the topology-owned wake set.
             explicit ManagedContextRouter(
