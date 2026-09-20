@@ -9,6 +9,7 @@
 #include "../src/threading/detail/DedicatedThreadRuntime.hpp"
 #include "../src/threading/detail/DedicatedWorkerLeaseRuntime.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
+#include "../src/threading/detail/ExecutionControl.hpp"
 #include "../src/threading/detail/InfrastructureLifecycle.hpp"
 #include "../src/threading/detail/ManagedContextRouter.hpp"
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
@@ -1441,6 +1442,24 @@ int main() {
 
 
     Test::ManagedContextRouter runtimeRouter;
+    assert(
+        ESPressio::Threading::Detail::ExecutionControl<
+            Test::ExecutionContextProvider,
+            Test::ManagedContextRouter
+        >::SleepFor(
+            runtimeRouter,
+            ESPressio::Clock::Duration::FromNanoseconds(
+                0
+            )
+        ) == ESPressio::Threading::SleepResult::Completed
+    );
+
+    ESPressio::Threading::Detail::ExecutionControl<
+        Test::ExecutionContextProvider,
+        Test::ManagedContextRouter
+    >::Yield();
+
+
     Test::TestFacilityRuntime runtime(
         runtimeRouter
     );
