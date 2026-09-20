@@ -211,24 +211,34 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Wakes every managed context registered for the completed activation Phase.
-            void WakeJoiners(
+            ESPressio::Platform::Synchronization::SignalNotifyResult WakeJoiners(
                 bool phase
             ) {
+                auto result =
+                    ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+
                 _joinWaiters.VisitActive(
-                    [this, phase](
+                    [this, phase, &result](
                         auto& registration
                     ) {
                         if (registration.Phase != phase) {
                             return;
                         }
 
-                        static_cast<void>(
-                            _router->Wake(
-                                registration.WaitingContextIndex
-                            )
+                        const auto wakeResult = _router->Wake(
+                            registration.WaitingContextIndex
                         );
+
+                        if (
+                            result == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled &&
+                            wakeResult != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ) {
+                            result = wakeResult;
+                        }
                     }
                 );
+
+                return result;
             }
 
             /// Indicates whether the captured activation Phase has reached a stopped state.
@@ -289,11 +299,15 @@ namespace ESPressio::Threading::Detail {
 
                 if (
                     publicationResult ==
-                    DedicatedThreadControlPublicationResult::Published
-                ) {
+                        DedicatedThreadControlPublicationResult::Published &&
                     WakeJoiners(
                         activationPhase
+                    ) != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                ) {
+                    static_cast<void>(
+                        ReleaseLock()
                     );
+                    return DedicatedThreadStoppedPublicationResult::ProviderFailure;
                 }
 
                 static_cast<void>(
