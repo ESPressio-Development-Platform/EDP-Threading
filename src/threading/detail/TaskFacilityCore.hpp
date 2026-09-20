@@ -864,6 +864,34 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Bounded traversal.
+
+            /// Visits every structurally allocated Task incarnation while the owning facility lock is held.
+            template<class TVisitor>
+            void VisitAllocated(
+                TVisitor&& visitor
+            ) {
+                for (std::size_t index = 0U; index < TRecordCapacity; ++index) {
+                    const auto recordIndex = static_cast<Index>(
+                        index
+                    );
+
+                    if (_availability.IsAvailable(
+                        recordIndex
+                    )) {
+                        continue;
+                    }
+
+                    visitor(
+                        TaskRecordBinding<Index>{
+                            recordIndex,
+                            _records[recordIndex].Control.Phase()
+                        }
+                    );
+                }
+            }
+
+
             // Bounded observability.
 
             /// Returns the configured Task-record capacity.
