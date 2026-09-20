@@ -268,6 +268,12 @@ namespace ESPressio::Threading::Detail {
             using PoolIdentity = TPoolIdentity;
             using FacilityRuntime = Facility;
 
+            template<class TCallable>
+            using TaskForCallable = typename Facility::template TaskForCallable<TCallable>;
+
+            template<class TCallable>
+            using DispatchResultFor = typename Facility::template DispatchResultFor<TCallable>;
+
             static constexpr std::size_t WorkerCount = sizeof...(TWorkers);
 
 
@@ -314,6 +320,24 @@ namespace ESPressio::Threading::Detail {
 
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return DestroyNext<0U>();
+            }
+
+
+            // Lifecycle-gated owner dispatch target.
+
+            template<class TCallable>
+            auto Dispatch(
+                TCallable&& callable,
+                TaskDispatchPolicy policy,
+                Duration timeout = Duration{}
+            ) {
+                return _facility.Dispatch(
+                    std::forward<TCallable>(
+                        callable
+                    ),
+                    policy,
+                    timeout
+                );
             }
 
 
