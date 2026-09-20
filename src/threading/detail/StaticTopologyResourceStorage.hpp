@@ -24,24 +24,23 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TResourceIndex>
+    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TResourceIndex>
     using OwnedResourceAt = typename OwnedResourceType<
         typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::Resource,
         TBindings,
         TManagedContextRouter,
         TExecutionContextProvider,
-        TAtomicWord8Provider,
         TMutexProvider,
         StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::FirstContextIndex,
         TTopology::ManagedExecutionContextCount
     >::Type;
 
 
-    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TResourceIndex>
+    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord32Provider, class TMutexProvider, std::size_t TResourceIndex>
     auto ConstructOwnedResource(
         TBindings& bindings,
         TManagedContextRouter& router,
-        InfrastructureLifecycle<TAtomicWord8Provider>& lifecycle
+        InfrastructureLifecycle<TAtomicWord32Provider>& lifecycle
     ) {
         using Descriptor =
             typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>;
@@ -53,7 +52,6 @@ namespace ESPressio::Threading::Detail {
             TBindings,
             TManagedContextRouter,
             TExecutionContextProvider,
-            TAtomicWord8Provider,
             TMutexProvider,
             TResourceIndex
         >;
@@ -75,30 +73,30 @@ namespace ESPressio::Threading::Detail {
                 ).TakeCallable(),
                 router,
                 &lifecycle,
-                &InfrastructureLifecycle<TAtomicWord8Provider>::CanActivateThunk,
-                &InfrastructureLifecycle<TAtomicWord8Provider>::ShouldTerminateThunk
+                &InfrastructureLifecycle<TAtomicWord32Provider>::CanActivateThunk,
+                &InfrastructureLifecycle<TAtomicWord32Provider>::ShouldTerminateThunk
             );
         } else {
             return Resource(
                 router,
                 &lifecycle,
-                &InfrastructureLifecycle<TAtomicWord8Provider>::ShouldTerminateThunk
+                &InfrastructureLifecycle<TAtomicWord32Provider>::ShouldTerminateThunk
             );
         }
     }
 
 
-    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TResourceIndex, bool TComplete = (TResourceIndex == TTopology::ResourceCount)>
+    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord32Provider, class TMutexProvider, std::size_t TResourceIndex, bool TComplete = (TResourceIndex == TTopology::ResourceCount)>
     class StaticTopologyResourceStorage;
 
 
-    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TResourceIndex>
+    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord32Provider, class TMutexProvider, std::size_t TResourceIndex>
     class StaticTopologyResourceStorage<
         TTopology,
         TBindings,
         TManagedContextRouter,
         TExecutionContextProvider,
-        TAtomicWord8Provider,
+        TAtomicWord32Provider,
         TMutexProvider,
         TResourceIndex,
         false
@@ -111,7 +109,7 @@ namespace ESPressio::Threading::Detail {
                 TBindings,
                 TManagedContextRouter,
                 TExecutionContextProvider,
-                TAtomicWord8Provider,
+                TAtomicWord32Provider,
                 TMutexProvider,
                 TResourceIndex
             >;
@@ -121,7 +119,7 @@ namespace ESPressio::Threading::Detail {
                 TBindings,
                 TManagedContextRouter,
                 TExecutionContextProvider,
-                TAtomicWord8Provider,
+                TAtomicWord32Provider,
                 TMutexProvider,
                 TResourceIndex + 1U
             >;
@@ -135,7 +133,7 @@ namespace ESPressio::Threading::Detail {
             StaticTopologyResourceStorage(
                 TBindings& bindings,
                 TManagedContextRouter& router,
-                InfrastructureLifecycle<TAtomicWord8Provider>& lifecycle
+                InfrastructureLifecycle<TAtomicWord32Provider>& lifecycle
             ) :
                 _resource(
                     ConstructOwnedResource<
@@ -143,7 +141,7 @@ namespace ESPressio::Threading::Detail {
                         TBindings,
                         TManagedContextRouter,
                         TExecutionContextProvider,
-                        TAtomicWord8Provider,
+                        TAtomicWord32Provider,
                         TMutexProvider,
                         TResourceIndex
                     >(
@@ -244,13 +242,13 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TResourceIndex>
+    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord32Provider, class TMutexProvider, std::size_t TResourceIndex>
     class StaticTopologyResourceStorage<
         TTopology,
         TBindings,
         TManagedContextRouter,
         TExecutionContextProvider,
-        TAtomicWord8Provider,
+        TAtomicWord32Provider,
         TMutexProvider,
         TResourceIndex,
         true
@@ -261,7 +259,7 @@ namespace ESPressio::Threading::Detail {
             StaticTopologyResourceStorage(
                 TBindings&,
                 TManagedContextRouter&,
-                InfrastructureLifecycle<TAtomicWord8Provider>&
+                InfrastructureLifecycle<TAtomicWord32Provider>&
             ) noexcept {}
 
 
