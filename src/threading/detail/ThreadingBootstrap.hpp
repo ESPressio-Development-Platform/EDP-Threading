@@ -26,10 +26,12 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle access for statically realized resources.
 
+            /// Returns mutable access to the authoritative topology lifecycle for owned runtime wiring.
             Lifecycle& LifecycleState() noexcept {
                 return _lifecycle;
             }
 
+            /// Returns read-only access to the authoritative topology lifecycle.
             const Lifecycle& LifecycleState() const noexcept {
                 return _lifecycle;
             }
@@ -50,9 +52,8 @@ namespace ESPressio::Threading::Detail {
             /// Starts statically realized execution contexts in the exact argument order supplied
             /// by the application composition. Failure is transactional and prevents operational
             /// commit.
-            /// Coordinates initialization/start/shutdown across a compile-time pack of topology resources.
-    /// @tparam TResources Concrete topology-owned runtime resource Types coordinated by Bootstrap.
-    template<class... TResources>
+            /// @tparam TResources Concrete topology-owned runtime resource Types coordinated by Bootstrap.
+            template<class... TResources>
             ThreadingStartResult Start(
                 TResources&... resources
             ) noexcept {
