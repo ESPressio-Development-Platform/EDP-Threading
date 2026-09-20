@@ -301,6 +301,14 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Context identity.
+
+            /// Indicates whether this Worker's Platform context is the current execution context.
+            bool IsCurrentContext() const noexcept {
+                return _provider.IsCurrentContext();
+            }
+
+
             // Resource inspection.
 
             /// Returns the concrete provider object size counted separately from caller backing.
