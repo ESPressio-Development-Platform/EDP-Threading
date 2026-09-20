@@ -111,6 +111,14 @@ namespace ESPressio::Threading {
     };
 
 
+    enum class ThreadingFinalizationResult : std::uint8_t {
+        Completed = 0,
+        NotShuttingDown = 1,
+        ExecutionNotQuiescent = 2,
+        ProviderFailure = 3
+    };
+
+
     enum class TaskDispatchPolicy : std::uint8_t {
         Queue = 0,
         QueueWithTimeout = 1,
