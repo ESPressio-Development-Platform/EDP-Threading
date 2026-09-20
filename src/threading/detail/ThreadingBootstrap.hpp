@@ -20,6 +20,7 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Authoritative lifecycle Type used by Threading Bootstrap.
             using Lifecycle = InfrastructureLifecycle<TSpinLockProvider>;
 
 
@@ -71,6 +72,7 @@ namespace ESPressio::Threading::Detail {
                 TaskDispatchPolicy policy,
                 Duration timeout = Duration{}
             ) {
+                /// Typed dispatch result returned for the callable being dispatched.
                 using DispatchResult = typename TFacility::template DispatchResultFor<TCallable>;
 
                 if (!_lifecycle.CanActivate()) {
