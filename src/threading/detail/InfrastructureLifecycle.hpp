@@ -278,6 +278,44 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Completes terminal infrastructure shutdown after semantic resources are quiescent.
+            ///
+            /// BeginShutdown remains the nonblocking initiation boundary. The Bootstrap/coordinator
+            /// calls this only after queued work has been cancelled and active user callables have
+            /// cooperatively ceased.
+            template<class TShutdownWaitRuntime, class... TResources>
+            void FinalizeShutdown(
+                TShutdownWaitRuntime& shutdownWaitRuntime,
+                TResources&... resources
+            ) noexcept {
+                if (State() != InfrastructureState::ShuttingDown) {
+                    return;
+                }
+
+                auto resourceTuple = std::forward_as_tuple(
+                    resources...
+                );
+
+                constexpr std::size_t ResourceCount = sizeof...(TResources);
+
+                WakeStarted<0U>(
+                    resourceTuple,
+                    ResourceCount
+                );
+
+                JoinStarted<0U>(
+                    resourceTuple,
+                    ResourceCount
+                );
+
+                DestroyAll<0U>(
+                    resourceTuple
+                );
+
+                PublishShutdownComplete();
+                shutdownWaitRuntime.WakeCompleted();
+            }
+
     };
 
 } // ESPressio::Threading::Detail
