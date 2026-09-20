@@ -50,7 +50,9 @@ namespace ESPressio::Threading::Detail {
             /// Starts statically realized execution contexts in the exact argument order supplied
             /// by the application composition. Failure is transactional and prevents operational
             /// commit.
-            template<class... TResources>
+            /// Coordinates initialization/start/shutdown across a compile-time pack of topology resources.
+    /// @tparam TResources Concrete topology-owned runtime resource Types coordinated by Bootstrap.
+    template<class... TResources>
             ThreadingStartResult Start(
                 TResources&... resources
             ) noexcept {
