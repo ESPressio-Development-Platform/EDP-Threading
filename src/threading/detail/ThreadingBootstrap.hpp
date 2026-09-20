@@ -8,17 +8,17 @@
 
 namespace ESPressio::Threading::Detail {
 
-    template<class TAtomicWord8Provider>
+    template<class TAtomicWord32Provider>
     class ThreadingBootstrap final {
 
         private:
 
             /// Authoritative application-wide Threading lifecycle.
-            InfrastructureLifecycle<TAtomicWord8Provider> _lifecycle;
+            InfrastructureLifecycle<TAtomicWord32Provider> _lifecycle;
 
         public:
 
-            using Lifecycle = InfrastructureLifecycle<TAtomicWord8Provider>;
+            using Lifecycle = InfrastructureLifecycle<TAtomicWord32Provider>;
 
 
             // Lifecycle access for statically realized resources.
