@@ -33,7 +33,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TAtomicWord32Provider, class TMutexProvider>
+    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider>
     class StaticTopologyOwner final {
 
         static_assert(
@@ -60,7 +60,7 @@ namespace ESPressio::Threading::Detail {
             >;
 
             using Bootstrap = ThreadingBootstrap<
-                TAtomicWord32Provider
+                TSpinLockProvider
             >;
 
             using ShutdownWait = ShutdownWaitRuntime<
@@ -75,7 +75,7 @@ namespace ESPressio::Threading::Detail {
                 TBindings,
                 Router,
                 TExecutionContextProvider,
-                TAtomicWord32Provider,
+                TSpinLockProvider,
                 TMutexProvider,
                 0U
             >;
