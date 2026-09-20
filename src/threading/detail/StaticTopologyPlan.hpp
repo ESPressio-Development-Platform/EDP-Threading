@@ -17,6 +17,7 @@ namespace ESPressio::Threading::Detail {
         private:
 
             template<std::size_t... TIndices>
+            /// Computes the managed-context prefix sum preceding one topology resource.
             static constexpr std::size_t Sum(
                 std::index_sequence<TIndices...>
             ) noexcept {
@@ -36,6 +37,7 @@ namespace ESPressio::Threading::Detail {
                 "Topology resource index exceeds the statically declared resource count"
             );
 
+            /// Compile-time result or index produced by this trait/specialization.
             static constexpr std::size_t Value = Sum(
                 std::make_index_sequence<TResourceIndex>{}
             );
@@ -54,17 +56,21 @@ namespace ESPressio::Threading::Detail {
             "Topology resource descriptor index exceeds the statically declared resource count"
         );
 
+        /// Topology resource Type described at this compile-time position.
         using Resource = std::tuple_element_t<
             TResourceIndex,
             typename TTopology::Resources
         >;
 
+        /// First dense managed-context index assigned to this resource.
         static constexpr std::size_t FirstContextIndex =
             TopologyContextOffset<TTopology, TResourceIndex>::Value;
 
+        /// Number of managed execution contexts owned by this resource.
         static constexpr std::size_t ContextCount =
             ManagedContextCount<Resource>::Value;
 
+        /// One-past-last dense managed-context index owned by this resource.
         static constexpr std::size_t EndContextIndex =
             FirstContextIndex + ContextCount;
 
@@ -96,11 +102,13 @@ namespace ESPressio::Threading::Detail {
             "Worker descriptor index exceeds the statically declared Worker count"
         );
 
+        /// Worker declaration Type selected from the facility Worker pack.
         using WorkerType = std::tuple_element_t<
             TWorkerIndex,
             std::tuple<TWorkers...>
         >;
 
+        /// Resolved execution properties belonging to the selected Worker/resource.
         using Properties = typename WorkerType::Properties;
 
     };
@@ -115,6 +123,7 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            /// Compile-time descriptor for the owning topology resource.
             using ResourceDescriptor = TopologyResourceDescriptor<
                 TTopology,
                 TResourceIndex
@@ -122,6 +131,7 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Concrete Task facility Type represented by this descriptor.
             using Facility = typename ResourceDescriptor::Resource;
 
             static_assert(
@@ -129,13 +139,16 @@ namespace ESPressio::Threading::Detail {
                 "FacilityWorkerDescriptor requires a TaskExecutionFacility resource"
             );
 
+            /// Compile-time descriptor for the selected Worker.
             using Worker = WorkerDescriptor<
                 typename Facility::WorkerSet,
                 TWorkerIndex
             >;
 
+            /// Resolved execution properties belonging to the selected Worker/resource.
             using Properties = typename Worker::Properties;
 
+            /// Compact Type used to identify one managed execution context.
             static constexpr std::size_t ContextIndex =
                 ResourceDescriptor::FirstContextIndex +
                 TWorkerIndex;
@@ -155,15 +168,18 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Number of resources declared by the topology.
             static constexpr std::size_t ResourceCount =
                 TTopology::ResourceCount;
 
+            /// Total number of managed execution contexts in the topology.
             static constexpr std::size_t ManagedExecutionContextCount =
                 TTopology::ManagedExecutionContextCount;
 
             /// Defines the compile-time contract for `Resource`.
             /// @tparam TResourceIndex Compile-time topology resource index.
             template<std::size_t TResourceIndex>
+            /// Topology resource Type described at this compile-time position.
             using Resource = TopologyResourceDescriptor<
                 TTopology,
                 TResourceIndex
