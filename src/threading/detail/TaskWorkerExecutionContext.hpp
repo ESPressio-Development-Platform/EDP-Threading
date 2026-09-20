@@ -268,8 +268,22 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Starts the already initialized persistent Worker trampoline.
-            ESPressio::Platform::Execution::ExecutionStartResult Start() noexcept {
+            ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
                 return _provider.Start();
+            }
+
+            /// Compatibility spelling retained inside the implementation while Bootstrap is integrated.
+            ESPressio::Platform::Execution::ExecutionStartResult Start() noexcept {
+                return StartInfrastructure();
+            }
+
+            /// Wakes the persistent Worker so rollback/shutdown termination is re-evaluated.
+            void RequestInfrastructureTermination() noexcept {
+                static_cast<void>(
+                    _router->Wake(
+                        _contextIndex
+                    )
+                );
             }
 
             /// Joins the Worker after authoritative shutdown has caused its trampoline to return.
