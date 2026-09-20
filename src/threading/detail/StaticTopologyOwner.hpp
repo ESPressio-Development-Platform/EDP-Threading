@@ -223,7 +223,7 @@ namespace ESPressio::Threading::Detail {
                 Duration timeout = Duration{}
             ) {
                 return _bootstrap.Dispatch(
-                    TaskFacility<TPoolIdentity>().FacilityState(),
+                    TaskFacility<TPoolIdentity>(),
                     std::forward<TCallable>(
                         callable
                     ),
