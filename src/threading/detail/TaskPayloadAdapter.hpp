@@ -29,26 +29,15 @@ namespace ESPressio::Threading::Detail {
             "Over-aligned Task callable/result Types are not supported by the v1 bounded payload"
         );
 
-        // Cancellation view.
-
-        /// Reads the authoritative cancellation-request state from one Task record.
-        static bool IsCancellationRequested(
-            const void* context
-        ) noexcept {
-            return static_cast<const TRecord*>(context)->Control.IsCancellationRequested();
-        }
-
-
         // Payload execution.
 
         /// Invokes the stored callable and establishes any result payload without publishing terminal lifecycle state.
         static TaskInvocationOutcome Invoke(
-            TRecord& record
+            TRecord& record,
+            TaskContext& context
         ) {
-            auto* callable = reinterpret_cast<TCallable*>(record.Payload);
-            TaskContext context(
-                &record,
-                &IsCancellationRequested
+            auto* callable = reinterpret_cast<TCallable*>(
+                record.Payload
             );
 
             if constexpr (
@@ -74,6 +63,8 @@ namespace ESPressio::Threading::Detail {
 
                 return TaskInvocationOutcome::Completed;
             } else {
+                static_cast<void>(context);
+
                 static_assert(
                     std::is_invocable_r_v<TResult, TCallable&>,
                     "Task callable must return TResult or TaskCompletion<TResult>"
@@ -142,26 +133,15 @@ namespace ESPressio::Threading::Detail {
             "Over-aligned Task callable Types are not supported by the v1 bounded payload"
         );
 
-        // Cancellation view.
-
-        /// Reads the authoritative cancellation-request state from one Task record.
-        static bool IsCancellationRequested(
-            const void* context
-        ) noexcept {
-            return static_cast<const TRecord*>(context)->Control.IsCancellationRequested();
-        }
-
-
         // Payload execution.
 
         /// Invokes the stored void callable without publishing terminal lifecycle state.
         static TaskInvocationOutcome Invoke(
-            TRecord& record
+            TRecord& record,
+            TaskContext& context
         ) {
-            auto* callable = reinterpret_cast<TCallable*>(record.Payload);
-            TaskContext context(
-                &record,
-                &IsCancellationRequested
+            auto* callable = reinterpret_cast<TCallable*>(
+                record.Payload
             );
 
             if constexpr (
