@@ -298,19 +298,19 @@ namespace ESPressio::Threading::Detail {
                 bool phase,
                 const MonotonicWaitBudget& budget
             ) {
-                const auto contextIndex = _router->CurrentContextIndex();
-
-                if (!contextIndex.has_value()) {
-                    return TaskWaitResult::Interrupted;
-                }
-
-                // An already-terminal target satisfies Wait immediately even when the calling
-                // context also has a pending cooperative interruption request.
+                // An already-terminal target satisfies Wait immediately without requiring
+                // a managed waiting context or consulting cooperative interruption state.
                 if (_core.IsTerminal(
                     recordIndex,
                     phase
                 )) {
                     return TaskWaitResult::Finished;
+                }
+
+                const auto contextIndex = _router->CurrentContextIndex();
+
+                if (!contextIndex.has_value()) {
+                    return TaskWaitResult::Interrupted;
                 }
 
                 if (_router->IsInterrupted(
