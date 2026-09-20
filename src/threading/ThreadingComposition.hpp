@@ -233,17 +233,13 @@ namespace ESPressio::Threading {
 
             static constexpr ThreadPriority Priority = []() constexpr {
                 ThreadPriority result = ThreadPriority::Normal;
-                ((result = IsPriorityProperty<TProperties>::Value
-                    ? PriorityValue<TProperties>::Value
-                    : result), ...);
+                ((result = PriorityValue<TProperties>::Value), ...);
                 return result;
             }();
 
             static constexpr ProcessorAffinity Affinity = []() constexpr {
                 ProcessorAffinity result = ProcessorAffinity::Any();
-                ((result = IsAffinityProperty<TProperties>::Value
-                    ? AffinityValue<TProperties>::Value
-                    : result), ...);
+                ((result = AffinityValue<TProperties>::Value), ...);
                 return result;
             }();
 
