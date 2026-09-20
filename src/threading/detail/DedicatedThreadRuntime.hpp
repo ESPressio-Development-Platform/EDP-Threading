@@ -14,6 +14,21 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Outcome of validating Dedicated Thread synchronization resources.
+    enum class DedicatedThreadSynchronizationResult : std::uint8_t {
+        Ready = 0,
+        ProviderFailure = 1
+    };
+
+
+    /// Outcome of publishing terminal state for one Dedicated Thread activation phase.
+    enum class DedicatedThreadStoppedPublicationResult : std::uint8_t {
+        Published = 0,
+        StaleActivation = 1,
+        ProviderFailure = 2
+    };
+
+
     /// Detects whether a Dedicated Thread callable returns void when invoked without ThreadContext.
     /// @tparam TCallable Callable Type being inspected.
     /// @tparam TEnable SFINAE helper Type used to select the invocable specialization.
@@ -79,19 +94,6 @@ namespace ESPressio::Threading::Detail {
             void
         >;
 
-    };
-
-
-    enum class DedicatedThreadSynchronizationResult : std::uint8_t {
-        Ready = 0,
-        ProviderFailure = 1
-    };
-
-
-    enum class DedicatedThreadStoppedPublicationResult : std::uint8_t {
-        Published = 0,
-        StaleActivation = 1,
-        ProviderFailure = 2
     };
 
 
