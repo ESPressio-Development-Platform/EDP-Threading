@@ -14,6 +14,7 @@
 #include "../src/threading/detail/ManagedContextRouter.hpp"
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
 #include "../src/threading/detail/ShutdownCoordinator.hpp"
+#include "../src/threading/detail/ThreadingBootstrap.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
@@ -1846,6 +1847,46 @@ int main() {
     assert(
         successfulLifecycle.BeginShutdown() ==
         ESPressio::Threading::ThreadingShutdownResult::AlreadyCompleted
+    );
+
+
+    ESPressio::Threading::Detail::ThreadingBootstrap<
+        Test::AtomicByteProvider
+    > bootstrap;
+
+    auto gatedBeforeStart = bootstrap.Dispatch(
+        runtime,
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        gatedBeforeStart.Status() ==
+        ESPressio::Threading::TaskDispatchStatus::ShuttingDown
+    );
+
+    assert(
+        bootstrap.CommitInitialization() ==
+        ESPressio::Threading::ThreadingInitializationResult::Succeeded
+    );
+
+    Test::LifecycleResource bootstrapInfrastructure;
+
+    assert(
+        bootstrap.Start(
+            bootstrapInfrastructure
+        ) == ESPressio::Threading::ThreadingStartResult::Succeeded
+    );
+
+    auto gatedOperationalDispatch = bootstrap.Dispatch(
+        runtime,
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        gatedOperationalDispatch.Status() !=
+        ESPressio::Threading::TaskDispatchStatus::ShuttingDown
     );
 
 
