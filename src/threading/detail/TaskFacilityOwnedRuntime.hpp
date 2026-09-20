@@ -153,17 +153,21 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `DestroyInitializedPrefix`.
             /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
-            void DestroyInitializedPrefix() noexcept {
+            ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInitializedPrefix() noexcept {
                 if constexpr (
-                    TIndex > 0U
+                    TIndex == 0U
                 ) {
-                    static_cast<void>(
-                        std::get<TIndex - 1U>(
-                            _workers
-                        ).Destroy()
-                    );
+                    return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
+                } else {
+                    const auto result = std::get<TIndex - 1U>(
+                        _workers
+                    ).Destroy();
 
-                    DestroyInitializedPrefix<TIndex - 1U>();
+                    const auto tailResult = DestroyInitializedPrefix<TIndex - 1U>();
+
+                    return result != ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+                        ? result
+                        : tailResult;
                 }
             }
 
@@ -188,7 +192,9 @@ namespace ESPressio::Threading::Detail {
                     );
 
                     if (result != WorkerExecutionInitializationResult::Succeeded) {
-                        DestroyInitializedPrefix<TIndex>();
+                        static_cast<void>(
+                            DestroyInitializedPrefix<TIndex>()
+                        );
 
                         return result;
                     }
@@ -200,46 +206,62 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `RequestTerminationPrefix`.
             /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
-            void RequestTerminationPrefix(
+            ESPressio::Platform::Synchronization::SignalNotifyResult RequestTerminationPrefix(
                 std::size_t startedCount
             ) noexcept {
                 if constexpr (
-                    TIndex < sizeof...(TWorkers)
+                    TIndex == sizeof...(TWorkers)
                 ) {
+                    return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+                } else {
+                    ESPressio::Platform::Synchronization::SignalNotifyResult result =
+                        ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+
                     if (TIndex < startedCount) {
-                        std::get<TIndex>(
+                        result = std::get<TIndex>(
                             _workers
                         ).RequestInfrastructureTermination();
                     }
 
-                    RequestTerminationPrefix<TIndex + 1U>(
+                    const auto tailResult = RequestTerminationPrefix<TIndex + 1U>(
                         startedCount
                     );
+
+                    return result != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ? result
+                        : tailResult;
                 }
             }
 
             /// Defines the compile-time contract for `JoinPrefix`.
             /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
-            void JoinPrefix(
+            ESPressio::Platform::Execution::ExecutionJoinResult JoinPrefix(
                 std::size_t startedCount
             ) noexcept {
                 if constexpr (
-                    TIndex < sizeof...(TWorkers)
+                    TIndex == sizeof...(TWorkers)
                 ) {
+                    return ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
+                } else {
+                    ESPressio::Platform::Execution::ExecutionJoinResult result =
+                        ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
+
                     if (TIndex < startedCount) {
-                        static_cast<void>(
-                            std::get<TIndex>(
-                                _workers
-                            ).Join(
-                                ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                            )
+                        result = std::get<TIndex>(
+                            _workers
+                        ).Join(
+                            ESPressio::Platform::Synchronization::WaitTimeout::Forever()
                         );
                     }
 
-                    JoinPrefix<TIndex + 1U>(
+                    const auto tailResult = JoinPrefix<TIndex + 1U>(
                         startedCount
                     );
+
+                    return result != ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded
+                        ? result
+                        : tailResult;
                 }
             }
 
@@ -262,12 +284,16 @@ namespace ESPressio::Threading::Detail {
                         result !=
                         ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
                     ) {
-                        RequestTerminationPrefix<0U>(
-                            startedCount
+                        static_cast<void>(
+                            RequestTerminationPrefix<0U>(
+                                startedCount
+                            )
                         );
 
-                        JoinPrefix<0U>(
-                            startedCount
+                        static_cast<void>(
+                            JoinPrefix<0U>(
+                                startedCount
+                            )
                         );
 
                         return result;
@@ -284,15 +310,21 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `RequestTerminationNext`.
             /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
-            void RequestTerminationNext() noexcept {
+            ESPressio::Platform::Synchronization::SignalNotifyResult RequestTerminationNext() noexcept {
                 if constexpr (
-                    TIndex < sizeof...(TWorkers)
+                    TIndex == sizeof...(TWorkers)
                 ) {
-                    std::get<TIndex>(
+                    return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+                } else {
+                    const auto result = std::get<TIndex>(
                         _workers
                     ).RequestInfrastructureTermination();
 
-                    RequestTerminationNext<TIndex + 1U>();
+                    const auto tailResult = RequestTerminationNext<TIndex + 1U>();
+
+                    return result != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ? result
+                        : tailResult;
                 }
             }
 
@@ -436,8 +468,8 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
-            void RequestInfrastructureTermination() noexcept {
-                RequestTerminationNext<0U>();
+            ESPressio::Platform::Synchronization::SignalNotifyResult RequestInfrastructureTermination() noexcept {
+                return RequestTerminationNext<0U>();
             }
 
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
