@@ -60,6 +60,7 @@ namespace ESPressio::Threading::Detail {
                 TManagedContextRouter
             >;
 
+            /// Topology-owned concrete Dedicated Worker runtime.
             Runtime _runtime;
 
         public:
