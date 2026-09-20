@@ -85,11 +85,19 @@ namespace ESPressio::Threading::Detail {
                     return WorkerExecutionInitializationResult::ProviderFailure;
                 }
 
-                return _worker.Initialize(
+                const auto result = _worker.Initialize(
                     priority,
                     affinity,
                     name
                 );
+
+                if (result != WorkerExecutionInitializationResult::Succeeded) {
+                    static_cast<void>(
+                        _worker.Destroy()
+                    );
+                }
+
+                return result;
             }
 
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
