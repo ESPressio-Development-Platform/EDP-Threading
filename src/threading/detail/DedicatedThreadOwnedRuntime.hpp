@@ -9,10 +9,26 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `DedicatedThreadOwnedRuntime`.
+    /// @tparam TDeclaration Static topology declaration Type being realized.
+    /// @tparam TCallable Callable Type whose invocation/storage contract is being adapted.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed contexts.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TContextIndex Dense topology execution-context index assigned to the resource.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TDeclaration, class TCallable, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     class DedicatedThreadOwnedRuntime;
 
 
+    /// Defines the compile-time contract for `DedicatedThreadOwnedRuntime`.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// @tparam TCallable Callable Type whose invocation/storage contract is being adapted.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed contexts.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TContextIndex Dense topology execution-context index assigned to the resource.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TThreadIdentity, class... TProperties, class TCallable, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     class DedicatedThreadOwnedRuntime<
         DedicatedThread<TThreadIdentity, TProperties...>,
