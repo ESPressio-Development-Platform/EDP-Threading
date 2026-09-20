@@ -1000,6 +1000,20 @@ namespace Test {
     );
 
 
+    using EmptyShutdownWait =
+        ESPressio::Threading::Detail::ShutdownWaitRuntime<
+            ESPressio::Threading::Detail::InfrastructureLifecycle<AtomicByteProvider>,
+            0U,
+            MutexProvider,
+            EmptyRouter
+        >;
+
+    static_assert(
+        sizeof(EmptyShutdownWait) == sizeof(void*),
+        "Empty Threading topology must not reserve waiter or mutex provider storage"
+    );
+
+
     using EmptyOwner =
         ESPressio::Threading::Detail::StaticTopologyOwner<
             EmptyTopology,
@@ -1178,6 +1192,22 @@ int main() {
     assert(
         emptyOwner.Start() ==
         ESPressio::Threading::ThreadingStartResult::Succeeded
+    );
+
+    assert(
+        emptyOwner.BeginShutdown() ==
+        ESPressio::Threading::ThreadingShutdownResult::Accepted
+    );
+
+    assert(
+        emptyOwner.IsExecutionQuiescent()
+    );
+
+    emptyOwner.FinalizeShutdown();
+
+    assert(
+        emptyOwner.WaitForShutdown() ==
+        ESPressio::Threading::ShutdownWaitResult::Completed
     );
 
     ESPressio::Threading::Detail::ManagedContextWakeSet<
