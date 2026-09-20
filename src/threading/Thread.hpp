@@ -42,6 +42,8 @@ namespace ESPressio::Threading {
     } // ESPressio::Threading::Detail
 
 
+    /// Defines the compile-time contract for `Thread`.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
     template<class TThreadIdentity>
     class Thread final {
 
