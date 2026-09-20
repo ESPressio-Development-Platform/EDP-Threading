@@ -21,15 +21,16 @@ namespace ESPressio::Threading::Detail {
     struct StructuralResolverForTuple;
 
 
+    /// Specializes structural-resolver construction for a tuple of concrete runtime resources.
+    /// @tparam TResources Concrete topology-owned runtime resource Types represented by the tuple.
     template<class... TResources>
     struct StructuralResolverForTuple<
         std::tuple<TResources...>
     > {
 
-        /// Defines the compile-time contract for `Type`.
+        /// Resolves the concrete structural context-resolver Type for this resource tuple.
         /// @tparam TContextCapacity Number of managed execution contexts represented by the topology.
         template<std::size_t TContextCapacity>
-        /// Resolved Type produced by this compile-time helper.
         using Type = StructuralContextResolver<
             TContextCapacity,
             TResources...
@@ -113,21 +114,34 @@ namespace ESPressio::Threading::Detail {
             >::template Type<ContextCapacity>;
 
 
+            // Owned runtime state.
+
+            /// Owns the authoritative Threading infrastructure lifecycle and start/shutdown coordinator.
             Bootstrap _bootstrap;
 
+            /// Owns one targeted wake provider for each managed execution context.
             WakeSet _wakeSet;
 
+            /// Routes current-context identity, interruption state, and targeted wake operations.
             Router _router;
 
+            /// Owns the application-supplied Dedicated Thread callable bindings for the runtime lifetime.
             TBindings _bindings;
 
+            /// Owns every statically declared Task facility, Dedicated Worker, and Dedicated Thread runtime resource.
             Resources _resources;
 
+            /// Resolves managed context identity structurally across the owned resource tree.
             Resolver _resolver;
 
+            /// Owns bounded wait registration for terminal Threading shutdown observation.
             ShutdownWait _shutdownWait;
 
 
+            // Private construction and lifecycle helpers.
+
+            /// Builds the structural context resolver from every topology-owned runtime resource.
+            /// @tparam TIndices Compile-time resource indices expanded into the resolver constructor.
             template<std::size_t... TIndices>
             static Resolver MakeResolver(
                 Resources& resources,
@@ -138,8 +152,8 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
-            /// Defines the compile-time contract for `InitializeNext`.
-            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
+            /// Initializes topology resources recursively in declaration order and rolls back the initialized prefix on failure.
+            /// @tparam TIndex Compile-time resource index currently being initialized.
             template<std::size_t TIndex>
             ThreadingInitializationResult InitializeNext() noexcept {
                 if constexpr (
@@ -158,8 +172,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            /// Defines the compile-time contract for `DestroyInitializedPrefix`.
-            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
+            /// Destroys an already-initialized prefix in reverse order during initialization rollback.
+            /// @tparam TIndex Number of initialized resources remaining in the prefix.
             template<std::size_t TIndex>
             void DestroyInitializedPrefix() noexcept {
                 if constexpr (
@@ -173,8 +187,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            /// Defines the compile-time contract for `InitializeResourceAt`.
-            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
+            /// Locates and initializes one runtime resource selected by a runtime index.
+            /// @tparam TIndex Compile-time resource index currently being inspected.
             template<std::size_t TIndex>
             WorkerExecutionInitializationResult InitializeResourceAt(
                 std::size_t targetIndex
@@ -194,8 +208,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            /// Defines the compile-time contract for `DestroyResourceAt`.
-            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
+            /// Locates and destroys one runtime resource selected by a runtime index during ordered rollback.
+            /// @tparam TIndex Compile-time resource index currently being inspected.
             template<std::size_t TIndex>
             void DestroyResourceAt(
                 std::size_t targetIndex
@@ -216,9 +230,9 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            /// Defines the compile-time contract for `InitializeInRuntimeOrder`.
-            /// @tparam TOrderIndex Compile-time position in an application-specified resource order.
-            /// @tparam TOrderCount Number of resources in the application-specified order.
+            /// Initializes resources according to a validated application-specified permutation and rolls back that same order on failure.
+            /// @tparam TOrderIndex Compile-time position currently being initialized within the supplied order.
+            /// @tparam TOrderCount Total number of topology resources represented by the supplied order.
             template<std::size_t TOrderIndex, std::size_t TOrderCount>
             ThreadingInitializationResult InitializeInRuntimeOrder(
                 const std::array<std::size_t, TOrderCount>& order
@@ -249,8 +263,8 @@ namespace ESPressio::Threading::Detail {
             }
 
 
-            /// Defines the compile-time contract for `TaskFacility`.
-            /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
+            /// Resolves the topology-owned ordinary Task facility identified by a Pool identity.
+            /// @tparam TPoolIdentity Semantic identity Type of the requested Task pool.
             template<class TPoolIdentity>
             auto& TaskFacility() noexcept {
                 constexpr auto index = TaskFacilityResourceIndex<
@@ -266,8 +280,8 @@ namespace ESPressio::Threading::Detail {
                 return _resources.template Get<index>();
             }
 
-            /// Defines the compile-time contract for `DedicatedWorker`.
-            /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+            /// Resolves the topology-owned Dedicated Worker identified by its Task identity.
+            /// @tparam TTaskIdentity Semantic identity Type of the requested Dedicated Worker task.
             template<class TTaskIdentity>
             auto& DedicatedWorker() noexcept {
                 constexpr auto index = DedicatedWorkerResourceIndex<
@@ -283,8 +297,8 @@ namespace ESPressio::Threading::Detail {
                 return _resources.template Get<index>();
             }
 
-            /// Defines the compile-time contract for `DedicatedThreadResource`.
-            /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+            /// Resolves the topology-owned Dedicated Thread runtime identified by Thread identity.
+            /// @tparam TThreadIdentity Semantic identity Type of the requested Dedicated Thread.
             template<class TThreadIdentity>
             auto& DedicatedThreadResource() noexcept {
                 constexpr auto index = DedicatedThreadResourceIndex<
@@ -301,6 +315,8 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Starts all topology resources in the supplied compile-time order through transactional Bootstrap coordination.
+            /// @tparam TIndices Compile-time topology resource indices expanded in start order.
             template<std::size_t... TIndices>
             ThreadingStartResult StartAll(
                 std::index_sequence<TIndices...>
@@ -312,23 +328,30 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            // Construction and ownership.
+
+            /// Prevents copying because this owner contains address-stable Platform resources and internal cross-references.
             StaticTopologyOwner(
                 const StaticTopologyOwner&
             ) = delete;
 
+            /// Prevents copy assignment for the address-stable topology owner.
             StaticTopologyOwner& operator =(
                 const StaticTopologyOwner&
             ) = delete;
 
+            /// Prevents moving because internal resource/router addresses must remain stable after construction.
             StaticTopologyOwner(
                 StaticTopologyOwner&&
             ) = delete;
 
+            /// Prevents move assignment for the address-stable topology owner.
             StaticTopologyOwner& operator =(
                 StaticTopologyOwner&&
             ) = delete;
 
 
+            /// Constructs the complete static topology, retaining Dedicated Thread bindings without starting execution.
             explicit StaticTopologyOwner(
                 TBindings bindings
             ) :
@@ -369,6 +392,9 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Infrastructure initialization and start.
+
+            /// Initializes every Platform-backed topology resource in declaration order without starting managed execution.
             ThreadingInitializationResult Initialize() noexcept {
                 if (
                     _bootstrap.LifecycleState().State() !=
@@ -395,6 +421,8 @@ namespace ESPressio::Threading::Detail {
                 return _bootstrap.CommitInitialization();
             }
 
+            /// Initializes every topology resource using an application-specified compile-time permutation.
+            /// @tparam TResourceIndices Topology resource indices naming every declared resource exactly once.
             template<std::size_t... TResourceIndices>
             ThreadingInitializationResult InitializeInOrder() noexcept {
                 static_assert(
@@ -459,12 +487,15 @@ namespace ESPressio::Threading::Detail {
                 return _bootstrap.CommitInitialization();
             }
 
+            /// Starts all initialized infrastructure contexts transactionally in topology declaration order.
             ThreadingStartResult Start() noexcept {
                 return StartAll(
                     std::make_index_sequence<TTopology::ResourceCount>{}
                 );
             }
 
+            /// Starts all initialized topology resources transactionally using an application-specified compile-time permutation.
+            /// @tparam TResourceIndices Topology resource indices naming every declared resource exactly once in start order.
             template<std::size_t... TResourceIndices>
             ThreadingStartResult StartInOrder() noexcept {
                 static_assert(
@@ -510,9 +541,9 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle-gated semantic execution surfaces.
 
-            /// Defines the compile-time contract for `Dispatch`.
-            /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
-            /// @tparam TCallable Callable Type being dispatched or adapted.
+            /// Dispatches finite work to the ordinary Task facility identified by Pool identity.
+            /// @tparam TPoolIdentity Semantic identity Type of the destination Task pool.
+            /// @tparam TCallable Callable Type admitted into the bounded facility.
             template<class TPoolIdentity, class TCallable>
             auto Dispatch(
                 TCallable&& callable,
@@ -529,9 +560,9 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
-            /// Defines the compile-time contract for `DispatchDedicated`.
-            /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
-            /// @tparam TCallable Callable Type being dispatched or adapted.
+            /// Dispatches finite work to the isolated Dedicated Worker identified by Task identity.
+            /// @tparam TTaskIdentity Semantic identity Type of the destination Dedicated Worker task.
+            /// @tparam TCallable Callable Type admitted into the isolated bounded facility.
             template<class TTaskIdentity, class TCallable>
             auto DispatchDedicated(
                 TCallable&& callable,
@@ -548,15 +579,15 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
-            /// Defines the compile-time contract for `ThreadHandle`.
-            /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+            /// Returns a move-only non-owning control handle for the requested topology-owned Dedicated Thread.
+            /// @tparam TThreadIdentity Semantic identity Type of the requested Dedicated Thread.
             template<class TThreadIdentity>
             Thread<TThreadIdentity> ThreadHandle() noexcept {
                 return DedicatedThreadResource<TThreadIdentity>().Handle();
             }
 
-            /// Defines the compile-time contract for `StartThread`.
-            /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+            /// Starts one topology-owned Dedicated Thread through the lifecycle-gated Bootstrap surface.
+            /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread to activate.
             template<class TThreadIdentity>
             ThreadStartResult StartThread() noexcept {
                 return _bootstrap.StartThread(
@@ -567,6 +598,7 @@ namespace ESPressio::Threading::Detail {
 
             // Terminal semantic shutdown.
 
+            /// Begins terminal shutdown, publishing the global lifecycle transition before cancelling/stopping resource work.
             ThreadingShutdownResult BeginShutdown() noexcept {
                 const auto result = _bootstrap.LifecycleState().BeginShutdown();
 
@@ -577,10 +609,12 @@ namespace ESPressio::Threading::Detail {
                 return result;
             }
 
+            /// Indicates whether every topology-owned execution resource has ceased active execution work.
             bool IsExecutionQuiescent() noexcept {
                 return _resources.IsExecutionQuiescent();
             }
 
+            /// Tears down quiescent infrastructure, publishes terminal completion, and wakes shutdown waiters.
             ThreadingFinalizationResult FinalizeShutdown() noexcept {
                 if (
                     _bootstrap.LifecycleState().State() !=
@@ -607,10 +641,14 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Terminal shutdown observation.
+
+            /// Waits indefinitely for terminal shutdown completion from a managed Threading context.
             ShutdownWaitResult WaitForShutdown() {
                 return _shutdownWait.Wait();
             }
 
+            /// Waits for terminal shutdown completion using one relative canonical monotonic-time budget.
             ShutdownWaitResult WaitForShutdownFor(
                 Duration duration
             ) {
@@ -619,6 +657,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Waits for terminal shutdown completion until a canonical EDP-Clock monotonic deadline.
             ShutdownWaitResult WaitForShutdownUntil(
                 MonotonicTimestamp deadline
             ) {
