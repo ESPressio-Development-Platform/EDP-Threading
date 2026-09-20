@@ -355,6 +355,13 @@ namespace ESPressio::Threading::Detail {
             // Infrastructure lifecycle.
 
             WorkerExecutionInitializationResult Initialize() noexcept {
+                if (
+                    _facility.ValidateSynchronization() !=
+                    TaskFacilitySynchronizationResult::Ready
+                ) {
+                    return WorkerExecutionInitializationResult::ProviderFailure;
+                }
+
                 return InitializeNext<0U>();
             }
 
