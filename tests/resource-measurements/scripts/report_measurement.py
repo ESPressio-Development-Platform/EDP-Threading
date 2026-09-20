@@ -1,5 +1,6 @@
 Import("env")
 
+import os
 import shlex
 import subprocess
 
@@ -13,16 +14,64 @@ MEASUREMENT_SYMBOLS = {
 }
 
 
-def run_tool(command, arguments):
+def resolve_tool(command):
     executable = shlex.split(
         env.subst(command)
     )
 
+    if len(executable) != 1:
+        raise RuntimeError(
+            "Expected one tool executable for " + command
+        )
+
+    return executable[0]
+
+
+def resolve_nm_tool():
+    size_tool = resolve_tool(
+        "$SIZETOOL"
+    )
+
+    tool_root, extension = os.path.splitext(
+        size_tool
+    )
+
+    if not tool_root.endswith(
+        "-size"
+    ):
+        raise RuntimeError(
+            "Unable to derive nm tool from SIZETOOL: " +
+            size_tool
+        )
+
+    return (
+        tool_root[:-5] +
+        "-nm" +
+        extension
+    )
+
+
+def run_tool(executable, arguments):
+    process_environment = os.environ.copy()
+    process_environment.update(
+        {
+            str(key): str(value)
+            for key, value in env.get(
+                "ENV",
+                {},
+            ).items()
+        }
+    )
+
     completed = subprocess.run(
-        executable + arguments,
+        [
+            executable,
+            *arguments,
+        ],
         check=True,
         capture_output=True,
         text=True,
+        env=process_environment,
     )
 
     return completed.stdout
@@ -30,8 +79,12 @@ def run_tool(command, arguments):
 
 def parse_size(elf_path):
     output = run_tool(
-        "$SIZE",
+        resolve_tool(
+            "$SIZETOOL"
+        ),
         [
+            "-B",
+            "-d",
             elf_path,
         ],
     )
@@ -63,7 +116,7 @@ def parse_size(elf_path):
 
 def parse_measurement_symbols(elf_path):
     output = run_tool(
-        "$NM",
+        resolve_nm_tool(),
         [
             "-S",
             elf_path,
