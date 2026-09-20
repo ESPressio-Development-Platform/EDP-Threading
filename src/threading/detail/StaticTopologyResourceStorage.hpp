@@ -201,6 +201,27 @@ namespace ESPressio::Threading::Detail {
                     _tail.IsExecutionQuiescent();
             }
 
+            template<class TShutdownWaitRuntime>
+            void FinalizeShutdown(
+                TShutdownWaitRuntime& shutdownWaitRuntime
+            ) noexcept {
+                _resource.RequestInfrastructureTermination();
+
+                static_cast<void>(
+                    _resource.JoinInfrastructure(
+                        ESPressio::Platform::Synchronization::WaitTimeout::Infinite()
+                    )
+                );
+
+                static_cast<void>(
+                    _resource.DestroyInfrastructure()
+                );
+
+                _tail.FinalizeShutdown(
+                    shutdownWaitRuntime
+                );
+            }
+
 
             template<std::size_t TIndex>
             const auto& Get() const noexcept {
@@ -247,6 +268,13 @@ namespace ESPressio::Threading::Detail {
 
             bool IsExecutionQuiescent() noexcept {
                 return true;
+            }
+
+            template<class TShutdownWaitRuntime>
+            void FinalizeShutdown(
+                TShutdownWaitRuntime& shutdownWaitRuntime
+            ) noexcept {
+                shutdownWaitRuntime.WakeCompleted();
             }
 
     };
