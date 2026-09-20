@@ -121,23 +121,32 @@ namespace ESPressio::Threading::Detail {
             /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
             /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
-            static void WakeStarted(
+            static ESPressio::Platform::Synchronization::SignalNotifyResult WakeStarted(
                 TTuple& resources,
                 std::size_t startedCount
             ) noexcept {
                 if constexpr (
-                    TIndex < std::tuple_size_v<TTuple>
+                    TIndex == std::tuple_size_v<TTuple>
                 ) {
+                    return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+                } else {
+                    ESPressio::Platform::Synchronization::SignalNotifyResult result =
+                        ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+
                     if (TIndex < startedCount) {
-                        std::get<TIndex>(
+                        result = std::get<TIndex>(
                             resources
                         ).RequestInfrastructureTermination();
                     }
 
-                    WakeStarted<TIndex + 1U>(
+                    const auto tailResult = WakeStarted<TIndex + 1U>(
                         resources,
                         startedCount
                     );
+
+                    return result != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ? result
+                        : tailResult;
                 }
             }
 
@@ -300,9 +309,11 @@ namespace ESPressio::Threading::Detail {
                         InfrastructureState::StartRollback
                     );
 
-                    WakeStarted<0U>(
-                        resourceTuple,
-                        startedCount
+                    static_cast<void>(
+                        WakeStarted<0U>(
+                            resourceTuple,
+                            startedCount
+                        )
                     );
 
                     const auto joinResult = JoinStarted<0U>(
