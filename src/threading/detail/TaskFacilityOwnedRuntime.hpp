@@ -51,6 +51,7 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            /// Concrete Task facility Type represented by this owned resource.
             using Facility = TaskFacilityRuntime<
                 TRecordCapacity::Value,
                 TCallableCapacity::Value,
@@ -65,6 +66,7 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `WorkerDeclaration`.
             /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
             template<std::size_t TWorkerIndex>
+            /// Static Worker declaration Type selected at a compile-time index.
             using WorkerDeclaration = std::tuple_element_t<
                 TWorkerIndex,
                 std::tuple<TWorkers...>
@@ -73,6 +75,7 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `WorkerContext`.
             /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
             template<std::size_t TWorkerIndex>
+            /// Persistent execution-context Type used to realize one Worker declaration.
             using WorkerContext = TaskWorkerExecutionContext<
                 TExecutionContextProvider,
                 WorkerDeclaration<TWorkerIndex>::Properties::StackCapacity,
@@ -81,6 +84,7 @@ namespace ESPressio::Threading::Detail {
             >;
 
             template<std::size_t... TIndices>
+            /// Tuple Type containing all persistent Worker execution contexts.
             using WorkerTuple = std::tuple<
                 WorkerContext<TIndices>...
             >;
@@ -123,6 +127,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Concrete tuple Type returned by Worker construction.
             using WorkersTuple = decltype(
                 MakeWorkers(
                     std::declval<Facility&>(),
@@ -167,6 +172,7 @@ namespace ESPressio::Threading::Detail {
                 ) {
                     return WorkerExecutionInitializationResult::Succeeded;
                 } else {
+                    /// Static Worker/resource declaration Type represented by this specialization.
                     using Declaration = WorkerDeclaration<TIndex>;
 
                     const auto result = std::get<TIndex>(
@@ -369,19 +375,24 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Semantic identity Type of this Task pool.
             using PoolIdentity = TPoolIdentity;
+            /// Concrete Task-facility runtime Type owned by this resource.
             using FacilityRuntime = Facility;
 
             /// Defines the compile-time contract for `TaskForCallable`.
             /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
+            /// Task handle Type produced for the supplied callable.
             using TaskForCallable = typename Facility::template TaskForCallable<TCallable>;
 
             /// Defines the compile-time contract for `DispatchResultFor`.
             /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
+            /// Typed dispatch result produced for the supplied callable.
             using DispatchResultFor = typename Facility::template DispatchResultFor<TCallable>;
 
+            /// Number of Workers owned by this facility.
             static constexpr std::size_t WorkerCount = sizeof...(TWorkers);
 
 
