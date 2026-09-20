@@ -213,12 +213,15 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Wakes every managed context waiting on one terminal Task incarnation.
-            void WakeMatchingWaiters(
+            ESPressio::Platform::Synchronization::SignalNotifyResult WakeMatchingWaiters(
                 Index recordIndex,
                 bool phase
             ) {
+                auto result =
+                    ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+
                 _waiters.VisitActive(
-                    [this, recordIndex, phase](
+                    [this, recordIndex, phase, &result](
                         WaitRegistration& registration
                     ) {
                         if (!Matches(
@@ -229,41 +232,101 @@ namespace ESPressio::Threading::Detail {
                             return;
                         }
 
-                        static_cast<void>(
-                            _router->Wake(
-                                registration.WaitingContextIndex
-                            )
+                        const auto wakeResult = _router->Wake(
+                            registration.WaitingContextIndex
                         );
+
+                        if (
+                            result == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled &&
+                            wakeResult != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ) {
+                            result = wakeResult;
+                        }
                     }
                 );
+
+                return result;
             }
 
             /// Wakes every managed context currently blocked for Task-record admission capacity.
-            void WakeAdmissionWaiters() {
+            ESPressio::Platform::Synchronization::SignalNotifyResult WakeAdmissionWaiters() {
+                auto result =
+                    ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+
                 _admissionWaiters.VisitActive(
-                    [this](
+                    [this, &result](
                         AdmissionWaitRegistrationType& registration
                     ) {
-                        static_cast<void>(
-                            _router->Wake(
-                                registration.WaitingContextIndex
-                            )
+                        const auto wakeResult = _router->Wake(
+                            registration.WaitingContextIndex
                         );
+
+                        if (
+                            result == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled &&
+                            wakeResult != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ) {
+                            result = wakeResult;
+                        }
                     }
                 );
+
+                return result;
             }
 
             /// Grants queued Tasks to currently available Workers in FIFO opportunity order.
             ///
-            /// The facility lock must be held throughout this scheduling pass. Every successful
-            /// grant publishes Running with the selected dense Worker context before either the
-            /// dispatch waiter or Worker context is woken.
-            void ScheduleAvailableWorkers() {
+            /// The facility lock must be held throughout this scheduling pass. A sleeping Worker is
+            /// successfully woken before its Task grant is published, while the currently executing
+            /// Worker can accept a grant directly because it does not require a wake.
+            ESPressio::Platform::Synchronization::SignalNotifyResult ScheduleAvailableWorkers() {
+                auto result =
+                    ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+
                 for (;;) {
-                    const auto contextIndex = _workerScheduler.TryClaimAvailable();
+                    const auto currentContextIndex = _router->CurrentContextIndex();
+                    auto contextIndex = currentContextIndex.has_value()
+                        ? _workerScheduler.TryClaimSpecific(
+                            currentContextIndex.value()
+                        )
+                        : std::optional<ContextIndex>{};
 
                     if (!contextIndex.has_value()) {
-                        return;
+                        contextIndex = _workerScheduler.TryClaimAvailable();
+                    }
+
+                    if (!contextIndex.has_value()) {
+                        return result;
+                    }
+
+                    if (_core.QueuedTasks() == 0U) {
+                        static_cast<void>(
+                            _workerScheduler.MarkAvailable(
+                                contextIndex.value()
+                            )
+                        );
+                        return result;
+                    }
+
+                    const auto isCurrentWorker =
+                        currentContextIndex.has_value() &&
+                        currentContextIndex.value() == contextIndex.value();
+
+                    if (!isCurrentWorker) {
+                        const auto wakeResult = _router->Wake(
+                            contextIndex.value()
+                        );
+
+                        if (
+                            wakeResult !=
+                            ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ) {
+                            static_cast<void>(
+                                _workerScheduler.MarkAvailable(
+                                    contextIndex.value()
+                                )
+                            );
+                            return wakeResult;
+                        }
                     }
 
                     const auto claim = _core.ClaimNextForWorker(
@@ -276,21 +339,21 @@ namespace ESPressio::Threading::Detail {
                                 contextIndex.value()
                             )
                         );
-                        return;
+                        return ESPressio::Platform::Synchronization::SignalNotifyResult::ProviderFailure;
                     }
 
                     const auto& binding = claim.Binding().value();
-
-                    WakeMatchingWaiters(
+                    const auto waiterWakeResult = WakeMatchingWaiters(
                         binding.RecordIndex,
                         binding.Phase
                     );
 
-                    static_cast<void>(
-                        _router->Wake(
-                            contextIndex.value()
-                        )
-                    );
+                    if (
+                        result == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled &&
+                        waiterWakeResult != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                    ) {
+                        result = waiterWakeResult;
+                    }
                 }
             }
 
@@ -1024,11 +1087,28 @@ namespace ESPressio::Threading::Detail {
                     }
 
                     const auto binding = admission.Binding().value();
-                    ScheduleAvailableWorkers();
+                    const auto schedulingResult = ScheduleAvailableWorkers();
                     const auto workerGranted = _core.HasWorkerGrant(
                         binding.RecordIndex,
                         binding.Phase
                     );
+
+                    if (
+                        schedulingResult !=
+                            ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled &&
+                        !workerGranted
+                    ) {
+                        static_cast<void>(
+                            WithdrawUnreturnedDispatch(
+                                binding.RecordIndex,
+                                binding.Phase
+                            )
+                        );
+                        static_cast<void>(
+                            ReleaseLock()
+                        );
+                        return DispatchResult(TaskDispatchStatus::Interrupted);
+                    }
 
                     if (policy == TaskDispatchPolicy::AbandonImmediately && !workerGranted) {
                         WithdrawUnreturnedDispatch(
@@ -1101,7 +1181,9 @@ namespace ESPressio::Threading::Detail {
                 );
 
                 if (result.IsAdmitted()) {
-                    ScheduleAvailableWorkers();
+                    static_cast<void>(
+                        ScheduleAvailableWorkers()
+                    );
                 }
 
                 ReleaseLock();
@@ -1123,11 +1205,20 @@ namespace ESPressio::Threading::Detail {
                     contextIndex
                 );
 
-                if (result == WorkerAvailabilityResult::Available) {
-                    ScheduleAvailableWorkers();
+                if (
+                    result == WorkerAvailabilityResult::Available &&
+                    ScheduleAvailableWorkers() !=
+                        ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                ) {
+                    static_cast<void>(
+                        ReleaseLock()
+                    );
+                    return WorkerAvailabilityResult::ProviderFailure;
                 }
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
                 return result;
             }
 
