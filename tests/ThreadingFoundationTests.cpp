@@ -523,6 +523,20 @@ namespace Test {
     >;
 
 
+    using ResolvedWorkerProperties = ESPressio::Threading::ResourceProperties<
+        ESPressio::Threading::StackCapacity<4096U>,
+        ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::High>,
+        ESPressio::Threading::Affinity<1U>
+    >;
+
+    static_assert(
+        ResolvedWorkerProperties::StackCapacity == 4096U &&
+        ResolvedWorkerProperties::Priority == ESPressio::Threading::ThreadPriority::High &&
+        ResolvedWorkerProperties::Affinity == ESPressio::Threading::ProcessorAffinity::Specific(1U),
+        "Execution resource properties must resolve directly into concrete Platform configuration"
+    );
+
+
     static_assert(
         ESPressio::Threading::Detail::ValidExecutionResourceProperties<
             ESPressio::Threading::StackCapacity<4096U>,
