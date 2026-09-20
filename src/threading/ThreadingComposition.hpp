@@ -1117,7 +1117,7 @@ namespace ESPressio::Threading {
     namespace Detail {
 
         /// Defines the compile-time contract for `MatchesTaskPoolIdentity`.
-        /// @tparam TIdentity Compile-time template parameter `TIdentity` used by this specialization.
+        /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
         /// @tparam TResource Topology resource Type being classified or inspected.
         template<class TIdentity, class TResource>
         struct MatchesTaskPoolIdentity {
@@ -1129,7 +1129,7 @@ namespace ESPressio::Threading {
 
 
         /// Defines the compile-time contract for `MatchesTaskPoolIdentity`.
-        /// @tparam TIdentity Compile-time template parameter `TIdentity` used by this specialization.
+        /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
         /// @tparam TRecordCapacity Task-record capacity declaration Type.
         /// @tparam TCallableCapacity Callable-storage capacity declaration Type.
         /// @tparam TResultCapacity Result-storage capacity declaration Type.
@@ -1147,7 +1147,7 @@ namespace ESPressio::Threading {
 
 
         /// Defines the compile-time contract for `MatchesDedicatedThreadIdentity`.
-        /// @tparam TIdentity Compile-time template parameter `TIdentity` used by this specialization.
+        /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
         /// @tparam TResource Topology resource Type being classified or inspected.
         template<class TIdentity, class TResource>
         struct MatchesDedicatedThreadIdentity {
@@ -1159,7 +1159,7 @@ namespace ESPressio::Threading {
 
 
         /// Defines the compile-time contract for `MatchesDedicatedThreadIdentity`.
-        /// @tparam TIdentity Compile-time template parameter `TIdentity` used by this specialization.
+        /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
         template<class TIdentity, class... TProperties>
         struct MatchesDedicatedThreadIdentity<
             TIdentity,
@@ -1173,7 +1173,7 @@ namespace ESPressio::Threading {
 
 
         /// Defines the compile-time contract for `MatchesDedicatedWorkerIdentity`.
-        /// @tparam TIdentity Compile-time template parameter `TIdentity` used by this specialization.
+        /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
         /// @tparam TResource Topology resource Type being classified or inspected.
         template<class TIdentity, class TResource>
         struct MatchesDedicatedWorkerIdentity {
@@ -1185,7 +1185,7 @@ namespace ESPressio::Threading {
 
 
         /// Defines the compile-time contract for `MatchesDedicatedWorkerIdentity`.
-        /// @tparam TIdentity Compile-time template parameter `TIdentity` used by this specialization.
+        /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
         template<class TIdentity, class... TProperties>
         struct MatchesDedicatedWorkerIdentity<
             TIdentity,
