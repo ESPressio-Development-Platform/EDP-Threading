@@ -91,6 +91,9 @@ namespace ESPressio::Threading::Detail {
 
     /// Defines the compile-time contract for `IsDedicatedThreadIdentity`.
     /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Matches one Dedicated Thread declaration against a requested Thread identity.
+    /// @tparam TThreadIdentity Semantic identity Type carried by the Dedicated Thread declaration.
+    /// @tparam TProperties Compile-time execution-property Types carried by the declaration.
     template<class TThreadIdentity, class... TProperties>
     struct IsDedicatedThreadIdentity<
         DedicatedThread<
