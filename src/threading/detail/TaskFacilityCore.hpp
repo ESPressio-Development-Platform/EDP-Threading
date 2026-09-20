@@ -344,7 +344,9 @@ namespace ESPressio::Threading::Detail {
             AdmissionResult Admit(
                 TCallable&& callable
             ) noexcept {
+                /// Decayed callable Type retained in bounded Task payload storage.
                 using StoredCallable = std::decay_t<TCallable>;
+                /// Result Type produced by the stored callable.
                 using Result = CallableResultT<StoredCallable>;
 
                 static_assert(
@@ -425,6 +427,7 @@ namespace ESPressio::Threading::Detail {
                     )
                 );
 
+                /// Payload adapter Type responsible for callable invocation and result publication.
                 using Adapter = TaskPayloadAdapter<
                     Record,
                     StoredCallable,
