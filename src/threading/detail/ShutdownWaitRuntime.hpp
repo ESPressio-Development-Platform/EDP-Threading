@@ -16,6 +16,20 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Result of removing one published shutdown-wait registration.
+    enum class ShutdownWaitRegistrationRemovalResult : std::uint8_t {
+        Removed = 0,
+        ProviderFailure = 1
+    };
+
+
+    /// Result of waking all contexts registered for terminal shutdown completion.
+    enum class ShutdownWaitWakeResult : std::uint8_t {
+        Succeeded = 0,
+        ProviderFailure = 1
+    };
+
+
     /// Owns bounded terminal-shutdown wait registration and targeted wake behavior.
     ///
     /// @tparam TInfrastructureLifecycle Authoritative Threading infrastructure lifecycle Type.
@@ -100,7 +114,9 @@ namespace ESPressio::Threading::Detail {
             // Terminal publication wake.
 
             /// Performs no wake work because an empty topology owns no managed contexts.
-            void WakeCompleted() noexcept {}
+            ShutdownWaitWakeResult WakeCompleted() noexcept {
+                return ShutdownWaitWakeResult::Succeeded;
+            }
 
     };
 
@@ -158,23 +174,24 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Removes one previously published terminal-shutdown wait registration.
-            void Unregister(
+            ShutdownWaitRegistrationRemovalResult Unregister(
                 std::size_t registrationIndex
             ) noexcept {
                 if (
                     AcquireLock() !=
                     ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
                 ) {
-                    return;
+                    return ShutdownWaitRegistrationRemovalResult::ProviderFailure;
                 }
 
                 _waiters.Unregister(
                     registrationIndex
                 );
 
-                static_cast<void>(
-                    ReleaseLock()
-                );
+                return ReleaseLock() ==
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                    ? ShutdownWaitRegistrationRemovalResult::Removed
+                    : ShutdownWaitRegistrationRemovalResult::ProviderFailure;
             }
 
             /// Waits for terminal shutdown completion using one canonical monotonic wait budget.
@@ -199,10 +216,10 @@ namespace ESPressio::Threading::Detail {
                 }
 
                 if (IsComplete()) {
-                    static_cast<void>(
-                        ReleaseLock()
-                    );
-                    return ShutdownWaitResult::Completed;
+                    return ReleaseLock() ==
+                        ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                        ? ShutdownWaitResult::Completed
+                        : ShutdownWaitResult::Interrupted;
                 }
 
                 Registration registration;
@@ -228,15 +245,19 @@ namespace ESPressio::Threading::Detail {
                     _waiters.Unregister(
                         registrationIndex
                     );
-                    static_cast<void>(
-                        ReleaseLock()
-                    );
-                    return ShutdownWaitResult::Completed;
+
+                    return ReleaseLock() ==
+                        ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                        ? ShutdownWaitResult::Completed
+                        : ShutdownWaitResult::Interrupted;
                 }
 
-                static_cast<void>(
-                    ReleaseLock()
-                );
+                if (
+                    ReleaseLock() !=
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                ) {
+                    return ShutdownWaitResult::Interrupted;
+                }
 
                 for (;;) {
                     const auto remaining = budget.Remaining();
@@ -244,9 +265,13 @@ namespace ESPressio::Threading::Detail {
                     if (remaining.IsNoWait()) {
                         const auto complete = IsComplete();
 
-                        Unregister(
-                            registrationIndex
-                        );
+                        if (
+                            Unregister(
+                                registrationIndex
+                            ) != ShutdownWaitRegistrationRemovalResult::Removed
+                        ) {
+                            return ShutdownWaitResult::Interrupted;
+                        }
 
                         return complete
                             ? ShutdownWaitResult::Completed
@@ -259,17 +284,20 @@ namespace ESPressio::Threading::Detail {
                     );
 
                     if (IsComplete()) {
-                        Unregister(
+                        return Unregister(
                             registrationIndex
-                        );
-                        return ShutdownWaitResult::Completed;
+                        ) == ShutdownWaitRegistrationRemovalResult::Removed
+                            ? ShutdownWaitResult::Completed
+                            : ShutdownWaitResult::Interrupted;
                     }
 
                     if (_router->IsInterrupted(
                         contextIndex.value()
                     )) {
-                        Unregister(
-                            registrationIndex
+                        static_cast<void>(
+                            Unregister(
+                                registrationIndex
+                            )
                         );
                         return ShutdownWaitResult::Interrupted;
                     }
@@ -277,8 +305,10 @@ namespace ESPressio::Threading::Detail {
                     if (
                         waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::ProviderFailure
                     ) {
-                        Unregister(
-                            registrationIndex
+                        static_cast<void>(
+                            Unregister(
+                                registrationIndex
+                            )
                         );
                         return ShutdownWaitResult::Interrupted;
                     }
@@ -289,9 +319,13 @@ namespace ESPressio::Threading::Detail {
                     ) {
                         const auto complete = IsComplete();
 
-                        Unregister(
-                            registrationIndex
-                        );
+                        if (
+                            Unregister(
+                                registrationIndex
+                            ) != ShutdownWaitRegistrationRemovalResult::Removed
+                        ) {
+                            return ShutdownWaitResult::Interrupted;
+                        }
 
                         return complete
                             ? ShutdownWaitResult::Completed
@@ -368,29 +402,40 @@ namespace ESPressio::Threading::Detail {
             // Terminal publication wake.
 
             /// Wakes every context registered against the non-restartable terminal shutdown predicate.
-            void WakeCompleted() {
+            ShutdownWaitWakeResult WakeCompleted() {
                 if (
                     AcquireLock() !=
                     ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
                 ) {
-                    return;
+                    return ShutdownWaitWakeResult::ProviderFailure;
                 }
 
+                bool providerFailure = false;
+
                 _waiters.VisitActive(
-                    [this](
+                    [this, &providerFailure](
                         Registration& registration
                     ) {
-                        static_cast<void>(
+                        if (
                             _router->Wake(
                                 registration.WaitingContextIndex
-                            )
-                        );
+                            ) != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                        ) {
+                            providerFailure = true;
+                        }
                     }
                 );
 
-                static_cast<void>(
-                    ReleaseLock()
-                );
+                if (
+                    ReleaseLock() !=
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                ) {
+                    providerFailure = true;
+                }
+
+                return providerFailure
+                    ? ShutdownWaitWakeResult::ProviderFailure
+                    : ShutdownWaitWakeResult::Succeeded;
             }
 
     };
