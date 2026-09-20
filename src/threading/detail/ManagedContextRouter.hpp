@@ -43,7 +43,9 @@ namespace ESPressio::Threading::Detail {
             ) noexcept {}
 
 
-            template<class... TArguments>
+            /// Forwards arbitrary construction arguments when the empty-router specialization has no state to initialize.
+    /// @tparam TArguments Constructor argument Types accepted and intentionally ignored by the zero-context router.
+    template<class... TArguments>
             /// Binds the completed structural resolver after topology resource construction.
             void BindTopology(
                 TArguments&&...
