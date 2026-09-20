@@ -34,6 +34,11 @@ namespace ESPressio::Threading::Detail {
                 _lifecycle(&lifecycle) {}
 
 
+            bool ValidateSynchronization() noexcept {
+                return true;
+            }
+
+
             ShutdownWaitResult Wait() {
                 return IsComplete()
                     ? ShutdownWaitResult::Completed
@@ -228,6 +233,23 @@ namespace ESPressio::Threading::Detail {
             ) noexcept :
                 _lifecycle(&lifecycle),
                 _router(&router) {}
+
+
+            bool ValidateSynchronization() noexcept {
+                const auto acquireResult = _mutex.Acquire(
+                    ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
+                );
+
+                if (
+                    acquireResult !=
+                    ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
+                ) {
+                    return false;
+                }
+
+                return _mutex.Release() ==
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released;
+            }
 
 
             // Wait operations.
