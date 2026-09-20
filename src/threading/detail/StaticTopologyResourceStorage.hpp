@@ -201,20 +201,26 @@ namespace ESPressio::Threading::Detail {
                     _tail.IsExecutionQuiescent();
             }
 
-            void FinalizeShutdown() noexcept {
+            bool FinalizeShutdown() noexcept {
                 _resource.RequestInfrastructureTermination();
 
-                static_cast<void>(
+                if (
                     _resource.JoinInfrastructure(
                         ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                    )
-                );
+                    ) !=
+                    ESPressio::Platform::Execution::ExecutionJoinResult::Joined
+                ) {
+                    return false;
+                }
 
-                static_cast<void>(
-                    _resource.DestroyInfrastructure()
-                );
+                if (
+                    _resource.DestroyInfrastructure() !=
+                    ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed
+                ) {
+                    return false;
+                }
 
-                _tail.FinalizeShutdown();
+                return _tail.FinalizeShutdown();
             }
 
 
@@ -265,7 +271,9 @@ namespace ESPressio::Threading::Detail {
                 return true;
             }
 
-            void FinalizeShutdown() noexcept {}
+            bool FinalizeShutdown() noexcept {
+                return true;
+            }
 
     };
 
