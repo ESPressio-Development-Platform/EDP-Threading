@@ -7,6 +7,8 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `AvailabilityBitmap`.
+    /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
     template<std::size_t TCapacity>
     class AvailabilityBitmap final {
 
@@ -168,6 +170,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `IntrusiveTaskQueue`.
+    /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
     template<std::size_t TCapacity>
     class IntrusiveTaskQueue final {
 
@@ -214,6 +218,7 @@ namespace ESPressio::Threading::Detail {
             // Mutation.
 
             /// Appends one record whose queue-link field is supplied by the caller.
+            /// @tparam TRecords Task-record collection Type whose intrusive queue links are manipulated.
             template<class TRecords>
             void Push(
                 TRecords& records,
@@ -232,6 +237,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Removes and returns the first queued record or the invalid sentinel.
+            /// @tparam TRecords Task-record collection Type whose intrusive queue links are manipulated.
             template<class TRecords>
             Index Pop(
                 TRecords& records
@@ -252,6 +258,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Removes one specific queued record while preserving FIFO order of all others.
+            /// @tparam TRecords Task-record collection Type whose intrusive queue links are manipulated.
             template<class TRecords>
             bool Remove(
                 TRecords& records,
