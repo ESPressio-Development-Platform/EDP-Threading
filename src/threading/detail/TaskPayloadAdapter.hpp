@@ -161,6 +161,10 @@ namespace ESPressio::Threading::Detail {
                     ? TaskInvocationOutcome::Cancelled
                     : TaskInvocationOutcome::Completed;
             } else {
+                static_cast<void>(
+                    context
+                );
+
                 static_assert(
                     std::is_invocable_r_v<void, TCallable&>,
                     "Void Task callable must return void or TaskCompletion<void>"
