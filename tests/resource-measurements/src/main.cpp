@@ -240,8 +240,8 @@ namespace Measurement {
                 auto task = dispatch.TakeTask();
                 static_cast<void>(
                     task.WaitFor(
-                        Threading::Duration::FromMilliseconds(
-                            10U
+                        Threading::Duration::FromNanoseconds(
+                            10000000LL
                         )
                     )
                 );
