@@ -42,6 +42,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `StructuralContextResolver`.
+    /// @tparam TContextCapacity Number of managed execution contexts represented by the topology.
     template<std::size_t TContextCapacity, class... TResources>
     class StructuralContextResolver final {
 
@@ -55,6 +57,8 @@ namespace ESPressio::Threading::Detail {
             std::tuple<TResources*...> _resources;
 
 
+            /// Defines the compile-time contract for `ResolveCurrentNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             std::optional<ContextIndex> ResolveCurrentNext() const noexcept {
                 if constexpr (
@@ -78,6 +82,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `IsInterruptedNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             bool IsInterruptedNext(
                 ContextIndex contextIndex
