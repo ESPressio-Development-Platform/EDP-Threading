@@ -15,6 +15,32 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    template<class TSignalProvider>
+    class ManagedContextWakeSet<0U, TSignalProvider> final {
+
+        public:
+
+            using ContextIndex = typename SmallestIndex<1U>::Type;
+
+            static constexpr std::size_t ContextCapacity = 0U;
+
+
+            ManagedContextWakeValidationResult Validate() noexcept {
+                return ManagedContextWakeValidationResult::Ready;
+            }
+
+            ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
+                ContextIndex
+            ) noexcept = delete;
+
+            ESPressio::Platform::Synchronization::SignalWaitResult Wait(
+                ContextIndex,
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept = delete;
+
+    };
+
+
     template<std::size_t TContextCapacity, class TSignalProvider>
     class ManagedContextWakeSet final {
 
