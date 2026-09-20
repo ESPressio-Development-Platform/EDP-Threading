@@ -27,6 +27,24 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    enum class TaskFacilityCompletionResult : std::uint8_t {
+        Completed = 0,
+        ProviderFailure = 1
+    };
+
+
+    enum class TaskFacilityOwnerReleaseResult : std::uint8_t {
+        Released = 0,
+        ProviderFailure = 1
+    };
+
+
+    enum class TaskFacilityShutdownCancellationResult : std::uint8_t {
+        Applied = 0,
+        ProviderFailure = 1
+    };
+
+
     /// Defines the compile-time contract for `TaskFacilityRuntime`.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
