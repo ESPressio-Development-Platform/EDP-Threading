@@ -853,6 +853,7 @@ namespace ESPressio::Threading::Detail {
             /// Public Task handle Type produced by one callable Type.
             /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
+            /// Task handle Type produced for the supplied callable.
             using TaskForCallable = Task<
                 CallableResultT<std::decay_t<TCallable>>
             >;
@@ -860,6 +861,7 @@ namespace ESPressio::Threading::Detail {
             /// Structured public dispatch result produced for one callable Type.
             /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
+            /// Typed dispatch result produced for the supplied callable.
             using DispatchResultFor = TaskDispatchResult<
                 TaskForCallable<TCallable>
             >;
@@ -904,7 +906,9 @@ namespace ESPressio::Threading::Detail {
                 TaskDispatchPolicy policy,
                 Duration timeout = Duration{}
             ) {
+                /// Task handle Type instantiated for the callable being dispatched.
                 using TaskType = TaskForCallable<TCallable>;
+                /// Typed dispatch result returned for the callable being dispatched.
                 using DispatchResult = DispatchResultFor<TCallable>;
 
                 const auto contextIndex = _router->CurrentContextIndex();
