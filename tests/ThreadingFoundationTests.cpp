@@ -1236,6 +1236,35 @@ namespace Test {
         "Empty Threading topology must not reserve waiter or mutex provider storage"
     );
 
+    static_assert(
+        std::is_same_v<
+            decltype(
+                std::declval<EmptyShutdownWait&>().WakeCompleted()
+            ),
+            ESPressio::Threading::Detail::ShutdownWaitWakeResult
+        >,
+        "Empty-topology shutdown completion wake must expose its typed outcome"
+    );
+
+
+    using ManagedShutdownWait =
+        ESPressio::Threading::Detail::ShutdownWaitRuntime<
+            ESPressio::Threading::Detail::InfrastructureLifecycle<SpinLockProvider>,
+            ManagedContextRouter::ContextCapacity,
+            MutexProvider,
+            ManagedContextRouter
+        >;
+
+    static_assert(
+        std::is_same_v<
+            decltype(
+                std::declval<ManagedShutdownWait&>().WakeCompleted()
+            ),
+            ESPressio::Threading::Detail::ShutdownWaitWakeResult
+        >,
+        "Managed shutdown completion wake must expose its typed provider outcome"
+    );
+
 
     using EmptyOwner =
         ESPressio::Threading::Detail::StaticTopologyOwner<
