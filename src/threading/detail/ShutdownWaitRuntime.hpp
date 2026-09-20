@@ -9,6 +9,54 @@
 
 namespace ESPressio::Threading::Detail {
 
+    template<class TInfrastructureLifecycle, class TMutexProvider, class TManagedContextRouter>
+    class ShutdownWaitRuntime<
+        TInfrastructureLifecycle,
+        0U,
+        TMutexProvider,
+        TManagedContextRouter
+    > final {
+
+        private:
+
+            TInfrastructureLifecycle* _lifecycle;
+
+            bool IsComplete() const noexcept {
+                return _lifecycle->State() == InfrastructureState::ShutdownComplete;
+            }
+
+        public:
+
+            explicit ShutdownWaitRuntime(
+                TInfrastructureLifecycle& lifecycle,
+                TManagedContextRouter&
+            ) noexcept :
+                _lifecycle(&lifecycle) {}
+
+
+            ShutdownWaitResult Wait() {
+                return IsComplete()
+                    ? ShutdownWaitResult::Completed
+                    : ShutdownWaitResult::Interrupted;
+            }
+
+            ShutdownWaitResult WaitFor(
+                Duration
+            ) {
+                return Wait();
+            }
+
+            ShutdownWaitResult WaitUntil(
+                MonotonicTimestamp
+            ) {
+                return Wait();
+            }
+
+            void WakeCompleted() noexcept {}
+
+    };
+
+
     template<class TInfrastructureLifecycle, std::size_t TExecutionContextCapacity, class TMutexProvider, class TManagedContextRouter>
     class ShutdownWaitRuntime final {
 
