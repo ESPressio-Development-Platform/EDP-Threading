@@ -224,6 +224,52 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            template<class TPoolIdentity>
+            auto& TaskFacility() noexcept {
+                constexpr auto index = TaskFacilityResourceIndex<
+                    TTopology,
+                    TPoolIdentity
+                >;
+
+                static_assert(
+                    index != TopologyResourceNotFound,
+                    "Requested Task Pool identity is not present in this Threading topology"
+                );
+
+                return _resources.template Get<index>();
+            }
+
+            template<class TTaskIdentity>
+            auto& DedicatedWorker() noexcept {
+                constexpr auto index = DedicatedWorkerResourceIndex<
+                    TTopology,
+                    TTaskIdentity
+                >;
+
+                static_assert(
+                    index != TopologyResourceNotFound,
+                    "Requested Dedicated Worker Task identity is not present in this Threading topology"
+                );
+
+                return _resources.template Get<index>();
+            }
+
+            template<class TThreadIdentity>
+            auto& DedicatedThreadResource() noexcept {
+                constexpr auto index = DedicatedThreadResourceIndex<
+                    TTopology,
+                    TThreadIdentity
+                >;
+
+                static_assert(
+                    index != TopologyResourceNotFound,
+                    "Requested Dedicated Thread identity is not present in this Threading topology"
+                );
+
+                return _resources.template Get<index>();
+            }
+
+
             template<std::size_t... TIndices>
             ThreadingStartResult StartAll(
                 std::index_sequence<TIndices...>
