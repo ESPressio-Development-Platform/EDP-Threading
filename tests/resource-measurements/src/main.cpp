@@ -631,6 +631,13 @@ namespace Measurement {
             reinterpret_cast<std::uintptr_t>(
                 EDP_Threading_Measurement_SynchronizationWake
             );
+
+        if (
+            KeepConstructor == nullptr ||
+            KeepLinkedSurface == nullptr
+        ) {
+            EDP_Threading_Measurement_Keep ^= 1U;
+        }
     }
 
 
@@ -686,9 +693,11 @@ namespace Measurement {
         Runtime&
     );
 
+    __attribute__((used))
     volatile ConstructFunction KeepConstructor =
         &ConstructRuntime;
 
+    __attribute__((used))
     volatile LinkFunction KeepLinkedSurface =
         &LinkRuntimeSurface;
 
