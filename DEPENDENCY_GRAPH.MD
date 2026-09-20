@@ -1,5 +1,7 @@
 # EDP-Threading Dependency Graph
 
+> Revalidated: 2026-09-20 — V2 compliance audit and Threading validation/resource-measurement work introduced no new ESPressio-library dependency.
+
 ## Library Dependency Tree
 
 ```text
