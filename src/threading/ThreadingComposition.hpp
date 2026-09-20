@@ -273,6 +273,65 @@ namespace ESPressio::Threading {
         };
 
 
+        template<class TProperty>
+        struct IsTaskRecordCapacityProperty {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct IsTaskRecordCapacityProperty<TaskRecordCapacity<TCapacity>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TProperty>
+        struct IsCallableCapacityProperty {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct IsCallableCapacityProperty<CallableCapacity<TCapacity>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TProperty>
+        struct IsResultCapacityProperty {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct IsResultCapacityProperty<ResultCapacity<TCapacity>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class... TProperties>
+        struct ValidDedicatedWorkerStorage {
+
+            static constexpr bool Value =
+                (static_cast<std::size_t>(IsTaskRecordCapacityProperty<TProperties>::Value) + ... + 0U) <= 1U &&
+                (static_cast<std::size_t>(IsCallableCapacityProperty<TProperties>::Value) + ... + 0U) <= 1U &&
+                (static_cast<std::size_t>(IsResultCapacityProperty<TProperties>::Value) + ... + 0U) <= 1U;
+
+        };
+
+
         template<class... TProperties>
         struct ResolvedDedicatedWorkerStorage {
 
@@ -407,6 +466,11 @@ namespace ESPressio::Threading {
         static_assert(
             Detail::ValidExecutionResourceProperties<TWorkerProperties...>::Value,
             "DedicatedWorkerLease contains duplicate StackCapacity, Priority or affinity properties"
+        );
+
+        static_assert(
+            Detail::ValidDedicatedWorkerStorage<TWorkerProperties...>::Value,
+            "DedicatedWorkerLease contains duplicate TaskRecordCapacity, CallableCapacity or ResultCapacity properties"
         );
 
         using TaskIdentity = TTaskIdentity;
