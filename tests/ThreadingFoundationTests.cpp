@@ -5,6 +5,7 @@
 #include <ESPressio_Threading.hpp>
 
 #include "../src/threading/detail/DedicatedThreadControl.hpp"
+#include "../src/threading/detail/DedicatedThreadRuntime.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
@@ -284,6 +285,22 @@ namespace Test {
     };
 
 
+    struct DedicatedThreadIdentity final {};
+
+
+    struct DedicatedCallable final {
+
+        void operator ()(
+            ESPressio::Threading::ThreadContext& context
+        ) noexcept {
+            static_cast<void>(
+                context.IsStopRequested()
+            );
+        }
+
+    };
+
+
     struct OrdinaryPool final {};
 
 
@@ -461,6 +478,29 @@ namespace Test {
     static_assert(
         TestWorkerExecutionContext::StackBackingBytes() == 128U,
         "Worker stack backing must round semantic capacity to provider granularity"
+    );
+
+
+    using TestDedicatedThreadRuntime = ESPressio::Threading::Detail::DedicatedThreadRuntime<
+        DedicatedThreadIdentity,
+        DedicatedCallable,
+        100U,
+        ManagedContextRouter::ContextCapacity,
+        AtomicByteProvider,
+        MutexProvider,
+        ExecutionContextProvider,
+        ManagedContextRouter
+    >;
+
+
+    static_assert(
+        TestDedicatedThreadRuntime::ControlBackingBytes() == 24U,
+        "Dedicated Thread control backing must follow provider-declared physical storage"
+    );
+
+    static_assert(
+        TestDedicatedThreadRuntime::StackBackingBytes() == 128U,
+        "Dedicated Thread stack backing must round semantic capacity to provider granularity"
     );
 
 
