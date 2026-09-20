@@ -65,7 +65,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Publishes one authoritative lifecycle transition under the topology-wide SpinLock.
-            void PublishState(
+            ESPressio::Platform::Synchronization::SpinLockReleaseResult PublishState(
                 InfrastructureState state
             ) noexcept {
                 _stateLock.Acquire();
@@ -74,9 +74,7 @@ namespace ESPressio::Threading::Detail {
                     state
                 );
 
-                static_cast<void>(
-                    _stateLock.Release()
-                );
+                return _stateLock.Release();
             }
 
 
@@ -267,11 +265,11 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingInitializationResult::AlreadyInitialized;
                 }
 
-                PublishState(
+                return PublishState(
                     InfrastructureState::Initialized
-                );
-
-                return ThreadingInitializationResult::Succeeded;
+                ) == ESPressio::Platform::Synchronization::SpinLockReleaseResult::Released
+                    ? ThreadingInitializationResult::Succeeded
+                    : ThreadingInitializationResult::ProviderFailure;
             }
 
 
@@ -305,8 +303,10 @@ namespace ESPressio::Threading::Detail {
                         startedCount
                     ) != ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
                 ) {
-                    PublishState(
-                        InfrastructureState::StartRollback
+                    static_cast<void>(
+                        PublishState(
+                            InfrastructureState::StartRollback
+                        )
                     );
 
                     static_cast<void>(
@@ -336,11 +336,11 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingStartResult::ProviderFailure;
                 }
 
-                PublishState(
+                return PublishState(
                     InfrastructureState::Started
-                );
-
-                return ThreadingStartResult::Succeeded;
+                ) == ESPressio::Platform::Synchronization::SpinLockReleaseResult::Released
+                    ? ThreadingStartResult::Succeeded
+                    : ThreadingStartResult::ProviderFailure;
             }
 
 
@@ -362,16 +362,20 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingShutdownResult::NotStarted;
                 }
 
-                PublishState(
-                    InfrastructureState::ShuttingDown
+                // The ordinary SpinLock Release contract has no provider-failure outcome; the
+                // interrupt-context-only rejection cannot occur on this application-context path.
+                static_cast<void>(
+                    PublishState(
+                        InfrastructureState::ShuttingDown
+                    )
                 );
 
                 return ThreadingShutdownResult::Accepted;
             }
 
             /// Publishes the terminal ShutdownComplete state after all managed contexts are destroyed.
-            void PublishShutdownComplete() noexcept {
-                PublishState(
+            ESPressio::Platform::Synchronization::SpinLockReleaseResult PublishShutdownComplete() noexcept {
+                return PublishState(
                     InfrastructureState::ShutdownComplete
                 );
             }
