@@ -15,6 +15,17 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Owns one reusable targeted wake primitive per managed execution context.
+    ///
+    /// @tparam TContextCapacity Number of managed execution contexts in the static topology.
+    /// @tparam TSignalProvider Concrete Platform Signal provider used for targeted wake delivery.
+    template<std::size_t TContextCapacity, class TSignalProvider>
+    class ManagedContextWakeSet;
+
+
+    /// Empty-topology wake-set specialization retaining no Signal provider storage.
+    ///
+    /// @tparam TSignalProvider Concrete Platform Signal provider Type that would otherwise back wakes.
     template<class TSignalProvider>
     class ManagedContextWakeSet<0U, TSignalProvider> final {
 
