@@ -121,6 +121,10 @@ namespace ESPressio::Threading::Detail {
             ShutdownWaitResult WaitWithBudget(
                 const MonotonicWaitBudget& budget
             ) {
+                if (IsComplete()) {
+                    return ShutdownWaitResult::Completed;
+                }
+
                 const auto contextIndex = _router->CurrentContextIndex();
 
                 if (!contextIndex.has_value()) {
