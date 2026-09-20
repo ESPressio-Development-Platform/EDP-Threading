@@ -84,7 +84,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             template<std::size_t TIndex, class TTuple>
-            static void JoinDestroyStarted(
+            static void JoinStarted(
                 TTuple& resources,
                 std::size_t startedCount
             ) noexcept {
@@ -92,24 +92,37 @@ namespace ESPressio::Threading::Detail {
                     TIndex < std::tuple_size_v<TTuple>
                 ) {
                     if (TIndex < startedCount) {
-                        auto& resource = std::get<TIndex>(
-                            resources
-                        );
-
                         static_cast<void>(
-                            resource.JoinInfrastructure(
+                            std::get<TIndex>(
+                                resources
+                            ).JoinInfrastructure(
                                 ESPressio::Platform::Synchronization::WaitTimeout::Forever()
                             )
                         );
-
-                        static_cast<void>(
-                            resource.DestroyInfrastructure()
-                        );
                     }
 
-                    JoinDestroyStarted<TIndex + 1U>(
+                    JoinStarted<TIndex + 1U>(
                         resources,
                         startedCount
+                    );
+                }
+            }
+
+            template<std::size_t TIndex, class TTuple>
+            static void DestroyAll(
+                TTuple& resources
+            ) noexcept {
+                if constexpr (
+                    TIndex < std::tuple_size_v<TTuple>
+                ) {
+                    static_cast<void>(
+                        std::get<TIndex>(
+                            resources
+                        ).DestroyInfrastructure()
+                    );
+
+                    DestroyAll<TIndex + 1U>(
+                        resources
                     );
                 }
             }
@@ -209,9 +222,13 @@ namespace ESPressio::Threading::Detail {
                         startedCount
                     );
 
-                    JoinDestroyStarted<0U>(
+                    JoinStarted<0U>(
                         resourceTuple,
                         startedCount
+                    );
+
+                    DestroyAll<0U>(
+                        resourceTuple
                     );
 
                     return ThreadingStartResult::ProviderFailure;
