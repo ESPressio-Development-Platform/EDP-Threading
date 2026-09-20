@@ -23,6 +23,7 @@ namespace ESPressio::Threading::Detail {
         DedicatedThread<TThreadIdentity, TProperties...>
     > {
 
+        /// Resolved Type produced by this compile-time helper.
         using Type = TThreadIdentity;
 
     };
@@ -36,6 +37,7 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     /// @tparam TResourceIndex Compile-time topology resource index.
     template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TResourceIndex>
+    /// Concrete owned runtime Type corresponding to one topology resource.
     using OwnedResourceAt = typename OwnedResourceType<
         typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::Resource,
         TBindings,
@@ -61,11 +63,14 @@ namespace ESPressio::Threading::Detail {
         TManagedContextRouter& router,
         InfrastructureLifecycle<TSpinLockProvider>& lifecycle
     ) {
+        /// Compile-time descriptor for the resource being constructed.
         using Descriptor =
             typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>;
 
+        /// Static resource declaration Type represented by this storage node.
         using Declaration = typename Descriptor::Resource;
 
+        /// Topology resource Type described at this compile-time position.
         using Resource = OwnedResourceAt<
             TTopology,
             TBindings,
@@ -78,9 +83,11 @@ namespace ESPressio::Threading::Detail {
         if constexpr (
             IsDedicatedThread<Declaration>::Value
         ) {
+            /// Semantic identity Type of a Dedicated Thread declaration.
             using ThreadIdentity =
                 typename DeclarationThreadIdentity<Declaration>::Type;
 
+            /// Application callable-binding Type matched to a Dedicated Thread.
             using Binding = typename DedicatedThreadBindingTypeFromTuple<
                 ThreadIdentity,
                 TBindings
@@ -140,6 +147,7 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            /// Topology resource Type described at this compile-time position.
             using Resource = OwnedResourceAt<
                 TTopology,
                 TBindings,
@@ -149,6 +157,7 @@ namespace ESPressio::Threading::Detail {
                 TResourceIndex
             >;
 
+            /// Recursive lookup result for the remaining topology resource pack.
             using Tail = StaticTopologyResourceStorage<
                 TTopology,
                 TBindings,
