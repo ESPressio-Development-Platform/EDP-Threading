@@ -173,6 +173,44 @@ namespace ESPressio::Threading {
 
 
         template<class TResource>
+        struct ManagedContextCount {
+
+            static constexpr std::size_t Value = 0U;
+
+        };
+
+
+        template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers>
+        struct ManagedContextCount<
+            TaskExecutionFacility<TPoolIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>
+        > {
+
+            static constexpr std::size_t Value = TWorkers::Count;
+
+        };
+
+
+        template<class TTaskIdentity, class... TProperties>
+        struct ManagedContextCount<
+            DedicatedWorkerLease<TTaskIdentity, TProperties...>
+        > {
+
+            static constexpr std::size_t Value = 1U;
+
+        };
+
+
+        template<class TThreadIdentity, class... TProperties>
+        struct ManagedContextCount<
+            DedicatedThread<TThreadIdentity, TProperties...>
+        > {
+
+            static constexpr std::size_t Value = 1U;
+
+        };
+
+
+        template<class TResource>
         struct IsDedicatedWorkerLease {
 
             static constexpr bool Value = false;
@@ -335,6 +373,9 @@ namespace ESPressio::Threading {
 
         static constexpr std::size_t DedicatedThreadCount =
             (static_cast<std::size_t>(Detail::IsDedicatedThread<TResources>::Value) + ... + 0U);
+
+        static constexpr std::size_t ManagedExecutionContextCount =
+            (Detail::ManagedContextCount<TResources>::Value + ... + 0U);
 
     };
 
