@@ -17,6 +17,22 @@ namespace ESPressio::Threading {
             /// Optional successfully completed result.
             std::optional<TResult> _result;
 
+
+            // Internal construction.
+
+            /// Creates an acknowledged-cancellation completion.
+            TaskCompletion() = default;
+
+            /// Creates a successfully completed result.
+            explicit TaskCompletion(
+                TResult result
+            ) :
+                _result(
+                    std::move(
+                        result
+                    )
+                ) {}
+
         public:
 
             // Construction.
@@ -53,19 +69,6 @@ namespace ESPressio::Threading {
                 );
             }
 
-        private:
-
-            // Internal construction.
-
-            /// Creates an acknowledged-cancellation completion.
-            TaskCompletion() = default;
-
-            /// Creates a successfully completed result.
-            explicit TaskCompletion(
-                TResult result
-            ) :
-                _result(std::move(result)) {}
-
     };
 
 
@@ -78,6 +81,15 @@ namespace ESPressio::Threading {
 
             /// Indicates whether callable execution acknowledged cancellation.
             bool _cancelled;
+
+
+            // Internal construction.
+
+            /// Creates a void completion with the supplied cancellation state.
+            explicit TaskCompletion(
+                bool cancelled
+            ) noexcept :
+                _cancelled(cancelled) {}
 
         public:
 
@@ -100,16 +112,6 @@ namespace ESPressio::Threading {
             bool IsCancelled() const noexcept {
                 return _cancelled;
             }
-
-        private:
-
-            // Internal construction.
-
-            /// Creates a void completion with the supplied cancellation state.
-            explicit TaskCompletion(
-                bool cancelled
-            ) noexcept :
-                _cancelled(cancelled) {}
 
     };
 
