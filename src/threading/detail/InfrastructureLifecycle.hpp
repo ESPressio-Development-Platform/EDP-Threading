@@ -84,24 +84,26 @@ namespace ESPressio::Threading::Detail {
             /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
             /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
-            static bool StartNext(
+            static ESPressio::Platform::Execution::ExecutionStartResult StartNext(
                 TTuple& resources,
                 std::size_t& startedCount
             ) noexcept {
                 if constexpr (
                     TIndex == std::tuple_size_v<TTuple>
                 ) {
-                    return true;
+                    return ESPressio::Platform::Execution::ExecutionStartResult::Succeeded;
                 } else {
                     auto& resource = std::get<TIndex>(
                         resources
                     );
 
+                    const auto result = resource.StartInfrastructure();
+
                     if (
-                        resource.StartInfrastructure() !=
+                        result !=
                         ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
                     ) {
-                        return false;
+                        return result;
                     }
 
                     ++startedCount;
@@ -141,32 +143,34 @@ namespace ESPressio::Threading::Detail {
             /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
             /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
-            static bool JoinStarted(
+            static ESPressio::Platform::Execution::ExecutionJoinResult JoinStarted(
                 TTuple& resources,
                 std::size_t startedCount
             ) noexcept {
                 if constexpr (
                     TIndex == std::tuple_size_v<TTuple>
                 ) {
-                    return true;
+                    return ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
                 } else {
-                    bool joined = true;
+                    ESPressio::Platform::Execution::ExecutionJoinResult result =
+                        ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
 
                     if (TIndex < startedCount) {
-                        joined =
-                            std::get<TIndex>(
-                                resources
-                            ).JoinInfrastructure(
-                                ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                            ) ==
-                            ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
+                        result = std::get<TIndex>(
+                            resources
+                        ).JoinInfrastructure(
+                            ESPressio::Platform::Synchronization::WaitTimeout::Forever()
+                        );
                     }
 
-                    return JoinStarted<TIndex + 1U>(
+                    const auto tailResult = JoinStarted<TIndex + 1U>(
                         resources,
                         startedCount
-                    ) &&
-                        joined;
+                    );
+
+                    return result != ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded
+                        ? result
+                        : tailResult;
                 }
             }
 
@@ -174,24 +178,25 @@ namespace ESPressio::Threading::Detail {
             /// @tparam TTuple Tuple Type containing the resources traversed by this helper.
             /// @tparam TIndex Compile-time tuple/resource index used by the recursive traversal.
             template<std::size_t TIndex, class TTuple>
-            static bool DestroyAll(
+            static ESPressio::Platform::Execution::ExecutionDestroyResult DestroyAll(
                 TTuple& resources
             ) noexcept {
                 if constexpr (
                     TIndex == std::tuple_size_v<TTuple>
                 ) {
-                    return true;
+                    return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
                 } else {
-                    const bool destroyed =
-                        std::get<TIndex>(
-                            resources
-                        ).DestroyInfrastructure() ==
-                        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
-
-                    return DestroyAll<TIndex + 1U>(
+                    const auto result = std::get<TIndex>(
                         resources
-                    ) &&
-                        destroyed;
+                    ).DestroyInfrastructure();
+
+                    const auto tailResult = DestroyAll<TIndex + 1U>(
+                        resources
+                    );
+
+                    return result != ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+                        ? result
+                        : tailResult;
                 }
             }
 
@@ -274,10 +279,12 @@ namespace ESPressio::Threading::Detail {
 
                 std::size_t startedCount = 0U;
 
-                if (!StartNext<0U>(
-                    resourceTuple,
-                    startedCount
-                )) {
+                if (
+                    StartNext<0U>(
+                        resourceTuple,
+                        startedCount
+                    ) != ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
+                ) {
                     PublishState(
                         InfrastructureState::StartRollback
                     );
@@ -287,21 +294,21 @@ namespace ESPressio::Threading::Detail {
                         startedCount
                     );
 
-                    const bool joined = JoinStarted<0U>(
+                    const auto joinResult = JoinStarted<0U>(
                         resourceTuple,
                         startedCount
                     );
 
-                    const bool destroyed = DestroyAll<0U>(
+                    const auto destroyResult = DestroyAll<0U>(
                         resourceTuple
                     );
 
                     static_cast<void>(
-                        joined
+                        joinResult
                     );
 
                     static_cast<void>(
-                        destroyed
+                        destroyResult
                     );
 
                     return ThreadingStartResult::ProviderFailure;
