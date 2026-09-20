@@ -50,7 +50,6 @@ namespace ESPressio::Threading::Detail {
             // Completion inspection.
 
             /// Indicates whether the authoritative Threading lifecycle reached terminal shutdown completion.
-            /// Indicates whether the authoritative Threading lifecycle reached terminal shutdown completion.
             bool IsComplete() const noexcept {
                 return _lifecycle->State() == InfrastructureState::ShutdownComplete;
             }
@@ -153,6 +152,7 @@ namespace ESPressio::Threading::Detail {
                 return _mutex.Release();
             }
 
+            /// Indicates whether the authoritative Threading lifecycle reached terminal shutdown completion.
             bool IsComplete() const noexcept {
                 return _lifecycle->State() == InfrastructureState::ShutdownComplete;
             }
