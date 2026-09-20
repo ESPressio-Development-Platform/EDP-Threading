@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -9,6 +10,13 @@
 #include "StaticTopologyResourceTypes.hpp"
 
 namespace ESPressio::Threading::Detail {
+
+    /// Outcome of applying terminal semantic shutdown across recursive topology resource storage.
+    enum class TopologyShutdownApplicationResult : std::uint8_t {
+        Applied = 0,
+        ProviderFailure = 1
+    };
+
 
     /// Defines the compile-time contract for `DeclarationThreadIdentity`.
     /// @tparam TDeclaration Static topology declaration Type being realized.
@@ -229,13 +237,20 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Applies terminal semantic shutdown behavior to this resource and then the recursive tail.
-            void BeginShutdown() noexcept {
+            TopologyShutdownApplicationResult BeginShutdown() noexcept {
+                auto result = TopologyShutdownApplicationResult::Applied;
+
                 if constexpr (
                     IsTaskExecutionResource<
                         typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::Resource
                     >::Value
                 ) {
-                    _resource.BeginShutdownCancellation();
+                    if (
+                        _resource.BeginShutdownCancellation() ==
+                        TaskFacilityShutdownCancellationResult::ProviderFailure
+                    ) {
+                        result = TopologyShutdownApplicationResult::ProviderFailure;
+                    }
                 } else if constexpr (
                     IsDedicatedThread<
                         typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::Resource
@@ -246,7 +261,12 @@ namespace ESPressio::Threading::Detail {
                     );
                 }
 
-                _tail.BeginShutdown();
+                const auto tailResult = _tail.BeginShutdown();
+
+                return result == TopologyShutdownApplicationResult::ProviderFailure ||
+                    tailResult == TopologyShutdownApplicationResult::ProviderFailure
+                    ? TopologyShutdownApplicationResult::ProviderFailure
+                    : TopologyShutdownApplicationResult::Applied;
             }
 
             /// Indicates whether this resource and every recursive tail resource are execution-quiescent.
@@ -340,7 +360,9 @@ namespace ESPressio::Threading::Detail {
             // Terminal recursion operations.
 
             /// Performs no semantic shutdown work because the terminal node owns no resource.
-            void BeginShutdown() noexcept {}
+            TopologyShutdownApplicationResult BeginShutdown() noexcept {
+                return TopologyShutdownApplicationResult::Applied;
+            }
 
             /// Reports quiescence because the terminal node owns no execution resource.
             bool IsExecutionQuiescent() noexcept {
