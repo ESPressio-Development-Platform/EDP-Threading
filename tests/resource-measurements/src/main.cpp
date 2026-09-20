@@ -102,6 +102,8 @@ namespace Measurement {
             return StackBackingTotal<4096U>();
         }
 
+        /// Defines the compile-time contract for `LinkSurface`.
+        /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
             TRuntime& runtime
@@ -163,6 +165,8 @@ namespace Measurement {
             return StackBackingTotal<4096U, 4096U>();
         }
 
+        /// Defines the compile-time contract for `LinkSurface`.
+        /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
             TRuntime& runtime
@@ -216,6 +220,8 @@ namespace Measurement {
             return StackBackingTotal<2048U>();
         }
 
+        /// Defines the compile-time contract for `LinkSurface`.
+        /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
             TRuntime& runtime
@@ -272,6 +278,8 @@ namespace Measurement {
             return StackBackingTotal<2048U>();
         }
 
+        /// Defines the compile-time contract for `LinkSurface`.
+        /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
             TRuntime& runtime
@@ -326,6 +334,8 @@ namespace Measurement {
             return StackBackingTotal<4096U>();
         }
 
+        /// Defines the compile-time contract for `LinkSurface`.
+        /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
             TRuntime& runtime
@@ -439,6 +449,8 @@ namespace Measurement {
             >();
         }
 
+        /// Defines the compile-time contract for `LinkSurface`.
+        /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
             TRuntime& runtime
