@@ -8,6 +8,17 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Routes targeted wakes and structural context inspection for one static Threading topology.
+    ///
+    /// @tparam TContextCapacity Number of managed execution contexts in the topology.
+    /// @tparam TSignalProvider Concrete Platform Signal provider used by the wake set.
+    template<std::size_t TContextCapacity, class TSignalProvider>
+    class ManagedContextRouter;
+
+
+    /// Empty-topology router specialization retaining no structural routing state.
+    ///
+    /// @tparam TSignalProvider Concrete Platform Signal provider Type selected by Bootstrap.
     template<class TSignalProvider>
     class ManagedContextRouter<0U, TSignalProvider> final {
 
@@ -18,8 +29,7 @@ namespace ESPressio::Threading::Detail {
                 TSignalProvider
             >;
 
-            using ContextIndex =
-                typename ExecutionContextIndexTraits<0U>::Type;
+            using ContextIndex = typename SmallestIndex<1U>::Type;
 
             static constexpr std::size_t ContextCapacity = 0U;
 
@@ -48,11 +58,11 @@ namespace ESPressio::Threading::Detail {
                 return true;
             }
 
-            auto Wake(
+            ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
                 ContextIndex
             ) noexcept = delete;
 
-            auto Wait(
+            ESPressio::Platform::Synchronization::SignalWaitResult Wait(
                 ContextIndex,
                 ESPressio::Platform::Synchronization::WaitTimeout
             ) noexcept = delete;
