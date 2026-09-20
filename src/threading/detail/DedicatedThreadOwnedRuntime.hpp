@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -132,12 +133,9 @@ namespace ESPressio::Threading::Detail {
             }
 
 
-            bool TryResolveCurrentContext(
-                typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type& contextIndex
-            ) const noexcept {
-                return _runtime.TryResolveCurrentContext(
-                    contextIndex
-                );
+            /// Returns this resource's dense context index when it owns the current Platform context.
+            std::optional<typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type> CurrentContextIndex() const noexcept {
+                return _runtime.CurrentContextIndex();
             }
 
             bool IsContextInterrupted(
