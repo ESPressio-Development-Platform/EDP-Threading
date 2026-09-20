@@ -27,6 +27,15 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            DedicatedThreadControl() noexcept {
+                _value.StoreRelaxed(
+                    static_cast<std::uint8_t>(
+                        DedicatedThreadOperationalState::NeverStarted
+                    )
+                );
+            }
+
+
             // Observation.
 
             /// Returns the internal Dedicated Thread operational state.
