@@ -64,12 +64,9 @@ namespace ESPressio::Threading::Detail {
             using ThreadIdentity =
                 typename DeclarationThreadIdentity<Declaration>::Type;
 
-            using Binding = typename DedicatedThreadBindingType<
+            using Binding = typename DedicatedThreadBindingTypeFromTuple<
                 ThreadIdentity,
-                std::tuple_element_t<
-                    0U,
-                    TBindings
-                >
+                TBindings
             >::Type;
 
             return Resource(
