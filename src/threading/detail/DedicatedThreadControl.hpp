@@ -12,6 +12,25 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    enum class DedicatedThreadControlStartResult : std::uint8_t {
+        Started = 0,
+        AlreadyRunning = 1
+    };
+
+
+    enum class DedicatedThreadControlStopRequestResult : std::uint8_t {
+        Accepted = 0,
+        NotRunning = 1
+    };
+
+
+    enum class DedicatedThreadControlPublicationResult : std::uint8_t {
+        Published = 0,
+        PhaseMismatch = 1,
+        NotRunning = 2
+    };
+
+
     class DedicatedThreadControl final {
 
         private:
@@ -59,7 +78,7 @@ namespace ESPressio::Threading::Detail {
             // Lifecycle transitions.
 
             /// Starts a new activation and toggles the activation Phase under the owning runtime mutex.
-            bool TryStart(
+            DedicatedThreadControlStartResult TryStart(
                 bool& activationPhase
             ) noexcept {
                 const auto state = State();
@@ -68,7 +87,7 @@ namespace ESPressio::Threading::Detail {
                     state == DedicatedThreadOperationalState::Running ||
                     state == DedicatedThreadOperationalState::RunningStopRequested
                 ) {
-                    return false;
+                    return DedicatedThreadControlStartResult::AlreadyRunning;
                 }
 
                 const auto nextPhase = static_cast<std::uint8_t>(
@@ -81,15 +100,15 @@ namespace ESPressio::Threading::Detail {
                 );
 
                 activationPhase = nextPhase != 0U;
-                return true;
+                return DedicatedThreadControlStartResult::Started;
             }
 
             /// Requests cooperative stop for the current activation.
             ///
             /// The owning Dedicated Thread runtime serializes every mutation through its mutex.
-            bool TryRequestStop() noexcept {
+            DedicatedThreadControlStopRequestResult TryRequestStop() noexcept {
                 if (State() != DedicatedThreadOperationalState::Running) {
-                    return false;
+                    return DedicatedThreadControlStopRequestResult::NotRunning;
                 }
 
                 _value = static_cast<std::uint8_t>(
@@ -97,17 +116,17 @@ namespace ESPressio::Threading::Detail {
                     static_cast<std::uint8_t>(DedicatedThreadOperationalState::RunningStopRequested)
                 );
 
-                return true;
+                return DedicatedThreadControlStopRequestResult::Accepted;
             }
 
             /// Publishes completion only for the activation Phase that actually returned.
             ///
             /// The owning Dedicated Thread runtime serializes every mutation through its mutex.
-            bool TryPublishStopped(
+            DedicatedThreadControlPublicationResult TryPublishStopped(
                 bool activationPhase
             ) noexcept {
                 if (((_value & PhaseMask) != 0U) != activationPhase) {
-                    return false;
+                    return DedicatedThreadControlPublicationResult::PhaseMismatch;
                 }
 
                 const auto state = State();
@@ -116,7 +135,7 @@ namespace ESPressio::Threading::Detail {
                     state != DedicatedThreadOperationalState::Running &&
                     state != DedicatedThreadOperationalState::RunningStopRequested
                 ) {
-                    return false;
+                    return DedicatedThreadControlPublicationResult::NotRunning;
                 }
 
                 _value = static_cast<std::uint8_t>(
@@ -124,7 +143,7 @@ namespace ESPressio::Threading::Detail {
                     static_cast<std::uint8_t>(DedicatedThreadOperationalState::Stopped)
                 );
 
-                return true;
+                return DedicatedThreadControlPublicationResult::Published;
             }
 
     };
