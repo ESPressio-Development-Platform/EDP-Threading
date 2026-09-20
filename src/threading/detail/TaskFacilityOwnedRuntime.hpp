@@ -559,8 +559,8 @@ namespace ESPressio::Threading::Detail {
             // Shutdown cooperation.
 
             /// Applies terminal-shutdown cancellation semantics to queued and running Tasks in this facility.
-            void BeginShutdownCancellation() noexcept {
-                _facility.BeginShutdownCancellation();
+            TaskFacilityShutdownCancellationResult BeginShutdownCancellation() noexcept {
+                return _facility.BeginShutdownCancellation();
             }
 
             /// Indicates whether this facility has no queued or actively executing Task work.
