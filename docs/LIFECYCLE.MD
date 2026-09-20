@@ -8,7 +8,7 @@ A Task has public states Queued, Running, Completed and Cancelled. Running cance
 
 Cancellation is cooperative. Cancelling queued work prevents callable execution. Cancelling running work requests cooperation; a callable that ignores the request and returns normally completes normally.
 
-Task waits are predicate-driven. Wait registration is bounded and target-owned, and every wake re-evaluates the authoritative record/Phase state.
+Task waits are predicate-driven. Wait registration is bounded and target-owned, and every wake re-evaluates authoritative record/Phase state.
 
 ## Dedicated Threads
 
@@ -18,14 +18,29 @@ Dedicated Threads have one persistent Platform execution context and are semanti
 
 Join captures the current one-bit activation Phase. A concurrent later restart cannot retarget an already captured Join. Starting while an activation is Running or internally stop-requested returns AlreadyRunning; no deferred restart is queued.
 
-## Startup
+A moved-from Thread handle is invalid but safe to observe/control: it does not dereference its former resource.
 
-Threading Initialization starts no managed execution. Infrastructure Start occurs only after the application initialization barrier and is transactional. Semantic Task dispatch and Dedicated Thread activation are rejected until Start commits successfully.
+## Initialization
+
+Construction owns all statically configured backing but starts no EDP-managed execution context. `Initialize()` validates targeted wake providers and initializes Platform execution providers in declaration order. A failure destroys the failing provider and rolls back already initialized resources. Only successful completion commits the global initialization barrier.
+
+## Infrastructure Start
+
+`Start()` starts resources in topology declaration order. The operation is transactional: the first failure prevents later starts, requests termination of already-started trampolines, joins them and destroys initialized resources. Semantic Task dispatch and Dedicated Thread activation remain rejected until Start commits successfully.
+
+## Semantic execution
+
+After operational commit:
+
+- ordinary Tasks are dispatched through their Pool identity;
+- Dedicated Worker work is dispatched through its critical Task identity;
+- Dedicated Threads are addressed through Thread identity and explicitly activated;
+- `Yield`, `SleepFor`, `SleepUntil`, Task waits and Thread joins remain predicate-driven and interruption-aware.
 
 ## Shutdown
 
-Shutdown is terminal and initiation is nonblocking. New Task admission and Dedicated Thread activation cease, queued Tasks are cancelled, running Tasks receive cancellation requests and active Dedicated Threads receive stop requests.
+Shutdown is terminal and initiation is nonblocking. `BeginShutdown()` changes the authoritative lifecycle first, then structurally traverses the topology. New Task admission and Dedicated Thread activation cease, queued Tasks are cancelled, running Tasks receive cancellation requests and active Dedicated Threads receive stop requests.
 
-Execution quiescence is distinct from Task-record retention: completed/cancelled records may remain because a public handle or waiter still exists without keeping Worker infrastructure alive.
+`IsExecutionQuiescent()` scans every resource. Execution quiescence is distinct from Task-record retention: completed/cancelled records may remain because a public handle or waiter still exists without keeping Worker infrastructure alive. Arbitrary user code is never forcefully terminated; a noncooperating callable may therefore prevent terminal shutdown forever.
 
-After all semantic execution cooperatively ceases, persistent contexts are woken, joined and destroyed, terminal shutdown is published and registered shutdown waiters are targeted. Arbitrary user code is never forcefully terminated; a noncooperating callable may therefore prevent terminal shutdown forever.
+After quiescence, `FinalizeShutdown()` requests infrastructure termination, joins and destroys all persistent contexts, publishes `ShutdownComplete`, then wakes the runtime-owned bounded shutdown waiters. Applications may observe completion with `WaitForShutdown()`, `WaitForShutdownFor()` or `WaitForShutdownUntil()`. Completion publication occurs once and only after teardown.
