@@ -188,6 +188,7 @@ namespace ESPressio::Threading::Detail {
                 return _mutex.Release();
             }
 
+            /// Projects the compact internal lifecycle state onto the stable public Dedicated Thread state.
             static ThreadState PublicStateFor(
                 DedicatedThreadOperationalState state
             ) noexcept {
@@ -205,6 +206,7 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Wakes every managed context registered for the completed activation Phase.
             void WakeJoiners(
                 bool phase
             ) {
@@ -225,6 +227,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Indicates whether the captured activation Phase has reached a stopped state.
             bool IsActivationStopped(
                 bool capturedPhase
             ) const noexcept {
@@ -239,6 +242,7 @@ namespace ESPressio::Threading::Detail {
                 return state == DedicatedThreadOperationalState::Stopped;
             }
 
+            /// Bridges ThreadContext stop observation back to this runtime without exposing its concrete Type.
             static bool IsStopRequestedThunk(
                 const void* resource
             ) noexcept {
@@ -249,6 +253,7 @@ namespace ESPressio::Threading::Detail {
                 )->IsStopRequested();
             }
 
+            /// Invokes the bound application callable using the supported Dedicated Thread signature.
             void InvokeCallable() {
                 if constexpr (
                     std::is_invocable_v<TCallable&, ThreadContext&>
@@ -266,6 +271,7 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Publishes terminal state for the completed activation and wakes matching joiners.
             DedicatedThreadStoppedPublicationResult PublishStopped(
                 bool activationPhase
             ) noexcept {
@@ -296,6 +302,7 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Validates that the configured Mutex provider can support Dedicated Thread lifecycle serialization.
             DedicatedThreadSynchronizationResult ValidateSynchronization() noexcept {
                 const auto acquireResult = _mutex.Acquire(
                     ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
@@ -317,6 +324,7 @@ namespace ESPressio::Threading::Detail {
 
             // Persistent trampoline.
 
+            /// Runs the persistent Platform trampoline that waits for semantic activations or infrastructure termination.
             static void Entry(
                 void* parameter
             ) noexcept {
@@ -378,6 +386,7 @@ namespace ESPressio::Threading::Detail {
 
             // Join implementation.
 
+            /// Joins the activation captured at entry using one non-restarting canonical wait budget.
             ThreadJoinResult JoinWithBudget(
                 const MonotonicWaitBudget& budget
             ) {
@@ -531,6 +540,7 @@ namespace ESPressio::Threading::Detail {
 
             // Handle thunks.
 
+            /// Type-erased Thread handle bridge for lifecycle-state observation.
             static ThreadState StateThunk(
                 const void* resource
             ) noexcept {
@@ -541,6 +551,7 @@ namespace ESPressio::Threading::Detail {
                 )->State();
             }
 
+            /// Type-erased Thread handle bridge for semantic activation.
             static ThreadStartResult StartThunk(
                 void* resource
             ) noexcept {
@@ -549,6 +560,7 @@ namespace ESPressio::Threading::Detail {
                 )->StartActivation();
             }
 
+            /// Type-erased Thread handle bridge for cooperative stop requests.
             static ThreadStopRequestResult RequestStopThunk(
                 void* resource
             ) noexcept {
@@ -557,6 +569,7 @@ namespace ESPressio::Threading::Detail {
                 )->RequestStop();
             }
 
+            /// Type-erased Thread handle bridge for indefinite Join.
             static ThreadJoinResult JoinThunk(
                 void* resource
             ) {
@@ -565,6 +578,7 @@ namespace ESPressio::Threading::Detail {
                 )->Join();
             }
 
+            /// Type-erased Thread handle bridge for relative-duration Join.
             static ThreadJoinResult JoinForThunk(
                 void* resource,
                 Duration duration
@@ -576,6 +590,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Type-erased Thread handle bridge for monotonic-deadline Join.
             static ThreadJoinResult JoinUntilThunk(
                 void* resource,
                 MonotonicTimestamp deadline
@@ -605,6 +620,7 @@ namespace ESPressio::Threading::Detail {
 
             // Construction.
 
+            /// Constructs one topology-owned Dedicated Thread runtime without starting its Platform context.
             DedicatedThreadRuntime(
                 TCallable callable,
                 TManagedContextRouter& router,
@@ -629,6 +645,7 @@ namespace ESPressio::Threading::Detail {
 
             // Infrastructure lifecycle.
 
+            /// Initializes synchronization and the persistent Platform execution context without starting execution.
             WorkerExecutionInitializationResult Initialize(
                 ESPressio::Platform::Execution::ExecutionPriority priority,
                 ESPressio::Platform::Execution::ProcessorAffinity affinity,
@@ -667,6 +684,7 @@ namespace ESPressio::Threading::Detail {
                 return WorkerExecutionInitializationResult::Succeeded;
             }
 
+            /// Starts the persistent Platform execution context after the topology initialization barrier.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
                 return _provider.Start();
             }
@@ -680,6 +698,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Joins the persistent Platform execution context using the supplied native wait budget.
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
@@ -688,6 +707,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Destroys the initialized Platform execution context and releases its native provider state.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return _provider.Destroy();
             }
@@ -695,6 +715,7 @@ namespace ESPressio::Threading::Detail {
 
             // Public lifecycle.
 
+            /// Returns the stable public lifecycle state under the Dedicated Thread serialization boundary.
             ThreadState State() noexcept {
                 if (AcquireLock() != LockAcquireResult::Acquired) {
                     return ThreadState::Stopped;
@@ -710,6 +731,7 @@ namespace ESPressio::Threading::Detail {
                 return result;
             }
 
+            /// Starts one semantic activation when global lifecycle and local state permit it.
             ThreadStartResult StartActivation() noexcept {
                 if (!_canActivate(
                     _lifecycleContext
@@ -751,6 +773,7 @@ namespace ESPressio::Threading::Detail {
                 return ThreadStartResult::Started;
             }
 
+            /// Requests cooperative stop of the current activation and wakes its persistent context.
             ThreadStopRequestResult RequestStop() noexcept {
                 if (AcquireLock() != LockAcquireResult::Acquired) {
                     return ThreadStopRequestResult::NotRunning;
@@ -776,6 +799,7 @@ namespace ESPressio::Threading::Detail {
                 return ThreadStopRequestResult::Accepted;
             }
 
+            /// Indicates whether cooperative stop has been requested for the current activation.
             bool IsStopRequested() noexcept {
                 if (AcquireLock() != LockAcquireResult::Acquired) {
                     return true;
@@ -789,12 +813,14 @@ namespace ESPressio::Threading::Detail {
                 return result;
             }
 
+            /// Joins the activation captured when this call begins.
             ThreadJoinResult Join() {
                 return JoinWithBudget(
                     MonotonicWaitBudget::Forever()
                 );
             }
 
+            /// Joins the captured activation within one relative physical-time budget.
             ThreadJoinResult JoinFor(
                 Duration duration
             ) {
@@ -805,6 +831,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Joins the captured activation until one canonical monotonic deadline.
             ThreadJoinResult JoinUntil(
                 MonotonicTimestamp deadline
             ) {
@@ -864,6 +891,7 @@ namespace ESPressio::Threading::Detail {
 
             // Handle creation.
 
+            /// Creates a non-owning public control handle for this topology-owned Dedicated Thread.
             Thread<TThreadIdentity> Handle() noexcept {
                 return Thread<TThreadIdentity>(
                     this,
@@ -871,6 +899,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Returns the static type-erased operation table shared by handles for this concrete runtime.
             static const ThreadHandleOperations& HandleOperations() noexcept {
                 static const ThreadHandleOperations operations{
                     &StateThunk,
