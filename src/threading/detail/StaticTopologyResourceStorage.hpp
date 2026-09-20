@@ -16,8 +16,9 @@ namespace ESPressio::Threading::Detail {
     struct DeclarationThreadIdentity;
 
 
-    /// Defines the compile-time contract for `DeclarationThreadIdentity`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Extracts the semantic Thread identity from a Dedicated Thread declaration.
+    /// @tparam TThreadIdentity Semantic identity Type carried by the Dedicated Thread declaration.
+    /// @tparam TProperties Compile-time execution-property Types carried by the declaration.
     template<class TThreadIdentity, class... TProperties>
     struct DeclarationThreadIdentity<
         DedicatedThread<TThreadIdentity, TProperties...>
@@ -36,8 +37,8 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     /// @tparam TResourceIndex Compile-time topology resource index.
+    /// Resolves the concrete owned runtime Type corresponding to one topology resource.
     template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TResourceIndex>
-    /// Concrete owned runtime Type corresponding to one topology resource.
     using OwnedResourceAt = typename OwnedResourceType<
         typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::Resource,
         TBindings,
