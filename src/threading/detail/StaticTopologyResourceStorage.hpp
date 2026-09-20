@@ -176,7 +176,6 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            template<std::size_t TIndex = TResourceIndex>
             void BeginShutdown() noexcept {
                 if constexpr (
                     IsTaskExecutionResource<
