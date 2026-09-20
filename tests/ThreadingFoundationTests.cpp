@@ -1253,7 +1253,15 @@ static void HostValidationStage(
 
 /// Exercises compact Threading foundation primitives.
 int main() {
+    HostValidationStage(
+        "process entry"
+    );
+
     Test::MonotonicClock monotonicClock;
+
+    HostValidationStage(
+        "binding monotonic clock"
+    );
 
     assert(
         ESPressio::Clock::BindMonotonicClock(
@@ -1263,6 +1271,10 @@ int main() {
 
     assert(
         ESPressio::Clock::IsMonotonicClockBound()
+    );
+
+    HostValidationStage(
+        "monotonic clock bound"
     );
 
     HostValidationStage(
