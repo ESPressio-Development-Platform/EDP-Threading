@@ -677,11 +677,17 @@ namespace Test {
     static_assert(
         TopologyPlan::Resource<1U>::FirstContextIndex == 1U &&
         TopologyPlan::Resource<1U>::ContextCount == 1U,
-        "Dedicated Thread must follow the preceding facility range without a runtime registry"
+        "Dedicated Worker must follow the preceding facility range without a runtime registry"
     );
 
     static_assert(
-        TopologyPlan::ManagedExecutionContextCount == 2U,
+        TopologyPlan::Resource<2U>::FirstContextIndex == 2U &&
+        TopologyPlan::Resource<2U>::ContextCount == 1U,
+        "Dedicated Thread must follow the Dedicated Worker range without a runtime registry"
+    );
+
+    static_assert(
+        TopologyPlan::ManagedExecutionContextCount == 3U,
         "Static topology plan must preserve the topology-wide managed-context count"
     );
 
@@ -2065,7 +2071,7 @@ int main() {
 
 
     Test::ManagedContextRouter runtimeRouter;
-    assert(
+    assert((
         ESPressio::Threading::Detail::ExecutionControl<
             Test::ExecutionContextProvider,
             Test::ManagedContextRouter
@@ -2075,7 +2081,7 @@ int main() {
                 0
             )
         ) == ESPressio::Threading::SleepResult::Completed
-    );
+    ));
 
     ESPressio::Threading::Detail::ExecutionControl<
         Test::ExecutionContextProvider,
