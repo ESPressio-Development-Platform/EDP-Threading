@@ -19,6 +19,7 @@
 #include "../src/threading/detail/StaticTopologyPlan.hpp"
 #include "../src/threading/detail/StaticTopologyResourceTypes.hpp"
 #include "../src/threading/detail/StructuralContextResolver.hpp"
+#include "../src/threading/detail/TopologyResourceLookup.hpp"
 #include "../src/threading/detail/ThreadingBootstrap.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
@@ -984,6 +985,31 @@ namespace Test {
             AtomicByteProvider,
             MutexProvider
         >;
+
+    static_assert(
+        ESPressio::Threading::Detail::TaskFacilityResourceIndex<
+            MixedOwnedTopology,
+            OrdinaryPool
+        > == 0U,
+        "Task facilities must be addressable by semantic Pool identity"
+    );
+
+    static_assert(
+        ESPressio::Threading::Detail::DedicatedWorkerResourceIndex<
+            MixedOwnedTopology,
+            ReturningCallable
+        > == 1U,
+        "Dedicated Worker leases must be addressable by semantic Task identity"
+    );
+
+    static_assert(
+        ESPressio::Threading::Detail::DedicatedThreadResourceIndex<
+            MixedOwnedTopology,
+            DedicatedThreadIdentity
+        > == 2U,
+        "Dedicated Threads must be addressable by semantic Thread identity"
+    );
+
 
     static_assert(
         std::tuple_size_v<MixedOwnedResources> == 3U,
