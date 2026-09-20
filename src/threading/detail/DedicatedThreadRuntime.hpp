@@ -240,6 +240,23 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            bool ValidateSynchronization() noexcept {
+                const auto acquireResult = _mutex.Acquire(
+                    ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
+                );
+
+                if (
+                    acquireResult !=
+                    ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
+                ) {
+                    return false;
+                }
+
+                return _mutex.Release() ==
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released;
+            }
+
+
             // Persistent trampoline.
 
             static void Entry(
@@ -552,6 +569,10 @@ namespace ESPressio::Threading::Detail {
                 ESPressio::Platform::Execution::ProcessorAffinity affinity,
                 const char* name = nullptr
             ) noexcept {
+                if (!ValidateSynchronization()) {
+                    return WorkerExecutionInitializationResult::ProviderFailure;
+                }
+
                 ESPressio::Platform::Execution::ExecutionConfiguration configuration;
                 configuration.Priority = priority;
                 configuration.Affinity = affinity;
