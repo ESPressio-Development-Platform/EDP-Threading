@@ -13,15 +13,13 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
-            using Resources = typename TTopology::Resources;
-
             template<std::size_t... TIndices>
             static constexpr std::size_t Sum(
                 std::index_sequence<TIndices...>
             ) noexcept {
                 return (
                     ManagedContextCount<
-                        std::tuple_element_t<TIndices, Resources>
+                        std::tuple_element_t<TIndices, typename TTopology::Resources>
                     >::Value +
                     ... +
                     0U
