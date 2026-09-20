@@ -24,6 +24,13 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Outcome of an internal Task control-state transition.
+    enum class TaskControlTransitionResult : std::uint8_t {
+        Applied = 0,
+        StateMismatch = 1
+    };
+
+
     /// Defines the compile-time contract for `SmallestIndex`.
     /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
     template<std::size_t TCapacity>
@@ -134,19 +141,19 @@ namespace ESPressio::Threading::Detail {
             /// Changes the operational state only when the expected state still owns the transition.
             ///
             /// The owning facility runtime serializes every mutation through its mutex.
-            bool CompareExchangeState(
+            TaskControlTransitionResult CompareExchangeState(
                 TaskOperationalState expectedState,
                 TaskOperationalState desiredState
             ) noexcept {
                 if (State() != expectedState) {
-                    return false;
+                    return TaskControlTransitionResult::StateMismatch;
                 }
 
                 SetState(
                     desiredState
                 );
 
-                return true;
+                return TaskControlTransitionResult::Applied;
             }
 
             /// Releases the sole public ownership interest.
