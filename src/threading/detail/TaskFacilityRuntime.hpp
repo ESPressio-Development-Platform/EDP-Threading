@@ -27,7 +27,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TWorkerCount, std::size_t TFirstWorkerContextIndex, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider, class TMutexProvider, class TManagedContextRouter>
+    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TWorkerCount, std::size_t TFirstWorkerContextIndex, std::size_t TExecutionContextCapacity, class TMutexProvider, class TManagedContextRouter>
     class TaskFacilityRuntime final {
 
         static_assert(
@@ -44,8 +44,7 @@ namespace ESPressio::Threading::Detail {
                 TRecordCapacity,
                 TCallableCapacity,
                 TResultCapacity,
-                TExecutionContextCapacity,
-                TAtomicWord8Provider
+                TExecutionContextCapacity
             >;
 
             /// Compact record index selected by the deterministic core.
@@ -106,6 +105,31 @@ namespace ESPressio::Threading::Detail {
             TManagedContextRouter* _router;
 
 
+            // Invocation-local cancellation observation.
+
+            struct CancellationObservation final {
+
+                TaskFacilityRuntime* Facility;
+                Index RecordIndex;
+                bool Phase;
+
+            };
+
+
+            static bool IsCancellationRequestedThunk(
+                const void* context
+            ) noexcept {
+                const auto* observation = static_cast<const CancellationObservation*>(
+                    context
+                );
+
+                return observation->Facility->IsCancellationRequested(
+                    observation->RecordIndex,
+                    observation->Phase
+                );
+            }
+
+
             // Facility serialization.
 
             /// Acquires the facility serialization boundary indefinitely.
@@ -124,6 +148,24 @@ namespace ESPressio::Threading::Detail {
                 static_cast<void>(
                     _mutex.Release()
                 );
+            }
+
+            /// Reads cooperative cancellation through the authoritative facility serialization boundary.
+            bool IsCancellationRequested(
+                Index recordIndex,
+                bool phase
+            ) noexcept {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return true;
+                }
+
+                const auto result = _core.IsCancellationRequested(
+                    recordIndex,
+                    phase
+                );
+
+                ReleaseLock();
+                return result;
             }
 
 
@@ -1016,9 +1058,20 @@ namespace ESPressio::Threading::Detail {
                 Index recordIndex,
                 bool phase
             ) {
-                return _core.Invoke(
+                CancellationObservation observation {
+                    this,
                     recordIndex,
                     phase
+                };
+
+                TaskContext context(
+                    &observation,
+                    &IsCancellationRequestedThunk
+                );
+
+                return _core.Invoke(
+                    recordIndex,
+                    context
                 );
             }
 
