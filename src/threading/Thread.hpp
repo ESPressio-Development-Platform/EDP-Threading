@@ -135,6 +135,10 @@ namespace ESPressio::Threading {
 
             /// Requests cooperative stop of the current semantic activation.
             ThreadStopRequestResult RequestStop() noexcept {
+                if (!IsValid()) {
+                    return ThreadStopRequestResult::NotRunning;
+                }
+
                 return _operations->RequestStop(
                     _resource
                 );
@@ -142,6 +146,10 @@ namespace ESPressio::Threading {
 
             /// Waits indefinitely for the activation captured at Join entry to stop.
             ThreadJoinResult Join() {
+                if (!IsValid()) {
+                    return ThreadJoinResult::NeverStarted;
+                }
+
                 return _operations->Join(
                     _resource
                 );
@@ -151,6 +159,10 @@ namespace ESPressio::Threading {
             ThreadJoinResult JoinFor(
                 Duration duration
             ) {
+                if (!IsValid()) {
+                    return ThreadJoinResult::NeverStarted;
+                }
+
                 return _operations->JoinFor(
                     _resource,
                     duration
@@ -161,6 +173,10 @@ namespace ESPressio::Threading {
             ThreadJoinResult JoinUntil(
                 MonotonicTimestamp deadline
             ) {
+                if (!IsValid()) {
+                    return ThreadJoinResult::NeverStarted;
+                }
+
                 return _operations->JoinUntil(
                     _resource,
                     deadline
