@@ -9,13 +9,9 @@
 
 namespace ESPressio::Threading::Detail {
 
-    /// Resolves the currently executing managed context structurally from owned topology resources.
-    ///
+    /// Resolves current-context identity and interruption state structurally across topology-owned resources.
     /// @tparam TContextCapacity Number of managed execution contexts in the topology.
     /// @tparam TResources Concrete statically owned runtime resource Types participating in resolution.
-    /// Resolves current-context identity and interruption state structurally across topology-owned resources.
-    /// @tparam TContextCapacity Total managed execution-context capacity represented by the resolver.
-    /// @tparam TResources Concrete topology-owned runtime resource Types searched structurally.
     template<std::size_t TContextCapacity, class... TResources>
     class StructuralContextResolver;
 
@@ -30,12 +26,14 @@ namespace ESPressio::Threading::Detail {
             using ContextIndex = typename SmallestIndex<1U>::Type;
 
 
+            /// Reports that an empty topology has no currently executing managed context.
             static std::optional<ContextIndex> ResolveCurrentThunk(
                 const void*
             ) noexcept {
                 return std::nullopt;
             }
 
+            /// Conservatively reports interruption for any impossible context query against an empty topology.
             static bool IsInterruptedThunk(
                 const void*,
                 ContextIndex
@@ -52,13 +50,14 @@ namespace ESPressio::Threading::Detail {
     template<std::size_t TContextCapacity, class... TResources>
     class StructuralContextResolver final {
 
-        public:
+        private:
 
-            /// Compact Type used to identify one managed execution context.
-            using ContextIndex =
+            // Internal context vocabulary.
+
+            /// Internal compact Type used while resolving managed execution contexts.
+            using ContextIndexStorage =
                 typename ExecutionContextIndexTraits<TContextCapacity>::Type;
 
-        private:
 
             // Structural resource bindings.
 
@@ -66,10 +65,12 @@ namespace ESPressio::Threading::Detail {
             std::tuple<TResources*...> _resources;
 
 
-            /// Defines the compile-time contract for `ResolveCurrentNext`.
-            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
+            // Recursive structural resolution.
+
+            /// Resolves the current managed execution context by scanning topology resources in declaration order.
+            /// @tparam TIndex Compile-time resource index currently being inspected.
             template<std::size_t TIndex>
-            std::optional<ContextIndex> ResolveCurrentNext() const noexcept {
+            std::optional<ContextIndexStorage> ResolveCurrentNext() const noexcept {
                 if constexpr (
                     TIndex == sizeof...(TResources)
                 ) {
@@ -87,11 +88,11 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            /// Defines the compile-time contract for `IsInterruptedNext`.
-            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
+            /// Resolves whether one managed execution context carries an authoritative interruption request.
+            /// @tparam TIndex Compile-time resource index currently being inspected.
             template<std::size_t TIndex>
             bool IsInterruptedNext(
-                ContextIndex contextIndex
+                ContextIndexStorage contextIndex
             ) const noexcept {
                 if constexpr (
                     TIndex == sizeof...(TResources)
@@ -118,6 +119,15 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            // Public context vocabulary.
+
+            /// Compact Type used to identify one managed execution context.
+            using ContextIndex = ContextIndexStorage;
+
+
+            // Construction.
+
+            /// Binds the resolver to the address-stable topology-owned runtime resources.
             explicit StructuralContextResolver(
                 TResources&... resources
             ) noexcept :
@@ -128,6 +138,7 @@ namespace ESPressio::Threading::Detail {
 
             // Managed-context router thunks.
 
+            /// Type-erased router bridge that resolves the currently executing managed context.
             static std::optional<ContextIndex> ResolveCurrentThunk(
                 const void* context
             ) noexcept {
@@ -136,6 +147,7 @@ namespace ESPressio::Threading::Detail {
                 )->ResolveCurrentNext<0U>();
             }
 
+            /// Type-erased router bridge that resolves authoritative interruption for one managed context.
             static bool IsInterruptedThunk(
                 const void* context,
                 ContextIndex contextIndex
