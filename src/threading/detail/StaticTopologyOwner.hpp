@@ -559,10 +559,6 @@ namespace ESPressio::Threading::Detail {
             }
 
 
-            InfrastructureState LifecycleState() const noexcept {
-                return _bootstrap.LifecycleState().State();
-            }
-
 
     };
 
