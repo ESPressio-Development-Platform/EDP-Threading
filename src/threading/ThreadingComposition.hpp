@@ -173,6 +173,22 @@ namespace ESPressio::Threading {
 
 
         template<class TResource>
+        struct IsDedicatedWorkerLease {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TTaskIdentity, class... TProperties>
+        struct IsDedicatedWorkerLease<DedicatedWorkerLease<TTaskIdentity, TProperties...>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TResource>
         struct IsDedicatedThread {
 
             static constexpr bool Value = false;
@@ -307,6 +323,18 @@ namespace ESPressio::Threading {
 
         static constexpr bool HasDedicatedThreadExecution =
             (Detail::IsDedicatedThread<TResources>::Value || ... || false);
+
+        static constexpr bool HasDedicatedWorkerLease =
+            (Detail::IsDedicatedWorkerLease<TResources>::Value || ... || false);
+
+        static constexpr std::size_t TaskFacilityCount =
+            (static_cast<std::size_t>(Detail::IsTaskFacility<TResources>::Value) + ... + 0U);
+
+        static constexpr std::size_t DedicatedWorkerLeaseCount =
+            (static_cast<std::size_t>(Detail::IsDedicatedWorkerLease<TResources>::Value) + ... + 0U);
+
+        static constexpr std::size_t DedicatedThreadCount =
+            (static_cast<std::size_t>(Detail::IsDedicatedThread<TResources>::Value) + ... + 0U);
 
     };
 
