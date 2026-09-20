@@ -9,7 +9,7 @@
 
 namespace ESPressio::Threading::Detail {
 
-    template<class TTaskIdentity, std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TStackCapacity, std::size_t TExecutionContextIndex, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider, class TMutexProvider, class TExecutionContextProvider, class TManagedContextRouter>
+    template<class TTaskIdentity, std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TStackCapacity, std::size_t TExecutionContextIndex, std::size_t TExecutionContextCapacity, class TMutexProvider, class TExecutionContextProvider, class TManagedContextRouter>
     class DedicatedWorkerLeaseRuntime final {
 
         private:
@@ -21,7 +21,6 @@ namespace ESPressio::Threading::Detail {
                 1U,
                 TExecutionContextIndex,
                 TExecutionContextCapacity,
-                TAtomicWord8Provider,
                 TMutexProvider,
                 TManagedContextRouter
             >;
