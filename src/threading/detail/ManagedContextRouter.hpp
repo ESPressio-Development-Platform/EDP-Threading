@@ -37,34 +37,41 @@ namespace ESPressio::Threading::Detail {
             static constexpr std::size_t ContextCapacity = 0U;
 
 
+            /// Constructs a router bound only to the topology-owned wake set.
             explicit ManagedContextRouter(
                 WakeSet&
             ) noexcept {}
 
 
             template<class... TArguments>
+            /// Binds the completed structural resolver after topology resource construction.
             void BindTopology(
                 TArguments&&...
             ) noexcept = delete;
 
+            /// Indicates whether structural current-context and interruption resolution are bound.
             bool IsTopologyBound() const noexcept {
                 return false;
             }
 
+            /// Returns the dense index of the currently executing managed context when one exists.
             std::optional<ContextIndex> CurrentContextIndex() const noexcept {
                 return std::nullopt;
             }
 
+            /// Indicates whether the addressed managed context currently carries an authoritative interruption request.
             bool IsInterrupted(
                 ContextIndex
             ) const noexcept {
                 return true;
             }
 
+            /// Sends a targeted wake to one managed execution context.
             ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
                 ContextIndex
             ) noexcept = delete;
 
+            /// Waits on one managed context's targeted wake primitive using the supplied Platform timeout.
             ESPressio::Platform::Synchronization::SignalWaitResult Wait(
                 ContextIndex,
                 ESPressio::Platform::Synchronization::WaitTimeout
@@ -113,6 +120,7 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Constructs a router bound only to the topology-owned wake set.
             explicit ManagedContextRouter(
                 WakeSet& wakeSet
             ) noexcept :
@@ -121,6 +129,7 @@ namespace ESPressio::Threading::Detail {
                 _currentContextIndex(nullptr),
                 _isInterrupted(nullptr) {}
 
+            /// Constructs a router with both wake storage and an already completed structural resolver.
             ManagedContextRouter(
                 WakeSet& wakeSet,
                 const void* topologyContext,
@@ -135,6 +144,7 @@ namespace ESPressio::Threading::Detail {
 
             // Structural topology binding.
 
+            /// Binds the completed structural resolver after topology resource construction.
             void BindTopology(
                 const void* topologyContext,
                 std::optional<ContextIndex> (*currentContextIndex)(const void*) noexcept,
@@ -145,6 +155,7 @@ namespace ESPressio::Threading::Detail {
                 _isInterrupted = isInterrupted;
             }
 
+            /// Indicates whether structural current-context and interruption resolution are bound.
             bool IsTopologyBound() const noexcept {
                 return
                     _topologyContext != nullptr &&
@@ -155,6 +166,7 @@ namespace ESPressio::Threading::Detail {
 
             // Context resolution.
 
+            /// Returns the dense index of the currently executing managed context when one exists.
             std::optional<ContextIndex> CurrentContextIndex() const noexcept {
                 if (!IsTopologyBound()) {
                     return std::nullopt;
@@ -165,6 +177,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Indicates whether the addressed managed context currently carries an authoritative interruption request.
             bool IsInterrupted(
                 ContextIndex contextIndex
             ) const noexcept {
@@ -181,6 +194,7 @@ namespace ESPressio::Threading::Detail {
 
             // Targeted wake routing.
 
+            /// Sends a targeted wake to one managed execution context.
             ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
                 ContextIndex contextIndex
             ) noexcept {
@@ -189,6 +203,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Waits on one managed context's targeted wake primitive using the supplied Platform timeout.
             ESPressio::Platform::Synchronization::SignalWaitResult Wait(
                 ContextIndex contextIndex,
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
