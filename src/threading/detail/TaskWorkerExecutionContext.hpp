@@ -308,6 +308,16 @@ namespace ESPressio::Threading::Detail {
                 return _provider.IsCurrentContext();
             }
 
+            /// Indicates whether the current Worker execution should cooperatively return from a Threading-owned block.
+            bool IsInterrupted() noexcept {
+                return _isShutdownRequested(
+                    _shutdownContext
+                ) ||
+                    _facility->IsCancellationRequestedForContext(
+                        _contextIndex
+                    );
+            }
+
 
             // Resource inspection.
 
