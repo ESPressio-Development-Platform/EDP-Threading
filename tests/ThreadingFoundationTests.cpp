@@ -975,6 +975,31 @@ namespace Test {
 
     using EmptyBindings = std::tuple<>;
 
+    using EmptyWakeSet =
+        ESPressio::Threading::Detail::ManagedContextWakeSet<
+            0U,
+            SignalProvider
+        >;
+
+    using EmptyRouter =
+        ESPressio::Threading::Detail::ManagedContextRouter<
+            0U,
+            SignalProvider
+        >;
+
+    using EmptyResolver =
+        ESPressio::Threading::Detail::StructuralContextResolver<
+            0U
+        >;
+
+    static_assert(
+        sizeof(EmptyWakeSet) == 1U &&
+        sizeof(EmptyRouter) == 1U &&
+        sizeof(EmptyResolver) == 1U,
+        "Empty Threading topology support must compile away wake/router/resolver storage"
+    );
+
+
     using EmptyOwner =
         ESPressio::Threading::Detail::StaticTopologyOwner<
             EmptyTopology,
