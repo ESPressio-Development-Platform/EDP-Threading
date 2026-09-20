@@ -1,0 +1,195 @@
+#pragma once
+
+#include <cstddef>
+
+#include "../ThreadingTypes.hpp"
+#include "InfrastructureLifecycle.hpp"
+#include "TaskFacilityRuntime.hpp"
+#include "WaitRegistration.hpp"
+
+namespace ESPressio::Threading::Detail {
+
+    template<class TInfrastructureLifecycle, std::size_t TExecutionContextCapacity, class TManagedContextRouter>
+    class ShutdownWaitRuntime final {
+
+        private:
+
+            using ContextIndex =
+                typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type;
+
+            using Registration = ShutdownWaitRegistration<ContextIndex>;
+
+            /// Authoritative global lifecycle.
+            TInfrastructureLifecycle* _lifecycle;
+
+            /// Non-owning topology targeted-wake router.
+            TManagedContextRouter* _router;
+
+            /// Target-owned bounded terminal-shutdown wait registrations.
+            RegistrationSet<
+                Registration,
+                TExecutionContextCapacity
+            > _waiters;
+
+
+            bool IsComplete() const noexcept {
+                return _lifecycle->State() == InfrastructureState::ShutdownComplete;
+            }
+
+            ShutdownWaitResult WaitWithBudget(
+                const MonotonicWaitBudget& budget
+            ) {
+                const auto contextIndex = _router->CurrentContextIndex();
+
+                if (!contextIndex.has_value()) {
+                    return ShutdownWaitResult::Interrupted;
+                }
+
+                if (IsComplete()) {
+                    return ShutdownWaitResult::Completed;
+                }
+
+                Registration registration;
+                registration.WaitingContextIndex = contextIndex.value();
+
+                std::size_t registrationIndex = 0U;
+
+                if (
+                    _waiters.Register(
+                        registration,
+                        registrationIndex
+                    ) != WaitRegistrationStatus::Registered
+                ) {
+                    return ShutdownWaitResult::Interrupted;
+                }
+
+                // Re-observe after publication of the complete registration. Completion either
+                // happened before this check or must discover this waiter during terminal wake.
+                if (IsComplete()) {
+                    _waiters.Unregister(
+                        registrationIndex
+                    );
+                    return ShutdownWaitResult::Completed;
+                }
+
+                for (;;) {
+                    const auto remaining = budget.Remaining();
+
+                    if (remaining.IsNoWait()) {
+                        const auto complete = IsComplete();
+
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+
+                        return complete
+                            ? ShutdownWaitResult::Completed
+                            : ShutdownWaitResult::TimedOut;
+                    }
+
+                    const auto waitResult = _router->Wait(
+                        contextIndex.value(),
+                        remaining
+                    );
+
+                    if (IsComplete()) {
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+                        return ShutdownWaitResult::Completed;
+                    }
+
+                    if (_router->IsInterrupted(
+                        contextIndex.value()
+                    )) {
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+                        return ShutdownWaitResult::Interrupted;
+                    }
+
+                    if (
+                        waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::ProviderFailure
+                    ) {
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+                        return ShutdownWaitResult::Interrupted;
+                    }
+
+                    if (
+                        waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut &&
+                        budget.Remaining().IsNoWait()
+                    ) {
+                        const auto complete = IsComplete();
+
+                        _waiters.Unregister(
+                            registrationIndex
+                        );
+
+                        return complete
+                            ? ShutdownWaitResult::Completed
+                            : ShutdownWaitResult::TimedOut;
+                    }
+                }
+            }
+
+        public:
+
+            explicit ShutdownWaitRuntime(
+                TInfrastructureLifecycle& lifecycle,
+                TManagedContextRouter& router
+            ) noexcept :
+                _lifecycle(&lifecycle),
+                _router(&router) {}
+
+
+            // Wait operations.
+
+            ShutdownWaitResult Wait() {
+                return WaitWithBudget(
+                    MonotonicWaitBudget::Forever()
+                );
+            }
+
+            ShutdownWaitResult WaitFor(
+                Duration duration
+            ) {
+                return WaitWithBudget(
+                    MonotonicWaitBudget::For(
+                        duration
+                    )
+                );
+            }
+
+            ShutdownWaitResult WaitUntil(
+                MonotonicTimestamp deadline
+            ) {
+                return WaitWithBudget(
+                    MonotonicWaitBudget::Until(
+                        deadline
+                    )
+                );
+            }
+
+
+            // Terminal publication wake.
+
+            /// Wakes every context registered against the non-restartable terminal shutdown predicate.
+            void WakeCompleted() {
+                _waiters.VisitActive(
+                    [this](
+                        Registration& registration
+                    ) {
+                        static_cast<void>(
+                            _router->Wake(
+                                registration.WaitingContextIndex
+                            )
+                        );
+                    }
+                );
+            }
+
+    };
+
+} // ESPressio::Threading::Detail
