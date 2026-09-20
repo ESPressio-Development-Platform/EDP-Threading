@@ -166,6 +166,10 @@ namespace ESPressio::Threading {
 
             /// Returns the stable public Task lifecycle state.
             TaskState State() const noexcept {
+                if (_operations == nullptr) {
+                    return TaskState::Cancelled;
+                }
+
                 return _operations->State(
                     _owner,
                     _recordIndex,
@@ -196,6 +200,10 @@ namespace ESPressio::Threading {
 
             /// Waits indefinitely until this Task becomes terminal or the waiting context is interrupted.
             TaskWaitResult Wait() {
+                if (_operations == nullptr) {
+                    return TaskWaitResult::Interrupted;
+                }
+
                 return _operations->Wait(
                     _owner,
                     _recordIndex,
@@ -232,6 +240,10 @@ namespace ESPressio::Threading {
 
             /// Requests cooperative cancellation of this Task.
             TaskCancelResult Cancel() noexcept {
+                if (_operations == nullptr) {
+                    return TaskCancelResult::AlreadyTerminal;
+                }
+
                 return _operations->Cancel(
                     _owner,
                     _recordIndex,
@@ -383,6 +395,10 @@ namespace ESPressio::Threading {
 
             /// Returns the stable public Task lifecycle state.
             TaskState State() const noexcept {
+                if (_operations == nullptr) {
+                    return TaskState::Cancelled;
+                }
+
                 return _operations->State(
                     _owner,
                     _recordIndex,
@@ -413,6 +429,10 @@ namespace ESPressio::Threading {
 
             /// Waits indefinitely until this Task becomes terminal or the waiting context is interrupted.
             TaskWaitResult Wait() {
+                if (_operations == nullptr) {
+                    return TaskWaitResult::Interrupted;
+                }
+
                 return _operations->Wait(
                     _owner,
                     _recordIndex,
@@ -449,6 +469,10 @@ namespace ESPressio::Threading {
 
             /// Requests cooperative cancellation of this Task.
             TaskCancelResult Cancel() noexcept {
+                if (_operations == nullptr) {
+                    return TaskCancelResult::AlreadyTerminal;
+                }
+
                 return _operations->Cancel(
                     _owner,
                     _recordIndex,
