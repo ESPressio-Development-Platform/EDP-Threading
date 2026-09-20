@@ -9,6 +9,13 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Result of validating the synchronization provider used by shutdown waiting.
+    enum class ShutdownWaitSynchronizationResult : std::uint8_t {
+        Ready = 0,
+        ProviderFailure = 1
+    };
+
+
     /// Owns bounded terminal-shutdown wait registration and targeted wake behavior.
     ///
     /// @tparam TInfrastructureLifecycle Authoritative Threading infrastructure lifecycle Type.
@@ -49,8 +56,9 @@ namespace ESPressio::Threading::Detail {
                 _lifecycle(&lifecycle) {}
 
 
-            bool ValidateSynchronization() noexcept {
-                return true;
+            /// Reports that the empty topology requires no synchronization provider validation.
+            ShutdownWaitSynchronizationResult ValidateSynchronization() noexcept {
+                return ShutdownWaitSynchronizationResult::Ready;
             }
 
 
@@ -110,16 +118,16 @@ namespace ESPressio::Threading::Detail {
             TMutexProvider _mutex;
 
 
-            bool AcquireLock() noexcept {
+            /// Acquires the shutdown-wait registration mutex indefinitely.
+            ESPressio::Platform::Synchronization::LockAcquireResult AcquireLock() noexcept {
                 return _mutex.Acquire(
                     ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                ) == ESPressio::Platform::Synchronization::LockAcquireResult::Acquired;
+                );
             }
 
-            void ReleaseLock() noexcept {
-                static_cast<void>(
-                    _mutex.Release()
-                );
+            /// Releases the shutdown-wait registration mutex.
+            ESPressio::Platform::Synchronization::LockReleaseResult ReleaseLock() noexcept {
+                return _mutex.Release();
             }
 
             bool IsComplete() const noexcept {
@@ -129,7 +137,10 @@ namespace ESPressio::Threading::Detail {
             void Unregister(
                 std::size_t registrationIndex
             ) noexcept {
-                if (!AcquireLock()) {
+                if (
+                    AcquireLock() !=
+                    ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
+                ) {
                     return;
                 }
 
@@ -137,7 +148,9 @@ namespace ESPressio::Threading::Detail {
                     registrationIndex
                 );
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
             }
 
             ShutdownWaitResult WaitWithBudget(
@@ -153,12 +166,17 @@ namespace ESPressio::Threading::Detail {
                     return ShutdownWaitResult::Interrupted;
                 }
 
-                if (!AcquireLock()) {
+                if (
+                    AcquireLock() !=
+                    ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
+                ) {
                     return ShutdownWaitResult::Interrupted;
                 }
 
                 if (IsComplete()) {
-                    ReleaseLock();
+                    static_cast<void>(
+                        ReleaseLock()
+                    );
                     return ShutdownWaitResult::Completed;
                 }
 
@@ -173,7 +191,9 @@ namespace ESPressio::Threading::Detail {
                         registrationIndex
                     ) != WaitRegistrationStatus::Registered
                 ) {
-                    ReleaseLock();
+                    static_cast<void>(
+                        ReleaseLock()
+                    );
                     return ShutdownWaitResult::Interrupted;
                 }
 
@@ -183,11 +203,15 @@ namespace ESPressio::Threading::Detail {
                     _waiters.Unregister(
                         registrationIndex
                     );
-                    ReleaseLock();
+                    static_cast<void>(
+                        ReleaseLock()
+                    );
                     return ShutdownWaitResult::Completed;
                 }
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
 
                 for (;;) {
                     const auto remaining = budget.Remaining();
@@ -261,7 +285,8 @@ namespace ESPressio::Threading::Detail {
                 _router(&router) {}
 
 
-            bool ValidateSynchronization() noexcept {
+            /// Validates that the configured Mutex provider can be acquired and released.
+            ShutdownWaitSynchronizationResult ValidateSynchronization() noexcept {
                 const auto acquireResult = _mutex.Acquire(
                     ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
                 );
@@ -270,11 +295,13 @@ namespace ESPressio::Threading::Detail {
                     acquireResult !=
                     ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
                 ) {
-                    return false;
+                    return ShutdownWaitSynchronizationResult::ProviderFailure;
                 }
 
                 return _mutex.Release() ==
-                    ESPressio::Platform::Synchronization::LockReleaseResult::Released;
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                    ? ShutdownWaitSynchronizationResult::Ready
+                    : ShutdownWaitSynchronizationResult::ProviderFailure;
             }
 
 
@@ -311,7 +338,10 @@ namespace ESPressio::Threading::Detail {
 
             /// Wakes every context registered against the non-restartable terminal shutdown predicate.
             void WakeCompleted() {
-                if (!AcquireLock()) {
+                if (
+                    AcquireLock() !=
+                    ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
+                ) {
                     return;
                 }
 
@@ -327,7 +357,9 @@ namespace ESPressio::Threading::Detail {
                     }
                 );
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
             }
 
     };
