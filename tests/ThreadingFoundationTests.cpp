@@ -7,6 +7,7 @@
 #include "../src/threading/detail/DedicatedThreadControl.hpp"
 #include "../src/threading/detail/DedicatedThreadRuntime.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
+#include "../src/threading/detail/InfrastructureLifecycle.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
@@ -281,6 +282,51 @@ namespace Test {
         LifetimeResult operator ()() noexcept {
             return LifetimeResult{};
         }
+
+    };
+
+
+    class LifecycleResource final {
+
+        private:
+
+            bool _failStart;
+
+        public:
+
+            std::size_t StartCount = 0U;
+            std::size_t TerminationWakeCount = 0U;
+            std::size_t JoinCount = 0U;
+            std::size_t DestroyCount = 0U;
+
+            explicit LifecycleResource(
+                bool failStart = false
+            ) noexcept :
+                _failStart(failStart) {}
+
+            ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
+                ++StartCount;
+
+                return _failStart
+                    ? ESPressio::Platform::Execution::ExecutionStartResult::ProviderFailure
+                    : ESPressio::Platform::Execution::ExecutionStartResult::Succeeded;
+            }
+
+            void RequestInfrastructureTermination() noexcept {
+                ++TerminationWakeCount;
+            }
+
+            ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept {
+                ++JoinCount;
+                return ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
+            }
+
+            ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
+                ++DestroyCount;
+                return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
+            }
 
     };
 
@@ -1429,6 +1475,86 @@ int main() {
             result.IsSucceeded()
         );
     }
+
+    ESPressio::Threading::Detail::InfrastructureLifecycle<
+        Test::AtomicByteProvider
+    > lifecycle;
+
+    assert(
+        lifecycle.CommitInitialization() ==
+        ESPressio::Threading::ThreadingInitializationResult::Succeeded
+    );
+
+    Test::LifecycleResource firstLifecycleResource;
+    Test::LifecycleResource failingLifecycleResource(true);
+    Test::LifecycleResource laterLifecycleResource;
+
+    assert(
+        lifecycle.Start(
+            firstLifecycleResource,
+            failingLifecycleResource,
+            laterLifecycleResource
+        ) == ESPressio::Threading::ThreadingStartResult::ProviderFailure
+    );
+
+    assert(
+        firstLifecycleResource.StartCount == 1U &&
+        firstLifecycleResource.TerminationWakeCount == 1U &&
+        firstLifecycleResource.JoinCount == 1U &&
+        firstLifecycleResource.DestroyCount == 1U
+    );
+
+    assert(
+        failingLifecycleResource.StartCount == 1U &&
+        failingLifecycleResource.DestroyCount == 1U
+    );
+
+    assert(
+        laterLifecycleResource.StartCount == 0U &&
+        laterLifecycleResource.DestroyCount == 1U
+    );
+
+    assert(
+        lifecycle.ShouldTerminate()
+    );
+
+    ESPressio::Threading::Detail::InfrastructureLifecycle<
+        Test::AtomicByteProvider
+    > successfulLifecycle;
+
+    assert(
+        successfulLifecycle.CommitInitialization() ==
+        ESPressio::Threading::ThreadingInitializationResult::Succeeded
+    );
+
+    Test::LifecycleResource successfulResource;
+
+    assert(
+        successfulLifecycle.Start(
+            successfulResource
+        ) == ESPressio::Threading::ThreadingStartResult::Succeeded
+    );
+
+    assert(
+        successfulLifecycle.CanActivate()
+    );
+
+    assert(
+        successfulLifecycle.BeginShutdown() ==
+        ESPressio::Threading::ThreadingShutdownResult::Accepted
+    );
+
+    assert(
+        successfulLifecycle.ShouldTerminate()
+    );
+
+    successfulLifecycle.PublishShutdownComplete();
+
+    assert(
+        successfulLifecycle.BeginShutdown() ==
+        ESPressio::Threading::ThreadingShutdownResult::AlreadyCompleted
+    );
+
 
     bool shutdownRequested = false;
 
