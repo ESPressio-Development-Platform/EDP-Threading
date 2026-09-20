@@ -418,6 +418,15 @@ namespace Test {
                 >
             >
         >,
+        ESPressio::Threading::DedicatedWorkerLease<
+            ReturningCallable,
+            ESPressio::Threading::TaskRecordCapacity<3U>,
+            ESPressio::Threading::CallableCapacity<32U>,
+            ESPressio::Threading::ResultCapacity<16U>,
+            ESPressio::Threading::StackCapacity<2048U>,
+            ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::Critical>,
+            ESPressio::Threading::AnyAffinity
+        >,
         ESPressio::Threading::DedicatedThread<
             TelemetryThread,
             ESPressio::Threading::StackCapacity<4096U>,
@@ -452,6 +461,14 @@ namespace Test {
     static_assert(
         Topology::HasDedicatedThreadExecution,
         "Topology containing a Dedicated Thread must advertise Dedicated Thread execution"
+    );
+
+    static_assert(
+        Topology::HasDedicatedWorkerLease &&
+        Topology::TaskFacilityCount == 1U &&
+        Topology::DedicatedWorkerLeaseCount == 1U &&
+        Topology::DedicatedThreadCount == 1U,
+        "Topology must expose compile-time execution-resource counts without runtime registry state"
     );
 
     static_assert(
