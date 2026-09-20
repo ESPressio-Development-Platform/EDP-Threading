@@ -159,10 +159,8 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Releases the facility serialization boundary.
-            void ReleaseLock() noexcept {
-                static_cast<void>(
-                    _mutex.Release()
-                );
+            ESPressio::Platform::Synchronization::LockReleaseResult ReleaseLock() noexcept {
+                return _mutex.Release();
             }
 
             /// Reads cooperative cancellation through the authoritative facility serialization boundary.
