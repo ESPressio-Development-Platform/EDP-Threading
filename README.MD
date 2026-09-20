@@ -46,6 +46,12 @@ The v1 source implementation is in its completion tranche. It includes compile-t
 
 Provider/target compilation, local suite execution and final deterministic resource-layout evidence remain completion gates. Runtime behavior should not be treated as released until those validation gates are recorded. No version mutation is performed during this development.
 
+## Local validation
+
+Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when EDP-System, EDP-Platform and EDP-Clock are cloned beside this repository.
+
+A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, Dedicated Thread activation/cooperative stop and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
+
 ## Documentation
 
 - [Architecture and execution model](./docs/ARCHITECTURE.MD)
