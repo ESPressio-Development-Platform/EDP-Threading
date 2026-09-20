@@ -206,7 +206,7 @@ namespace ESPressio::Threading::Detail {
 
                 static_cast<void>(
                     _resource.JoinInfrastructure(
-                        ESPressio::Platform::Synchronization::WaitTimeout::Infinite()
+                        ESPressio::Platform::Synchronization::WaitTimeout::Forever()
                     )
                 );
 
