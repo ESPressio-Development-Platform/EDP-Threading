@@ -49,6 +49,7 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle state synchronization.
 
+            /// Reads the authoritative lifecycle state under the topology-wide SpinLock.
             InfrastructureState ReadState() const noexcept {
                 _stateLock.Acquire();
 
@@ -63,6 +64,7 @@ namespace ESPressio::Threading::Detail {
                 return state;
             }
 
+            /// Publishes one authoritative lifecycle transition under the topology-wide SpinLock.
             void PublishState(
                 InfrastructureState state
             ) noexcept {
@@ -202,19 +204,23 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Creates the lifecycle in its Uninitialized state.
             InfrastructureLifecycle() noexcept = default;
 
 
             // State observation.
 
+            /// Returns the synchronized application-wide Threading infrastructure state.
             InfrastructureState State() const noexcept {
                 return ReadState();
             }
 
+            /// Indicates whether semantic Task/Thread activation is currently permitted.
             bool CanActivate() const noexcept {
                 return State() == InfrastructureState::Started;
             }
 
+            /// Indicates whether persistent managed contexts must cooperatively terminate.
             bool ShouldTerminate() const noexcept {
                 const auto state = State();
 
@@ -223,6 +229,7 @@ namespace ESPressio::Threading::Detail {
                     state == InfrastructureState::ShutdownComplete;
             }
 
+            /// Type-erased lifecycle predicate used by statically owned resources before semantic activation.
             static bool CanActivateThunk(
                 const void* context
             ) noexcept {
@@ -231,6 +238,7 @@ namespace ESPressio::Threading::Detail {
                 )->CanActivate();
             }
 
+            /// Type-erased lifecycle predicate used by managed contexts to observe rollback or shutdown.
             static bool ShouldTerminateThunk(
                 const void* context
             ) noexcept {
@@ -242,6 +250,7 @@ namespace ESPressio::Threading::Detail {
 
             // Bootstrap phase publication.
 
+            /// Commits the global initialization barrier after every topology resource initialized successfully.
             ThreadingInitializationResult CommitInitialization() noexcept {
                 const auto state = State();
 
@@ -259,6 +268,8 @@ namespace ESPressio::Threading::Detail {
 
             // Transactional infrastructure Start.
 
+            /// Starts all supplied topology resources transactionally in argument order.
+            /// @tparam TResources Concrete topology-owned resource Types participating in infrastructure Start.
             template<class... TResources>
             ThreadingStartResult Start(
                 TResources&... resources
@@ -324,6 +335,7 @@ namespace ESPressio::Threading::Detail {
 
             // Shutdown initiation.
 
+            /// Begins the terminal application-wide shutdown transition without blocking for execution completion.
             ThreadingShutdownResult BeginShutdown() noexcept {
                 const auto state = State();
 
@@ -346,6 +358,7 @@ namespace ESPressio::Threading::Detail {
                 return ThreadingShutdownResult::Accepted;
             }
 
+            /// Publishes the terminal ShutdownComplete state after all managed contexts are destroyed.
             void PublishShutdownComplete() noexcept {
                 PublishState(
                     InfrastructureState::ShutdownComplete
