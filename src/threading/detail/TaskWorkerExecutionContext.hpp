@@ -225,7 +225,38 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Lightweight constructor arguments used to direct-construct a non-movable Worker inside static tuple storage.
+            struct ConstructionArguments final {
+
+                /// Task facility served by this Worker.
+                TTaskFacility* Facility = nullptr;
+
+                /// Managed-context router owning this Worker's targeted wake primitive.
+                TManagedContextRouter* Router = nullptr;
+
+                /// Dense topology-wide execution-context index assigned to this Worker.
+                typename TTaskFacility::ManagedContextIndex ContextIndex{};
+
+                /// Authoritative shutdown-state context.
+                const void* ShutdownContext = nullptr;
+
+                /// Predicate reading authoritative terminal-shutdown intent.
+                bool (*IsShutdownRequested)(const void*) noexcept = nullptr;
+
+            };
+
+
             // Construction.
+
+            /// Direct-constructs one statically provisioned Worker from lightweight topology bindings.
+            explicit TaskWorkerExecutionContext(
+                ConstructionArguments arguments
+            ) noexcept :
+                _facility(arguments.Facility),
+                _router(arguments.Router),
+                _contextIndex(arguments.ContextIndex),
+                _shutdownContext(arguments.ShutdownContext),
+                _isShutdownRequested(arguments.IsShutdownRequested) {}
 
             /// Binds one statically provisioned Worker to its facility, wake router and shutdown predicate.
             TaskWorkerExecutionContext(
@@ -235,11 +266,15 @@ namespace ESPressio::Threading::Detail {
                 const void* shutdownContext,
                 bool (*isShutdownRequested)(const void*) noexcept
             ) noexcept :
-                _facility(&facility),
-                _router(&router),
-                _contextIndex(contextIndex),
-                _shutdownContext(shutdownContext),
-                _isShutdownRequested(isShutdownRequested) {}
+                TaskWorkerExecutionContext(
+                    ConstructionArguments {
+                        &facility,
+                        &router,
+                        contextIndex,
+                        shutdownContext,
+                        isShutdownRequested
+                    }
+                ) {}
 
 
             // Infrastructure lifecycle.
