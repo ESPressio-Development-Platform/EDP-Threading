@@ -7,6 +7,20 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Outcome of claiming one bounded availability slot.
+    enum class AvailabilityClaimResult : std::uint8_t {
+        Claimed = 0,
+        Unavailable = 1
+    };
+
+
+    /// Outcome of removing one record from an intrusive Task queue.
+    enum class TaskQueueRemovalResult : std::uint8_t {
+        Removed = 0,
+        NotFound = 1
+    };
+
+
     /// Defines the compile-time contract for `AvailabilityBitmap`.
     /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
     template<std::size_t TCapacity>
@@ -102,7 +116,7 @@ namespace ESPressio::Threading::Detail {
             ///
             /// The owning Task facility must serialize this operation with all other bitmap
             /// and queue mutation. The bitmap deliberately carries no duplicated lock state.
-            bool TryClaim(
+            AvailabilityClaimResult TryClaim(
                 std::size_t& recordIndex
             ) noexcept {
                 for (std::size_t byteIndex = 0U; byteIndex < ByteCount; ++byteIndex) {
@@ -129,10 +143,10 @@ namespace ESPressio::Threading::Detail {
                     );
 
                     recordIndex = byteIndex * ByteBits + bitIndex;
-                    return true;
+                    return AvailabilityClaimResult::Claimed;
                 }
 
-                return false;
+                return AvailabilityClaimResult::Unavailable;
             }
 
             /// Republishes one fully reclaimed record as available.
@@ -260,7 +274,7 @@ namespace ESPressio::Threading::Detail {
             /// Removes one specific queued record while preserving FIFO order of all others.
             /// @tparam TRecords Task-record collection Type whose intrusive queue links are manipulated.
             template<class TRecords>
-            bool Remove(
+            TaskQueueRemovalResult Remove(
                 TRecords& records,
                 Index recordIndex
             ) noexcept {
@@ -282,14 +296,14 @@ namespace ESPressio::Threading::Detail {
                         }
 
                         records[current].SetQueueNext(InvalidIndex);
-                        return true;
+                        return TaskQueueRemovalResult::Removed;
                     }
 
                     previous = current;
                     current = records[current].QueueNext();
                 }
 
-                return false;
+                return TaskQueueRemovalResult::NotFound;
             }
 
     };
