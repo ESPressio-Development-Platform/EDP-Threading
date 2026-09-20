@@ -89,7 +89,6 @@ namespace ESPressio::Threading::Detail {
             // Bootstrap validation.
 
             /// Validates every statically constructed wake provider before managed execution starts.
-            /// Validates every statically owned targeted wake provider.
             ManagedContextWakeValidationResult Validate() noexcept {
                 for (std::size_t index = 0U; index < TContextCapacity; ++index) {
                     const auto result = _signals[index].Wait(
@@ -111,7 +110,6 @@ namespace ESPressio::Threading::Detail {
             // Targeted wake.
 
             /// Latches the reusable wake primitive belonging to one managed execution context.
-            /// Sends a targeted notification to one managed execution context.
             ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
                 ContextIndex contextIndex
             ) noexcept {
@@ -119,7 +117,6 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Blocks one managed execution context until its targeted signal fires or the wait expires.
-            /// Waits on one managed execution context's reusable targeted wake primitive.
             ESPressio::Platform::Synchronization::SignalWaitResult Wait(
                 ContextIndex contextIndex,
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
