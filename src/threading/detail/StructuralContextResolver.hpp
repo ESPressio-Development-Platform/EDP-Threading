@@ -23,6 +23,7 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Compact Type used to identify one managed execution context.
             using ContextIndex = typename SmallestIndex<1U>::Type;
 
 
@@ -49,6 +50,7 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Compact Type used to identify one managed execution context.
             using ContextIndex =
                 typename ExecutionContextIndexTraits<TContextCapacity>::Type;
 
