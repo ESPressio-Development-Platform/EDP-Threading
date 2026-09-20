@@ -194,27 +194,34 @@ namespace ESPressio::Threading::Detail {
             "A bounded Task queue requires positive capacity"
         );
 
-        public:
-
-            // Queue index vocabulary.
-
-            /// Smallest index Type satisfying the configured Task-record capacity.
-            using Index = typename SmallestIndex<TCapacity>::Type;
-
-            /// Sentinel which cannot identify a valid record.
-            static constexpr Index InvalidIndex = SmallestIndex<TCapacity>::Invalid;
-
         private:
+
+            // Queue index storage.
+
+            /// Internal smallest index Type satisfying the configured Task-record capacity.
+            using StorageIndex = typename SmallestIndex<TCapacity>::Type;
+
+            /// Internal sentinel which cannot identify a valid record.
+            static constexpr StorageIndex InvalidStorageIndex = SmallestIndex<TCapacity>::Invalid;
+
 
             // Queue endpoints.
 
             /// First queued record.
-            Index _head = InvalidIndex;
+            StorageIndex _head = InvalidStorageIndex;
 
             /// Last queued record.
-            Index _tail = InvalidIndex;
+            StorageIndex _tail = InvalidStorageIndex;
 
         public:
+
+            // Queue index vocabulary.
+
+            /// Smallest public index Type satisfying the configured Task-record capacity.
+            using Index = StorageIndex;
+
+            /// Public sentinel which cannot identify a valid record.
+            static constexpr Index InvalidIndex = InvalidStorageIndex;
 
             // Inspection.
 
