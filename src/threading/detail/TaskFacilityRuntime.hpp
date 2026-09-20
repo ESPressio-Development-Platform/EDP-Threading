@@ -117,7 +117,7 @@ namespace ESPressio::Threading::Detail {
             Core _core;
 
             /// Facility-local serialization primitive.
-            TMutexProvider _mutex;
+            mutable TMutexProvider _mutex;
 
             /// Target-owned bounded Task waiter registrations.
             Waiters _waiters;
@@ -166,7 +166,7 @@ namespace ESPressio::Threading::Detail {
             // Facility serialization.
 
             /// Acquires the facility serialization boundary indefinitely.
-            TaskFacilityLockResult AcquireLock() noexcept {
+            TaskFacilityLockResult AcquireLock() const noexcept {
                 const auto result = _mutex.Acquire(
                     ESPressio::Platform::Synchronization::WaitTimeout::Forever()
                 );
@@ -177,7 +177,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Releases the facility serialization boundary.
-            ESPressio::Platform::Synchronization::LockReleaseResult ReleaseLock() noexcept {
+            ESPressio::Platform::Synchronization::LockReleaseResult ReleaseLock() const noexcept {
                 return _mutex.Release();
             }
 
@@ -436,15 +436,6 @@ namespace ESPressio::Threading::Detail {
                 bool phase,
                 const MonotonicWaitBudget& budget
             ) {
-                // An already-terminal target satisfies Wait immediately without requiring
-                // a managed waiting context or consulting cooperative interruption state.
-                if (_core.IsTerminal(
-                    recordIndex,
-                    phase
-                )) {
-                    return TaskWaitResult::Finished;
-                }
-
                 const auto contextIndex = _router->CurrentContextIndex();
 
                 if (!contextIndex.has_value()) {
@@ -885,9 +876,9 @@ namespace ESPressio::Threading::Detail {
                     ) != WaitRegistrationStatus::Registered
                 ) {
                     WithdrawUnreturnedDispatch(
-                    recordIndex,
-                    phase
-                );
+                        recordIndex,
+                        phase
+                    );
                     ReleaseLock();
                     return TaskDispatchStatus::Interrupted;
                 }
@@ -897,10 +888,10 @@ namespace ESPressio::Threading::Detail {
                     phase
                 )) {
                     UnregisterWaiter(
-                    registrationIndex,
-                    recordIndex,
-                    phase
-                );
+                        registrationIndex,
+                        recordIndex,
+                        phase
+                    );
                     ReleaseLock();
                     return TaskDispatchStatus::Succeeded;
                 }
@@ -1369,10 +1360,19 @@ namespace ESPressio::Threading::Detail {
                 Index recordIndex,
                 bool phase
             ) const noexcept {
-                return _core.PublicState(
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return TaskState::Cancelled;
+                }
+
+                const auto result = _core.PublicState(
                     recordIndex,
                     phase
                 );
+
+                static_cast<void>(
+                    ReleaseLock()
+                );
+                return result;
             }
 
 
