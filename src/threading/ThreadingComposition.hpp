@@ -146,8 +146,26 @@ namespace ESPressio::Threading {
         };
 
 
+        template<class TProperty>
+        struct IsExecutionResourceProperty {
+
+            static constexpr bool Value =
+                IsStackCapacityProperty<TProperty>::Value ||
+                IsPriorityProperty<TProperty>::Value ||
+                IsAffinityProperty<TProperty>::Value;
+
+        };
+
+
         template<class... TProperties>
         struct ValidExecutionResourceProperties {
+
+            static constexpr bool EveryPropertyRecognized =
+                (
+                    IsExecutionResourceProperty<TProperties>::Value &&
+                    ... &&
+                    true
+                );
 
             static constexpr std::size_t StackCapacityCount =
                 (static_cast<std::size_t>(IsStackCapacityProperty<TProperties>::Value) + ... + 0U);
@@ -159,6 +177,7 @@ namespace ESPressio::Threading {
                 (static_cast<std::size_t>(IsAffinityProperty<TProperties>::Value) + ... + 0U);
 
             static constexpr bool Value =
+                EveryPropertyRecognized &&
                 StackCapacityCount <= 1U &&
                 PriorityCount <= 1U &&
                 AffinityCount <= 1U;
@@ -402,7 +421,7 @@ namespace ESPressio::Threading {
 
         static_assert(
             Detail::ValidExecutionResourceProperties<TProperties...>::Value,
-            "Execution resource properties may contain at most one StackCapacity, Priority and affinity declaration"
+            "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
         );
 
         static constexpr std::size_t Count = sizeof...(TProperties);
@@ -421,7 +440,7 @@ namespace ESPressio::Threading {
 
         static_assert(
             Detail::ValidExecutionResourceProperties<TWorkerProperties...>::Value,
-            "Worker contains duplicate StackCapacity, Priority or affinity properties"
+            "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
         );
 
         using Properties = ResourceProperties<TWorkerProperties...>;
@@ -466,7 +485,7 @@ namespace ESPressio::Threading {
 
         static_assert(
             Detail::ValidExecutionResourceProperties<TWorkerProperties...>::Value,
-            "DedicatedWorkerLease contains duplicate StackCapacity, Priority or affinity properties"
+            "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
         );
 
         static_assert(
@@ -547,7 +566,7 @@ namespace ESPressio::Threading {
 
         static_assert(
             Detail::ValidExecutionResourceProperties<TThreadProperties...>::Value,
-            "DedicatedThread contains duplicate StackCapacity, Priority or affinity properties"
+            "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
         );
 
         using ThreadIdentity = TThreadIdentity;
