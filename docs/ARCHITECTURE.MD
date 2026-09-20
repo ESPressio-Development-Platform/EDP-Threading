@@ -36,6 +36,8 @@ Resources are stored recursively in place, avoiding a requirement that already-c
 
 Owns finite Task records, bounded callable/result payload storage, availability bitmap, intrusive FIFO admission state, bounded target-owned wait registrations and one persistent Platform execution context per declared Worker.
 
+A Task is published as Running for a sleeping Worker only after that Worker's targeted wake has succeeded while the facility mutex is held. The currently executing Worker may accept queued work directly without a wake. This ordering prevents a failed wake from stranding a Task in Running state on a Worker that never became runnable.
+
 ### DedicatedWorkerLease
 
 Owns exactly one isolated Worker and one bounded Task facility. Ordinary Task facilities cannot consume that Worker. Storage and execution properties are declared with the lease.
