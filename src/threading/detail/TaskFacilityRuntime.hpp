@@ -1451,6 +1451,9 @@ namespace ESPressio::Threading::Detail {
                     result.Result() == TaskCancelResult::Accepted &&
                     runningContext.has_value()
                 ) {
+                    // Cancellation acceptance is the authoritative semantic transition. The targeted
+                    // wake is only a mechanism for promptly interrupting blocked execution; wake
+                    // failure does not retract the already-published cancellation request.
                     static_cast<void>(
                         _router->Wake(
                             runningContext.value()
