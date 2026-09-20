@@ -879,7 +879,11 @@ namespace ESPressio::Threading::Detail {
                 std::uint32_t recordIndex,
                 bool phase
             ) noexcept {
-                return static_cast<const TaskFacilityRuntime*>(owner)->State(
+                return const_cast<TaskFacilityRuntime*>(
+                    static_cast<const TaskFacilityRuntime*>(
+                        owner
+                    )
+                )->State(
                     static_cast<Index>(
                         recordIndex
                     ),
