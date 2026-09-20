@@ -40,6 +40,7 @@ namespace ESPressio::Threading {
     template<std::size_t TCapacity>
     struct TaskRecordCapacity final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr std::size_t Value = TCapacity;
 
     };
@@ -50,6 +51,7 @@ namespace ESPressio::Threading {
     template<std::size_t TCapacity>
     struct CallableCapacity final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr std::size_t Value = TCapacity;
 
     };
@@ -60,6 +62,7 @@ namespace ESPressio::Threading {
     template<std::size_t TCapacity>
     struct ResultCapacity final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr std::size_t Value = TCapacity;
 
     };
@@ -70,6 +73,7 @@ namespace ESPressio::Threading {
     template<std::size_t TCapacity>
     struct StackCapacity final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr std::size_t Value = TCapacity;
 
     };
@@ -80,6 +84,7 @@ namespace ESPressio::Threading {
     template<ThreadPriority TPriority>
     struct Priority final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr ThreadPriority Value = TPriority;
 
     };
@@ -90,6 +95,7 @@ namespace ESPressio::Threading {
     template<std::uint32_t TProcessorIndex>
     struct Affinity final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr ProcessorAffinity Value = ProcessorAffinity::Specific(TProcessorIndex);
 
     };
@@ -97,6 +103,7 @@ namespace ESPressio::Threading {
 
     struct AnyAffinity final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr ProcessorAffinity Value = ProcessorAffinity::Any();
 
     };
@@ -109,6 +116,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct IsStackCapacityProperty {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -119,6 +127,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct IsStackCapacityProperty<StackCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -129,6 +138,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct IsPriorityProperty {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -139,6 +149,7 @@ namespace ESPressio::Threading {
         template<ThreadPriority TPriority>
         struct IsPriorityProperty<Priority<TPriority>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -149,6 +160,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct IsAffinityProperty {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -159,6 +171,7 @@ namespace ESPressio::Threading {
         template<std::uint32_t TProcessorIndex>
         struct IsAffinityProperty<Affinity<TProcessorIndex>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -167,6 +180,7 @@ namespace ESPressio::Threading {
         template<>
         struct IsAffinityProperty<AnyAffinity> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -177,6 +191,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct IsExecutionResourceProperty {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 IsStackCapacityProperty<TProperty>::Value ||
                 IsPriorityProperty<TProperty>::Value ||
@@ -188,6 +203,7 @@ namespace ESPressio::Threading {
         template<class... TProperties>
         struct ValidExecutionResourceProperties {
 
+            /// Whether every supplied execution-resource property is recognized.
             static constexpr bool EveryPropertyRecognized =
                 (
                     IsExecutionResourceProperty<TProperties>::Value &&
@@ -195,15 +211,19 @@ namespace ESPressio::Threading {
                     true
                 );
 
+            /// Number of StackCapacity properties supplied to the declaration.
             static constexpr std::size_t StackCapacityCount =
                 (static_cast<std::size_t>(IsStackCapacityProperty<TProperties>::Value) + ... + 0U);
 
+            /// Number of Priority properties supplied to the declaration.
             static constexpr std::size_t PriorityCount =
                 (static_cast<std::size_t>(IsPriorityProperty<TProperties>::Value) + ... + 0U);
 
+            /// Number of affinity properties supplied to the declaration.
             static constexpr std::size_t AffinityCount =
                 (static_cast<std::size_t>(IsAffinityProperty<TProperties>::Value) + ... + 0U);
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 EveryPropertyRecognized &&
                 StackCapacityCount <= 1U &&
@@ -222,6 +242,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct StackCapacityValue {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = 0U;
 
         };
@@ -232,6 +253,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct StackCapacityValue<StackCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = TCapacity;
 
         };
@@ -242,6 +264,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct PriorityValue {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr ThreadPriority Value = ThreadPriority::Normal;
 
         };
@@ -252,6 +275,7 @@ namespace ESPressio::Threading {
         template<ThreadPriority TPriority>
         struct PriorityValue<Priority<TPriority>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr ThreadPriority Value = TPriority;
 
         };
@@ -262,6 +286,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct AffinityValue {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr ProcessorAffinity Value = ProcessorAffinity::Any();
 
         };
@@ -272,6 +297,7 @@ namespace ESPressio::Threading {
         template<std::uint32_t TProcessorIndex>
         struct AffinityValue<Affinity<TProcessorIndex>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr ProcessorAffinity Value = Affinity<TProcessorIndex>::Value;
 
         };
@@ -280,6 +306,7 @@ namespace ESPressio::Threading {
         template<>
         struct AffinityValue<AnyAffinity> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr ProcessorAffinity Value = AnyAffinity::Value;
 
         };
@@ -290,6 +317,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct TaskRecordCapacityValue {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = 0U;
 
         };
@@ -300,6 +328,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct TaskRecordCapacityValue<TaskRecordCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = TCapacity;
 
         };
@@ -310,6 +339,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct CallableCapacityValue {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = 0U;
 
         };
@@ -320,6 +350,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct CallableCapacityValue<CallableCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = TCapacity;
 
         };
@@ -330,6 +361,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct ResultCapacityValue {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = 0U;
 
         };
@@ -340,6 +372,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct ResultCapacityValue<ResultCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = TCapacity;
 
         };
@@ -350,6 +383,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct IsTaskRecordCapacityProperty {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -360,6 +394,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct IsTaskRecordCapacityProperty<TaskRecordCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -370,6 +405,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct IsCallableCapacityProperty {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -380,6 +416,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct IsCallableCapacityProperty<CallableCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -390,6 +427,7 @@ namespace ESPressio::Threading {
         template<class TProperty>
         struct IsResultCapacityProperty {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -400,6 +438,7 @@ namespace ESPressio::Threading {
         template<std::size_t TCapacity>
         struct IsResultCapacityProperty<ResultCapacity<TCapacity>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -408,6 +447,7 @@ namespace ESPressio::Threading {
         template<class... TProperties>
         struct ValidDedicatedWorkerStorage {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 (static_cast<std::size_t>(IsTaskRecordCapacityProperty<TProperties>::Value) + ... + 0U) <= 1U &&
                 (static_cast<std::size_t>(IsCallableCapacityProperty<TProperties>::Value) + ... + 0U) <= 1U &&
@@ -419,12 +459,15 @@ namespace ESPressio::Threading {
         template<class... TProperties>
         struct ResolvedDedicatedWorkerStorage {
 
+            /// Resolved bounded Task-record capacity.
             static constexpr std::size_t RecordCapacity =
                 (TaskRecordCapacityValue<TProperties>::Value + ... + 0U);
 
+            /// Resolved callable-storage capacity in bytes.
             static constexpr std::size_t CallableCapacity =
                 (CallableCapacityValue<TProperties>::Value + ... + 0U);
 
+            /// Resolved result-storage capacity in bytes.
             static constexpr std::size_t ResultCapacity =
                 (ResultCapacityValue<TProperties>::Value + ... + 0U);
 
@@ -439,6 +482,7 @@ namespace ESPressio::Threading {
                 /// Defines the compile-time contract for `ApplyPriority`.
                 /// @tparam TProperty Compile-time property Type being classified or resolved.
                 template<class TProperty>
+                /// Applies a supplied priority property to the compile-time resolution accumulator.
                 static constexpr void ApplyPriority(
                     ThreadPriority& result
                 ) noexcept {
@@ -452,6 +496,7 @@ namespace ESPressio::Threading {
                 /// Defines the compile-time contract for `ApplyAffinity`.
                 /// @tparam TProperty Compile-time property Type being classified or resolved.
                 template<class TProperty>
+                /// Applies a supplied affinity property to the compile-time resolution accumulator.
                 static constexpr void ApplyAffinity(
                     ProcessorAffinity& result
                 ) noexcept {
@@ -464,15 +509,18 @@ namespace ESPressio::Threading {
 
             public:
 
+                /// Resolved semantic execution stack capacity in bytes.
                 static constexpr std::size_t StackCapacity =
                     (StackCapacityValue<TProperties>::Value + ... + 0U);
 
+                /// Resolved logical execution priority.
                 static constexpr ThreadPriority Priority = []() constexpr {
                     ThreadPriority result = ThreadPriority::Normal;
                     (ApplyPriority<TProperties>(result), ...);
                     return result;
                 }();
 
+                /// Resolved processor affinity.
                 static constexpr ProcessorAffinity Affinity = []() constexpr {
                     ProcessorAffinity result = ProcessorAffinity::Any();
                     (ApplyAffinity<TProperties>(result), ...);
@@ -492,11 +540,15 @@ namespace ESPressio::Threading {
             "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
         );
 
+        /// Number of declarations represented by this property/resource pack.
         static constexpr std::size_t Count = sizeof...(TProperties);
+        /// Resolved semantic execution stack capacity in bytes.
         static constexpr std::size_t StackCapacity =
             Detail::ResolvedExecutionResourceProperties<TProperties...>::StackCapacity;
+        /// Resolved logical execution priority.
         static constexpr ThreadPriority Priority =
             Detail::ResolvedExecutionResourceProperties<TProperties...>::Priority;
+        /// Resolved processor affinity.
         static constexpr ProcessorAffinity Affinity =
             Detail::ResolvedExecutionResourceProperties<TProperties...>::Affinity;
 
@@ -511,6 +563,7 @@ namespace ESPressio::Threading {
             "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
         );
 
+        /// Resolved execution-property metadata for this declaration.
         using Properties = ResourceProperties<TWorkerProperties...>;
 
     };
@@ -519,6 +572,7 @@ namespace ESPressio::Threading {
     template<class... TWorkers>
     struct Workers final {
 
+        /// Number of declarations represented by this property/resource pack.
         static constexpr std::size_t Count = sizeof...(TWorkers);
 
     };
@@ -545,10 +599,15 @@ namespace ESPressio::Threading {
             "An active TaskExecutionFacility requires positive callable capacity; result capacity may be zero for void-only work"
         );
 
+        /// Semantic identity Type of this Task pool.
         using PoolIdentity = TPoolIdentity;
+        /// Task-record capacity declaration Type.
         using RecordCapacity = TRecordCapacity;
+        /// Callable-storage capacity declaration Type.
         using CallableStorageCapacity = TCallableCapacity;
+        /// Result-storage capacity declaration Type.
         using ResultStorageCapacity = TResultCapacity;
+        /// Declared Worker-set Type.
         using WorkerSet = TWorkers;
 
     };
@@ -603,16 +662,21 @@ namespace ESPressio::Threading {
             "DedicatedWorkerLease contains duplicate TaskRecordCapacity, CallableCapacity or ResultCapacity properties"
         );
 
+        /// Semantic identity Type of this Dedicated Worker task.
         using TaskIdentity = TTaskIdentity;
 
         /// Resolved execution-only properties; bounded Task storage declarations are handled separately below.
         using Properties = Detail::ResolvedExecutionResourceProperties<TWorkerProperties...>;
 
+        /// Number of Workers owned by this execution resource.
         static constexpr std::size_t WorkerCount = 1U;
+        /// Resolved bounded Task-record capacity.
         static constexpr std::size_t RecordCapacity =
             Detail::ResolvedDedicatedWorkerStorage<TWorkerProperties...>::RecordCapacity;
+        /// Resolved callable-storage capacity in bytes.
         static constexpr std::size_t CallableStorageCapacity =
             Detail::ResolvedDedicatedWorkerStorage<TWorkerProperties...>::CallableCapacity;
+        /// Resolved result-storage capacity in bytes.
         static constexpr std::size_t ResultStorageCapacity =
             Detail::ResolvedDedicatedWorkerStorage<TWorkerProperties...>::ResultCapacity;
 
@@ -646,7 +710,9 @@ namespace ESPressio::Threading {
 
         public:
 
+            /// Semantic identity Type of this Dedicated Thread.
             using ThreadIdentity = TThreadIdentity;
+            /// Callable Type bound to this Dedicated Thread.
             using Callable = TCallable;
 
 
@@ -699,7 +765,9 @@ namespace ESPressio::Threading {
             "Execution resource properties must be recognized and contain at most one StackCapacity, Priority and affinity declaration"
         );
 
+        /// Semantic identity Type of this Dedicated Thread.
         using ThreadIdentity = TThreadIdentity;
+        /// Resolved execution-property metadata for this declaration.
         using Properties = ResourceProperties<TThreadProperties...>;
 
     };
@@ -712,6 +780,7 @@ namespace ESPressio::Threading {
         template<class TResource>
         struct IsTaskFacility {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -726,6 +795,7 @@ namespace ESPressio::Threading {
         template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers>
         struct IsTaskFacility<TaskExecutionFacility<TPoolIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -736,6 +806,7 @@ namespace ESPressio::Threading {
         template<class TResource>
         struct ManagedContextCount {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = 0U;
 
         };
@@ -752,6 +823,7 @@ namespace ESPressio::Threading {
             TaskExecutionFacility<TPoolIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = TWorkers::Count;
 
         };
@@ -764,6 +836,7 @@ namespace ESPressio::Threading {
             DedicatedWorkerLease<TTaskIdentity, TProperties...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = 1U;
 
         };
@@ -776,6 +849,7 @@ namespace ESPressio::Threading {
             DedicatedThread<TThreadIdentity, TProperties...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr std::size_t Value = 1U;
 
         };
@@ -786,6 +860,7 @@ namespace ESPressio::Threading {
         template<class TResource>
         struct IsDedicatedWorkerLease {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -796,6 +871,7 @@ namespace ESPressio::Threading {
         template<class TTaskIdentity, class... TProperties>
         struct IsDedicatedWorkerLease<DedicatedWorkerLease<TTaskIdentity, TProperties...>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -806,6 +882,7 @@ namespace ESPressio::Threading {
         template<class TResource>
         struct IsDedicatedThread {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -816,6 +893,7 @@ namespace ESPressio::Threading {
         template<class TThreadIdentity, class... TThreadProperties>
         struct IsDedicatedThread<DedicatedThread<TThreadIdentity, TThreadProperties...>> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -827,6 +905,7 @@ namespace ESPressio::Threading {
         template<class TLeftResource, class TRightResource>
         struct ResourceIdentityConflict {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -849,6 +928,7 @@ namespace ESPressio::Threading {
             TaskExecutionFacility<TRightPoolIdentity, TRightRecordCapacity, TRightCallableCapacity, TRightResultCapacity, TRightWorkers>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = std::is_same_v<TLeftPoolIdentity, TRightPoolIdentity>;
 
         };
@@ -863,6 +943,7 @@ namespace ESPressio::Threading {
             DedicatedThread<TRightThreadIdentity, TRightProperties...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = std::is_same_v<TLeftThreadIdentity, TRightThreadIdentity>;
 
         };
@@ -877,6 +958,7 @@ namespace ESPressio::Threading {
             DedicatedWorkerLease<TRightTaskIdentity, TRightProperties...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = std::is_same_v<TLeftTaskIdentity, TRightTaskIdentity>;
 
         };
@@ -889,6 +971,7 @@ namespace ESPressio::Threading {
         template<>
         struct UniqueResourceIdentities<> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -899,6 +982,7 @@ namespace ESPressio::Threading {
         template<class TFirstResource, class... TRestResources>
         struct UniqueResourceIdentities<TFirstResource, TRestResources...> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 ((!ResourceIdentityConflict<TFirstResource, TRestResources>::Value) && ...) &&
                 UniqueResourceIdentities<TRestResources...>::Value;
@@ -958,29 +1042,38 @@ namespace ESPressio::Threading {
             "ThreadingTopology contains duplicate Task Pool, Dedicated Thread, or Dedicated Worker Lease semantic identity"
         );
 
+        /// Number of resources declared by this topology.
         static constexpr std::size_t ResourceCount = sizeof...(TResources);
 
+        /// Whether this topology provides ordinary Task execution.
         static constexpr bool HasTaskExecution =
             (Detail::IsTaskFacility<TResources>::Value || ... || false);
 
+        /// Whether this topology provides Dedicated Thread execution.
         static constexpr bool HasDedicatedThreadExecution =
             (Detail::IsDedicatedThread<TResources>::Value || ... || false);
 
+        /// Whether this topology declares any Dedicated Worker lease.
         static constexpr bool HasDedicatedWorkerLease =
             (Detail::IsDedicatedWorkerLease<TResources>::Value || ... || false);
 
+        /// Number of ordinary Task facilities in this topology.
         static constexpr std::size_t TaskFacilityCount =
             (static_cast<std::size_t>(Detail::IsTaskFacility<TResources>::Value) + ... + 0U);
 
+        /// Number of Dedicated Worker leases in this topology.
         static constexpr std::size_t DedicatedWorkerLeaseCount =
             (static_cast<std::size_t>(Detail::IsDedicatedWorkerLease<TResources>::Value) + ... + 0U);
 
+        /// Number of Dedicated Threads in this topology.
         static constexpr std::size_t DedicatedThreadCount =
             (static_cast<std::size_t>(Detail::IsDedicatedThread<TResources>::Value) + ... + 0U);
 
+        /// Total number of topology-owned managed execution contexts.
         static constexpr std::size_t ManagedExecutionContextCount =
             (Detail::ManagedContextCount<TResources>::Value + ... + 0U);
 
+        /// Tuple Type containing every topology resource declaration.
         using Resources = std::tuple<TResources...>;
 
     };
@@ -991,6 +1084,7 @@ namespace ESPressio::Threading {
     template<class TPoolIdentity, class... TConstraints>
     struct TaskPoolRequirement final {
 
+        /// Semantic identity Type of this Task pool.
         using PoolIdentity = TPoolIdentity;
 
     };
@@ -1001,6 +1095,7 @@ namespace ESPressio::Threading {
     template<class TThreadIdentity, class... TConstraints>
     struct DedicatedThreadRequirement final {
 
+        /// Semantic identity Type of this Dedicated Thread.
         using ThreadIdentity = TThreadIdentity;
 
     };
@@ -1011,6 +1106,7 @@ namespace ESPressio::Threading {
     template<class TTaskIdentity, class... TConstraints>
     struct DedicatedWorkerRequirement final {
 
+        /// Semantic identity Type of this Dedicated Worker task.
         using TaskIdentity = TTaskIdentity;
 
     };
@@ -1024,6 +1120,7 @@ namespace ESPressio::Threading {
         template<class TIdentity, class TResource>
         struct MatchesTaskPoolIdentity {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1041,6 +1138,7 @@ namespace ESPressio::Threading {
             TaskExecutionFacility<TIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -1052,6 +1150,7 @@ namespace ESPressio::Threading {
         template<class TIdentity, class TResource>
         struct MatchesDedicatedThreadIdentity {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1065,6 +1164,7 @@ namespace ESPressio::Threading {
             DedicatedThread<TIdentity, TProperties...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -1076,6 +1176,7 @@ namespace ESPressio::Threading {
         template<class TIdentity, class TResource>
         struct MatchesDedicatedWorkerIdentity {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1089,6 +1190,7 @@ namespace ESPressio::Threading {
             DedicatedWorkerLease<TIdentity, TProperties...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = true;
 
         };
@@ -1109,6 +1211,7 @@ namespace ESPressio::Threading {
             TaskPoolRequirement<TPoolIdentity, TConstraints...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 (MatchesTaskPoolIdentity<TPoolIdentity, TResources>::Value || ... || false);
 
@@ -1123,6 +1226,7 @@ namespace ESPressio::Threading {
             DedicatedThreadRequirement<TThreadIdentity, TConstraints...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 (MatchesDedicatedThreadIdentity<TThreadIdentity, TResources>::Value || ... || false);
 
@@ -1137,6 +1241,7 @@ namespace ESPressio::Threading {
             DedicatedWorkerRequirement<TTaskIdentity, TConstraints...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 (MatchesDedicatedWorkerIdentity<TTaskIdentity, TResources>::Value || ... || false);
 
@@ -1150,6 +1255,7 @@ namespace ESPressio::Threading {
     template<std::size_t TBytes>
     struct MinimumStackCapacity final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr std::size_t Value = TBytes;
 
     };
@@ -1160,6 +1266,7 @@ namespace ESPressio::Threading {
     template<std::size_t TCount>
     struct MinimumWorkerConcurrency final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr std::size_t Value = TCount;
 
     };
@@ -1170,6 +1277,7 @@ namespace ESPressio::Threading {
     template<ThreadPriority TPriority>
     struct MinimumPriority final {
 
+        /// Compile-time result produced by this trait or property specialization.
         static constexpr ThreadPriority Value = TPriority;
 
     };
@@ -1180,6 +1288,7 @@ namespace ESPressio::Threading {
     template<class TAffinity>
     struct RequiredAffinity final {
 
+        /// Affinity Type required by this compile-time constraint.
         using AffinityType = TAffinity;
 
     };
@@ -1198,6 +1307,7 @@ namespace ESPressio::Threading {
         template<std::size_t TMinimum>
         struct HasMinimumStackCapacity<TMinimum> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1213,6 +1323,7 @@ namespace ESPressio::Threading {
             TRest...
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = TCapacity >= TMinimum;
 
         };
@@ -1240,6 +1351,7 @@ namespace ESPressio::Threading {
         template<ThreadPriority TMinimum>
         struct HasMinimumPriority<TMinimum> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1255,6 +1367,7 @@ namespace ESPressio::Threading {
             TRest...
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 static_cast<std::uint8_t>(TValue) >=
                 static_cast<std::uint8_t>(TMinimum);
@@ -1284,6 +1397,7 @@ namespace ESPressio::Threading {
         template<class TRequiredAffinity>
         struct HasRequiredAffinity<TRequiredAffinity> {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1299,6 +1413,7 @@ namespace ESPressio::Threading {
             TRest...
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 std::is_same_v<TRequiredAffinity, TFirst> ||
                 HasRequiredAffinity<TRequiredAffinity, TRest...>::Value;
@@ -1312,6 +1427,7 @@ namespace ESPressio::Threading {
         template<class TWorker, class TConstraint>
         struct WorkerConstraintSatisfied {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1325,6 +1441,7 @@ namespace ESPressio::Threading {
             MinimumStackCapacity<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasMinimumStackCapacity<TMinimum, TProperties...>::Value;
 
@@ -1339,6 +1456,7 @@ namespace ESPressio::Threading {
             MinimumPriority<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasMinimumPriority<TMinimum, TProperties...>::Value;
 
@@ -1353,6 +1471,7 @@ namespace ESPressio::Threading {
             RequiredAffinity<TAffinity>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasRequiredAffinity<TAffinity, TProperties...>::Value;
 
@@ -1374,6 +1493,7 @@ namespace ESPressio::Threading {
             TConstraint
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 (WorkerConstraintSatisfied<TWorkers, TConstraint>::Value && ... && true);
 
@@ -1386,6 +1506,7 @@ namespace ESPressio::Threading {
         template<class TResource, class TConstraint>
         struct ResourceConstraintSatisfied {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1404,6 +1525,7 @@ namespace ESPressio::Threading {
             MinimumWorkerConcurrency<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = TWorkers::Count >= TMinimum;
 
         };
@@ -1422,6 +1544,7 @@ namespace ESPressio::Threading {
             TConstraint
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 EveryWorkerSatisfies<TWorkers, TConstraint>::Value;
 
@@ -1437,6 +1560,7 @@ namespace ESPressio::Threading {
             MinimumWorkerConcurrency<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = 1U >= TMinimum;
 
         };
@@ -1451,6 +1575,7 @@ namespace ESPressio::Threading {
             MinimumStackCapacity<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasMinimumStackCapacity<TMinimum, TProperties...>::Value;
 
@@ -1466,6 +1591,7 @@ namespace ESPressio::Threading {
             MinimumPriority<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasMinimumPriority<TMinimum, TProperties...>::Value;
 
@@ -1481,6 +1607,7 @@ namespace ESPressio::Threading {
             RequiredAffinity<TAffinity>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasRequiredAffinity<TAffinity, TProperties...>::Value;
 
@@ -1496,6 +1623,7 @@ namespace ESPressio::Threading {
             MinimumStackCapacity<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasMinimumStackCapacity<TMinimum, TProperties...>::Value;
 
@@ -1511,6 +1639,7 @@ namespace ESPressio::Threading {
             MinimumPriority<TMinimum>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasMinimumPriority<TMinimum, TProperties...>::Value;
 
@@ -1526,6 +1655,7 @@ namespace ESPressio::Threading {
             RequiredAffinity<TAffinity>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 HasRequiredAffinity<TAffinity, TProperties...>::Value;
 
@@ -1538,6 +1668,7 @@ namespace ESPressio::Threading {
         template<class TResource, class TRequirement>
         struct ResourceSatisfiesRequirement {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value = false;
 
         };
@@ -1552,6 +1683,7 @@ namespace ESPressio::Threading {
             TaskPoolRequirement<TPoolIdentity, TConstraints...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 MatchesTaskPoolIdentity<TPoolIdentity, TResource>::Value &&
                 (ResourceConstraintSatisfied<TResource, TConstraints>::Value && ... && true);
@@ -1568,6 +1700,7 @@ namespace ESPressio::Threading {
             DedicatedThreadRequirement<TThreadIdentity, TConstraints...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 MatchesDedicatedThreadIdentity<TThreadIdentity, TResource>::Value &&
                 (ResourceConstraintSatisfied<TResource, TConstraints>::Value && ... && true);
@@ -1584,6 +1717,7 @@ namespace ESPressio::Threading {
             DedicatedWorkerRequirement<TTaskIdentity, TConstraints...>
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 MatchesDedicatedWorkerIdentity<TTaskIdentity, TResource>::Value &&
                 (ResourceConstraintSatisfied<TResource, TConstraints>::Value && ... && true);
@@ -1606,6 +1740,7 @@ namespace ESPressio::Threading {
             TRequirement
         > {
 
+            /// Compile-time result produced by this trait or property specialization.
             static constexpr bool Value =
                 (ResourceSatisfiesRequirement<TResources, TRequirement>::Value || ... || false);
 
