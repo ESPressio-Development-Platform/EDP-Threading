@@ -379,6 +379,52 @@ namespace Test {
     };
 
 
+    /// Managed-context router that deliberately fails every targeted wake.
+    class FailingManagedContextRouter final {
+
+        public:
+
+            // Context topology metadata.
+
+            /// Number of managed contexts represented by this synthetic router.
+            static constexpr std::size_t ContextCapacity = 3U;
+
+
+            // Context inspection.
+
+            /// Returns the first dense managed-context index as the active synthetic context.
+            std::optional<std::uint8_t> CurrentContextIndex() const noexcept {
+                return static_cast<std::uint8_t>(0U);
+            }
+
+            /// Indicates that the synthetic managed context has not been interrupted.
+            bool IsInterrupted(
+                std::uint8_t
+            ) const noexcept {
+                return false;
+            }
+
+
+            // Wake operations.
+
+            /// Reports timeout for synthetic waits.
+            ESPressio::Platform::Synchronization::SignalWaitResult Wait(
+                std::uint8_t,
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept {
+                return ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut;
+            }
+
+            /// Deliberately reports targeted-wake provider failure.
+            ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
+                std::uint8_t
+            ) noexcept {
+                return ESPressio::Platform::Synchronization::SignalNotifyResult::ProviderFailure;
+            }
+
+    };
+
+
     /// Move-only result object used to verify exact destruction behavior.
     struct LifetimeResult final {
 
@@ -1124,6 +1170,17 @@ namespace Test {
         MutexProvider,
         ExecutionContextProvider,
         ManagedContextRouter
+    >;
+
+
+    using FailingWakeDedicatedThreadRuntime = ESPressio::Threading::Detail::DedicatedThreadRuntime<
+        DedicatedThreadIdentity,
+        DedicatedCallable,
+        100U,
+        FailingManagedContextRouter::ContextCapacity,
+        MutexProvider,
+        ExecutionContextProvider,
+        FailingManagedContextRouter
     >;
 
 
@@ -3032,6 +3089,53 @@ int main() {
 
     assert(
         dedicatedThreadRuntime.DestroyInfrastructure() ==
+        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+    );
+
+
+    HostValidationStage(
+        "dedicated thread activation wake failure"
+    );
+
+    Test::FailingManagedContextRouter failingWakeRouter;
+    bool failingWakeLifecycleActive = true;
+
+    Test::FailingWakeDedicatedThreadRuntime failingWakeDedicatedThreadRuntime(
+        Test::DedicatedCallable{},
+        failingWakeRouter,
+        2U,
+        &failingWakeLifecycleActive,
+        canActivatePredicate,
+        shouldTerminatePredicate
+    );
+
+    assert(
+        failingWakeDedicatedThreadRuntime.Initialize(
+            ESPressio::Platform::Execution::ExecutionPriority::High,
+            ESPressio::Platform::Execution::ProcessorAffinity::Any(),
+            "test-dedicated-wake-failure"
+        ) == ESPressio::Threading::Detail::WorkerExecutionInitializationResult::Succeeded
+    );
+
+    auto failingWakeThreadHandle = failingWakeDedicatedThreadRuntime.Handle();
+
+    assert(
+        failingWakeThreadHandle.State() ==
+        ESPressio::Threading::ThreadState::NeverStarted
+    );
+
+    assert(
+        failingWakeThreadHandle.Start() ==
+        ESPressio::Threading::ThreadStartResult::ActivationFailed
+    );
+
+    assert(
+        failingWakeThreadHandle.State() ==
+        ESPressio::Threading::ThreadState::NeverStarted
+    );
+
+    assert(
+        failingWakeDedicatedThreadRuntime.DestroyInfrastructure() ==
         ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
     );
 
