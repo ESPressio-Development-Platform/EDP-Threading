@@ -79,6 +79,19 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    enum class DedicatedThreadSynchronizationResult : std::uint8_t {
+        Ready = 0,
+        ProviderFailure = 1
+    };
+
+
+    enum class DedicatedThreadStoppedPublicationResult : std::uint8_t {
+        Published = 0,
+        StaleActivation = 1,
+        ProviderFailure = 2
+    };
+
+
     /// Defines the compile-time contract for `DedicatedThreadRuntime`.
     /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
     /// @tparam TCallable Callable Type being invoked, stored, or adapted.
@@ -136,6 +149,14 @@ namespace ESPressio::Threading::Detail {
             using ContextIndex =
                 typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type;
 
+            /// Typed Platform outcome returned when the runtime acquires its serialization mutex.
+            using LockAcquireResult =
+                ESPressio::Platform::Synchronization::LockAcquireResult;
+
+            /// Typed Platform outcome returned when the runtime releases its serialization mutex.
+            using LockReleaseResult =
+                ESPressio::Platform::Synchronization::LockReleaseResult;
+
             /// Non-owning topology wake/interruption router.
             TManagedContextRouter* _router;
 
@@ -154,16 +175,16 @@ namespace ESPressio::Threading::Detail {
 
             // Synchronization.
 
-            bool AcquireLock() noexcept {
+            /// Acquires the Dedicated Thread serialization mutex indefinitely.
+            LockAcquireResult AcquireLock() noexcept {
                 return _mutex.Acquire(
                     ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                ) == ESPressio::Platform::Synchronization::LockAcquireResult::Acquired;
+                );
             }
 
-            void ReleaseLock() noexcept {
-                static_cast<void>(
-                    _mutex.Release()
-                );
+            /// Releases the Dedicated Thread serialization mutex.
+            LockReleaseResult ReleaseLock() noexcept {
+                return _mutex.Release();
             }
 
             static ThreadState PublicStateFor(
@@ -203,7 +224,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
-            bool ActivationHasStopped(
+            bool IsActivationStopped(
                 bool capturedPhase
             ) const noexcept {
                 const auto currentPhase = _control.Phase();
@@ -244,26 +265,37 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            void PublishStopped(
+            DedicatedThreadStoppedPublicationResult PublishStopped(
                 bool activationPhase
             ) noexcept {
-                if (!AcquireLock()) {
-                    return;
+                if (AcquireLock() != LockAcquireResult::Acquired) {
+                    return DedicatedThreadStoppedPublicationResult::ProviderFailure;
                 }
 
-                if (_control.TryPublishStopped(
+                const auto publicationResult = _control.TryPublishStopped(
                     activationPhase
-                )) {
+                );
+
+                if (
+                    publicationResult ==
+                    DedicatedThreadControlPublicationResult::Published
+                ) {
                     WakeJoiners(
                         activationPhase
                     );
                 }
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
+
+                return publicationResult == DedicatedThreadControlPublicationResult::Published
+                    ? DedicatedThreadStoppedPublicationResult::Published
+                    : DedicatedThreadStoppedPublicationResult::StaleActivation;
             }
 
 
-            bool ValidateSynchronization() noexcept {
+            DedicatedThreadSynchronizationResult ValidateSynchronization() noexcept {
                 const auto acquireResult = _mutex.Acquire(
                     ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
                 );
@@ -272,11 +304,13 @@ namespace ESPressio::Threading::Detail {
                     acquireResult !=
                     ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
                 ) {
-                    return false;
+                    return DedicatedThreadSynchronizationResult::ProviderFailure;
                 }
 
                 return _mutex.Release() ==
-                    ESPressio::Platform::Synchronization::LockReleaseResult::Released;
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                    ? DedicatedThreadSynchronizationResult::Ready
+                    : DedicatedThreadSynchronizationResult::ProviderFailure;
             }
 
 
@@ -305,7 +339,7 @@ namespace ESPressio::Threading::Detail {
                     bool activationPhase = false;
                     bool shouldRun = false;
 
-                    if (self->AcquireLock()) {
+                    if (self->AcquireLock() == LockAcquireResult::Acquired) {
                         const auto state = self->_control.State();
 
                         if (
@@ -316,13 +350,17 @@ namespace ESPressio::Threading::Detail {
                             shouldRun = true;
                         }
 
-                        self->ReleaseLock();
+                        static_cast<void>(
+                            self->ReleaseLock()
+                        );
                     }
 
                     if (shouldRun) {
                         self->InvokeCallable();
-                        self->PublishStopped(
-                            activationPhase
+                        static_cast<void>(
+                            self->PublishStopped(
+                                activationPhase
+                            )
                         );
                         continue;
                     }
@@ -348,7 +386,7 @@ namespace ESPressio::Threading::Detail {
                     return ThreadJoinResult::Interrupted;
                 }
 
-                if (!AcquireLock()) {
+                if (AcquireLock() != LockAcquireResult::Acquired) {
                     return ThreadJoinResult::Interrupted;
                 }
 
@@ -382,7 +420,7 @@ namespace ESPressio::Threading::Detail {
                     return ThreadJoinResult::Interrupted;
                 }
 
-                if (ActivationHasStopped(
+                if (IsActivationStopped(
                     capturedPhase
                 )) {
                     _joinWaiters.Unregister(
@@ -392,17 +430,19 @@ namespace ESPressio::Threading::Detail {
                     return ThreadJoinResult::Joined;
                 }
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
 
                 for (;;) {
                     const auto remaining = budget.Remaining();
 
                     if (remaining.IsNoWait()) {
-                        if (!AcquireLock()) {
+                        if (AcquireLock() != LockAcquireResult::Acquired) {
                             return ThreadJoinResult::Interrupted;
                         }
 
-                        const auto stopped = ActivationHasStopped(
+                        const auto stopped = IsActivationStopped(
                             capturedPhase
                         );
 
@@ -421,11 +461,11 @@ namespace ESPressio::Threading::Detail {
                         remaining
                     );
 
-                    if (!AcquireLock()) {
+                    if (AcquireLock() != LockAcquireResult::Acquired) {
                         return ThreadJoinResult::Interrupted;
                     }
 
-                    if (ActivationHasStopped(
+                    if (IsActivationStopped(
                         capturedPhase
                     )) {
                         _joinWaiters.Unregister(
@@ -440,7 +480,7 @@ namespace ESPressio::Threading::Detail {
                     if (_router->IsInterrupted(
                         waitingContext.value()
                     )) {
-                        if (AcquireLock()) {
+                        if (AcquireLock() == LockAcquireResult::Acquired) {
                             _joinWaiters.Unregister(
                                 registrationIndex
                             );
@@ -453,7 +493,7 @@ namespace ESPressio::Threading::Detail {
                     if (
                         waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::ProviderFailure
                     ) {
-                        if (AcquireLock()) {
+                        if (AcquireLock() == LockAcquireResult::Acquired) {
                             _joinWaiters.Unregister(
                                 registrationIndex
                             );
@@ -467,11 +507,11 @@ namespace ESPressio::Threading::Detail {
                         waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut &&
                         budget.Remaining().IsNoWait()
                     ) {
-                        if (!AcquireLock()) {
+                        if (AcquireLock() != LockAcquireResult::Acquired) {
                             return ThreadJoinResult::Interrupted;
                         }
 
-                        const auto stopped = ActivationHasStopped(
+                        const auto stopped = IsActivationStopped(
                             capturedPhase
                         );
 
@@ -593,7 +633,10 @@ namespace ESPressio::Threading::Detail {
                 ESPressio::Platform::Execution::ProcessorAffinity affinity,
                 const char* name = nullptr
             ) noexcept {
-                if (!ValidateSynchronization()) {
+                if (
+                    ValidateSynchronization() !=
+                    DedicatedThreadSynchronizationResult::Ready
+                ) {
                     return WorkerExecutionInitializationResult::ProviderFailure;
                 }
 
@@ -652,7 +695,7 @@ namespace ESPressio::Threading::Detail {
             // Public lifecycle.
 
             ThreadState State() noexcept {
-                if (!AcquireLock()) {
+                if (AcquireLock() != LockAcquireResult::Acquired) {
                     return ThreadState::Stopped;
                 }
 
@@ -660,7 +703,9 @@ namespace ESPressio::Threading::Detail {
                     _control.State()
                 );
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
                 return result;
             }
 
@@ -671,7 +716,7 @@ namespace ESPressio::Threading::Detail {
                     return ThreadStartResult::ShuttingDown;
                 }
 
-                if (!AcquireLock()) {
+                if (AcquireLock() != LockAcquireResult::Acquired) {
                     return ThreadStartResult::ActivationFailed;
                 }
 
@@ -684,9 +729,11 @@ namespace ESPressio::Threading::Detail {
 
                 bool activationPhase = false;
 
-                if (!_control.TryStart(
-                    activationPhase
-                )) {
+                if (
+                    _control.TryStart(
+                        activationPhase
+                    ) != DedicatedThreadControlStartResult::Started
+                ) {
                     ReleaseLock();
                     return ThreadStartResult::AlreadyRunning;
                 }
@@ -697,16 +744,21 @@ namespace ESPressio::Threading::Detail {
                     )
                 );
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
                 return ThreadStartResult::Started;
             }
 
             ThreadStopRequestResult RequestStop() noexcept {
-                if (!AcquireLock()) {
+                if (AcquireLock() != LockAcquireResult::Acquired) {
                     return ThreadStopRequestResult::NotRunning;
                 }
 
-                if (!_control.TryRequestStop()) {
+                if (
+                    _control.TryRequestStop() !=
+                    DedicatedThreadControlStopRequestResult::Accepted
+                ) {
                     ReleaseLock();
                     return ThreadStopRequestResult::NotRunning;
                 }
@@ -717,18 +769,22 @@ namespace ESPressio::Threading::Detail {
                     )
                 );
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
                 return ThreadStopRequestResult::Accepted;
             }
 
             bool IsStopRequested() noexcept {
-                if (!AcquireLock()) {
+                if (AcquireLock() != LockAcquireResult::Acquired) {
                     return true;
                 }
 
                 const auto result = _control.IsStopRequested();
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
                 return result;
             }
 
@@ -763,7 +819,7 @@ namespace ESPressio::Threading::Detail {
 
             /// Indicates whether no semantic Dedicated Thread activation remains active.
             bool IsExecutionQuiescent() noexcept {
-                if (!AcquireLock()) {
+                if (AcquireLock() != LockAcquireResult::Acquired) {
                     return false;
                 }
 
@@ -772,7 +828,9 @@ namespace ESPressio::Threading::Detail {
                     state == DedicatedThreadOperationalState::NeverStarted ||
                     state == DedicatedThreadOperationalState::Stopped;
 
-                ReleaseLock();
+                static_cast<void>(
+                    ReleaseLock()
+                );
                 return result;
             }
 
