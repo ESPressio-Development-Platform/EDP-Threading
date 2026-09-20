@@ -17,7 +17,7 @@ Then, from `EDP-Threading`:
 bash tests/run-host-tests.sh
 ```
 
-The runner compiles `ThreadingFoundationTests.cpp` as C++17 with `-Wall -Wextra -Wpedantic -Werror`, executes it, and removes the temporary binary.
+The runner compiles `ThreadingFoundationTests.cpp` as C++17 with `-Wall -Wextra -Wpedantic -Werror`, AddressSanitizer and UndefinedBehaviorSanitizer enabled by default, executes it, and removes the temporary binary. Set `EDP_THREADING_SANITIZERS=0` only when an environment cannot provide those host sanitizers.
 
 ## ESP32 integration demo
 
