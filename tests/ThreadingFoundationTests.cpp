@@ -962,6 +962,68 @@ namespace Test {
         >;
 
 
+    using MixedOwnedTopology = ESPressio::Threading::ThreadingTopology<
+        std::tuple_element_t<
+            0U,
+            typename HeterogeneousPool::Resources
+        >,
+        DedicatedWorkerDeclaration,
+        DedicatedThreadDeclaration
+    >;
+
+    using MixedOwnedBindings = std::tuple<
+        DedicatedThreadBindingType
+    >;
+
+    using MixedOwnedResources =
+        ESPressio::Threading::Detail::OwnedResourceTuple<
+            MixedOwnedTopology,
+            MixedOwnedBindings,
+            ManagedContextRouter,
+            ExecutionContextProvider,
+            AtomicByteProvider,
+            MutexProvider
+        >;
+
+    static_assert(
+        std::tuple_size_v<MixedOwnedResources> == 3U,
+        "Every heterogeneous topology declaration must map to exactly one owned runtime resource"
+    );
+
+    static_assert(
+        std::is_same_v<
+            std::tuple_element_t<1U, MixedOwnedResources>,
+            ESPressio::Threading::Detail::DedicatedWorkerOwnedRuntime<
+                DedicatedWorkerDeclaration,
+                ManagedContextRouter,
+                ExecutionContextProvider,
+                AtomicByteProvider,
+                MutexProvider,
+                2U,
+                MixedOwnedTopology::ManagedExecutionContextCount
+            >
+        >,
+        "Dedicated Worker ownership must use its topology-derived dense context offset"
+    );
+
+    static_assert(
+        std::is_same_v<
+            std::tuple_element_t<2U, MixedOwnedResources>,
+            ESPressio::Threading::Detail::DedicatedThreadOwnedRuntime<
+                DedicatedThreadDeclaration,
+                DedicatedCallable,
+                ManagedContextRouter,
+                ExecutionContextProvider,
+                AtomicByteProvider,
+                MutexProvider,
+                3U,
+                MixedOwnedTopology::ManagedExecutionContextCount
+            >
+        >,
+        "Dedicated Thread ownership must use its semantic callable binding and dense context offset"
+    );
+
+
     static_assert(
         TestDedicatedThreadRuntime::ControlBackingBytes() == 24U,
         "Dedicated Thread control backing must follow provider-declared physical storage"
