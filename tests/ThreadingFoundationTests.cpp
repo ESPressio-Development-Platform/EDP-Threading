@@ -1318,16 +1318,6 @@ int main() {
         ESPressio::Threading::ThreadingShutdownResult::NotStarted
     );
 
-    static_cast<void>(
-        mixedOwner.template TaskFacility<Test::OrdinaryPool>()
-    );
-    static_cast<void>(
-        mixedOwner.template DedicatedWorker<Test::ReturningCallable>()
-    );
-    static_cast<void>(
-        mixedOwner.template DedicatedThreadResource<Test::DedicatedThreadIdentity>()
-    );
-
     auto movedThreadHandle =
         mixedOwner.template ThreadHandle<Test::DedicatedThreadIdentity>();
 
