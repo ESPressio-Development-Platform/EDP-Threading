@@ -41,8 +41,15 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            // Authoritative terminal lifecycle.
+
+            /// Non-owning reference to the application-wide Threading lifecycle.
             TInfrastructureLifecycle* _lifecycle;
 
+
+            // Completion inspection.
+
+            /// Indicates whether the authoritative Threading lifecycle reached terminal shutdown completion.
             /// Indicates whether the authoritative Threading lifecycle reached terminal shutdown completion.
             bool IsComplete() const noexcept {
                 return _lifecycle->State() == InfrastructureState::ShutdownComplete;
@@ -60,30 +67,40 @@ namespace ESPressio::Threading::Detail {
                 _lifecycle(&lifecycle) {}
 
 
+            // Synchronization validation.
+
             /// Reports that the empty topology requires no synchronization provider validation.
             ShutdownWaitSynchronizationResult ValidateSynchronization() noexcept {
                 return ShutdownWaitSynchronizationResult::Ready;
             }
 
 
+            // Wait operations.
+
+            /// Observes terminal shutdown completion without blocking for an empty topology.
             ShutdownWaitResult Wait() {
                 return IsComplete()
                     ? ShutdownWaitResult::Completed
                     : ShutdownWaitResult::Interrupted;
             }
 
+            /// Observes terminal shutdown completion for the empty topology; duration does not require blocking.
             ShutdownWaitResult WaitFor(
                 Duration
             ) {
                 return Wait();
             }
 
+            /// Observes terminal shutdown completion for the empty topology; deadline does not require blocking.
             ShutdownWaitResult WaitUntil(
                 MonotonicTimestamp
             ) {
                 return Wait();
             }
 
+            // Terminal publication wake.
+
+            /// Performs no wake work because an empty topology owns no managed contexts.
             void WakeCompleted() noexcept {}
 
     };
@@ -285,6 +302,9 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            // Construction.
+
+            /// Binds terminal-shutdown waiting to the authoritative lifecycle and managed-context router.
             explicit ShutdownWaitRuntime(
                 TInfrastructureLifecycle& lifecycle,
                 TManagedContextRouter& router
