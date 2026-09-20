@@ -698,6 +698,24 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Shutdown cooperation.
+
+            /// Indicates whether no semantic Dedicated Thread activation remains active.
+            bool IsExecutionQuiescent() noexcept {
+                if (!AcquireLock()) {
+                    return false;
+                }
+
+                const auto state = _control.State();
+                const auto result =
+                    state == DedicatedThreadOperationalState::NeverStarted ||
+                    state == DedicatedThreadOperationalState::Stopped;
+
+                ReleaseLock();
+                return result;
+            }
+
+
             // Context identity.
 
             /// Indicates whether this Dedicated Thread owns the current Platform execution context.
