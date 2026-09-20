@@ -495,6 +495,69 @@ namespace Test {
         "Topology must satisfy requirements for its configured Dedicated Thread identity"
     );
 
+    static_assert(
+        ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::TaskPoolRequirement<
+                OrdinaryPool,
+                ESPressio::Threading::MinimumStackCapacity<4096U>,
+                ESPressio::Threading::MinimumWorkerConcurrency<1U>,
+                ESPressio::Threading::MinimumPriority<ESPressio::Threading::ThreadPriority::Normal>,
+                ESPressio::Threading::RequiredAffinity<ESPressio::Threading::AnyAffinity>
+            >
+        >,
+        "Task Pool requirements must validate Worker stack/concurrency/priority/affinity"
+    );
+
+    static_assert(
+        !ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::TaskPoolRequirement<
+                OrdinaryPool,
+                ESPressio::Threading::MinimumWorkerConcurrency<2U>
+            >
+        >,
+        "Task Pool requirement must reject insufficient Worker concurrency"
+    );
+
+    static_assert(
+        ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::DedicatedWorkerRequirement<
+                ReturningCallable,
+                ESPressio::Threading::MinimumStackCapacity<2048U>,
+                ESPressio::Threading::MinimumWorkerConcurrency<1U>,
+                ESPressio::Threading::MinimumPriority<ESPressio::Threading::ThreadPriority::Critical>,
+                ESPressio::Threading::RequiredAffinity<ESPressio::Threading::AnyAffinity>
+            >
+        >,
+        "DedicatedWorkerLease requirements must validate its fixed one-Worker entitlement"
+    );
+
+    static_assert(
+        !ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::DedicatedWorkerRequirement<
+                ReturningCallable,
+                ESPressio::Threading::MinimumWorkerConcurrency<2U>
+            >
+        >,
+        "DedicatedWorkerLease must reject requirements above its fixed cardinality of one"
+    );
+
+    static_assert(
+        ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::DedicatedThreadRequirement<
+                TelemetryThread,
+                ESPressio::Threading::MinimumStackCapacity<4096U>,
+                ESPressio::Threading::MinimumPriority<ESPressio::Threading::ThreadPriority::High>,
+                ESPressio::Threading::RequiredAffinity<ESPressio::Threading::AnyAffinity>
+            >
+        >,
+        "Dedicated Thread requirements must validate stack/priority/affinity"
+    );
+
 
     static_assert(
         sizeof(ESPressio::Threading::Detail::TaskControl<AtomicByteProvider>) == 1U,
