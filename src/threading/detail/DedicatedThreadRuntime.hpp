@@ -18,6 +18,7 @@ namespace ESPressio::Threading::Detail {
     template<class TCallable, class = void>
     struct IsVoidThreadCallableWithoutContext final {
 
+        /// Compile-time result produced by this trait specialization.
         static constexpr bool Value = false;
 
     };
@@ -33,6 +34,7 @@ namespace ESPressio::Threading::Detail {
         >
     > final {
 
+        /// Compile-time result produced by this trait specialization.
         static constexpr bool Value = std::is_same_v<
             std::invoke_result_t<TCallable&>,
             void
@@ -46,6 +48,7 @@ namespace ESPressio::Threading::Detail {
     template<class TCallable, class = void>
     struct IsVoidThreadCallableWithContext final {
 
+        /// Compile-time result produced by this trait specialization.
         static constexpr bool Value = false;
 
     };
@@ -64,6 +67,7 @@ namespace ESPressio::Threading::Detail {
         >
     > final {
 
+        /// Compile-time result produced by this trait specialization.
         static constexpr bool Value = std::is_same_v<
             std::invoke_result_t<
                 TCallable&,
@@ -128,6 +132,7 @@ namespace ESPressio::Threading::Detail {
 
             // Topology bindings.
 
+            /// Compact Type used to identify one managed execution context.
             using ContextIndex =
                 typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type;
 
@@ -545,6 +550,7 @@ namespace ESPressio::Threading::Detail {
 
             // Provider contract.
 
+            /// Validated Platform execution-context provider contract traits.
             using ProviderTraits =
                 ESPressio::Platform::Execution::Detail::ExecutionContextProviderTraits<
                     TExecutionContextProvider
@@ -825,10 +831,12 @@ namespace ESPressio::Threading::Detail {
 
             // Resource inspection.
 
+            /// Deterministic byte count reported for `ProviderObjectBytes`.
             static constexpr std::size_t ProviderObjectBytes() noexcept {
                 return sizeof(TExecutionContextProvider);
             }
 
+            /// Deterministic byte count reported for `ControlBackingBytes`.
             static constexpr std::size_t ControlBackingBytes() noexcept {
                 return ExecutionContextBacking<
                     TExecutionContextProvider,
@@ -836,6 +844,7 @@ namespace ESPressio::Threading::Detail {
                 >::PhysicalControlCapacity();
             }
 
+            /// Deterministic byte count reported for `StackBackingBytes`.
             static constexpr std::size_t StackBackingBytes() noexcept {
                 return ExecutionContextBacking<
                     TExecutionContextProvider,
