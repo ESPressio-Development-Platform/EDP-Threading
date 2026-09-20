@@ -244,7 +244,7 @@ namespace ESPressio::Threading::Detail {
                 if constexpr (
                     TIndex == sizeof...(TWorkers)
                 ) {
-                    return ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
+                    return ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
                 } else {
                     const auto result = std::get<TIndex>(
                         _workers
@@ -254,7 +254,7 @@ namespace ESPressio::Threading::Detail {
 
                     if (
                         result !=
-                        ESPressio::Platform::Execution::ExecutionJoinResult::Joined
+                        ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded
                     ) {
                         return result;
                     }
@@ -270,7 +270,7 @@ namespace ESPressio::Threading::Detail {
                 if constexpr (
                     TIndex == sizeof...(TWorkers)
                 ) {
-                    return ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
+                    return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
                 } else {
                     const auto result = std::get<TIndex>(
                         _workers
@@ -278,7 +278,7 @@ namespace ESPressio::Threading::Detail {
 
                     if (
                         result !=
-                        ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed
+                        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
                     ) {
                         return result;
                     }
