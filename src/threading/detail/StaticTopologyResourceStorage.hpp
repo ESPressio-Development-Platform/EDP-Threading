@@ -204,23 +204,23 @@ namespace ESPressio::Threading::Detail {
             bool FinalizeShutdown() noexcept {
                 _resource.RequestInfrastructureTermination();
 
-                if (
+                const bool joined =
                     _resource.JoinInfrastructure(
                         ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                    ) !=
-                    ESPressio::Platform::Execution::ExecutionJoinResult::Joined
-                ) {
-                    return false;
-                }
+                    ) ==
+                    ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
 
-                if (
-                    _resource.DestroyInfrastructure() !=
-                    ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed
-                ) {
-                    return false;
-                }
+                const bool destroyed =
+                    joined &&
+                    _resource.DestroyInfrastructure() ==
+                    ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
 
-                return _tail.FinalizeShutdown();
+                const bool tailFinalized =
+                    _tail.FinalizeShutdown();
+
+                return joined &&
+                    destroyed &&
+                    tailFinalized;
             }
 
 
