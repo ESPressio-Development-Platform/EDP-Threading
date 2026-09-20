@@ -332,6 +332,13 @@ namespace ESPressio::Threading::Detail {
 
             ThreadingInitializationResult Initialize() noexcept {
                 if (
+                    _bootstrap.LifecycleState().State() !=
+                    InfrastructureState::Uninitialized
+                ) {
+                    return ThreadingInitializationResult::AlreadyInitialized;
+                }
+
+                if (
                     _wakeSet.Validate() !=
                     ManagedContextWakeValidationResult::Ready ||
                     !_shutdownWait.ValidateSynchronization()
@@ -384,6 +391,13 @@ namespace ESPressio::Threading::Detail {
                     unique,
                     "InitializeInOrder must name every topology resource exactly once"
                 );
+
+                if (
+                    _bootstrap.LifecycleState().State() !=
+                    InfrastructureState::Uninitialized
+                ) {
+                    return ThreadingInitializationResult::AlreadyInitialized;
+                }
 
                 if (
                     _wakeSet.Validate() !=
