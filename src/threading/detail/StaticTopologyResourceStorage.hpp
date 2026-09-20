@@ -169,12 +169,19 @@ namespace ESPressio::Threading::Detail {
                 TResourceIndex + 1U
             >;
 
+            // Recursive topology-owned storage.
+
+            /// Runtime resource owned at this compile-time topology position.
             Resource _resource;
 
+            /// Recursively owned storage for every later topology resource.
             Tail _tail;
 
         public:
 
+            // Construction.
+
+            /// Constructs this resource and the recursive tail directly in topology storage order.
             StaticTopologyResourceStorage(
                 TBindings& bindings,
                 TManagedContextRouter& router,
@@ -221,6 +228,7 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Applies terminal semantic shutdown behavior to this resource and then the recursive tail.
             void BeginShutdown() noexcept {
                 if constexpr (
                     IsTaskExecutionResource<
@@ -241,13 +249,15 @@ namespace ESPressio::Threading::Detail {
                 _tail.BeginShutdown();
             }
 
+            /// Indicates whether this resource and every recursive tail resource are execution-quiescent.
             bool IsExecutionQuiescent() noexcept {
                 return _resource.IsExecutionQuiescent() &&
                     _tail.IsExecutionQuiescent();
             }
 
+            /// Terminates, joins, and destroys this infrastructure resource before finalizing the recursive tail.
             ThreadingFinalizationResult FinalizeShutdown() noexcept {
-                _resource.RequestInfrastructureTermination();
+                const auto wakeResult = _resource.RequestInfrastructureTermination();
 
                 const auto joinResult = _resource.JoinInfrastructure(
                     ESPressio::Platform::Synchronization::WaitTimeout::Forever()
@@ -261,6 +271,7 @@ namespace ESPressio::Threading::Detail {
                 const auto tailResult = _tail.FinalizeShutdown();
 
                 if (
+                    wakeResult != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled ||
                     joinResult != ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded ||
                     destroyResult != ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded ||
                     tailResult != ThreadingFinalizationResult::Completed
@@ -316,6 +327,9 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            // Construction.
+
+            /// Constructs the terminal recursive storage node without owning any resource state.
             StaticTopologyResourceStorage(
                 TBindings&,
                 TManagedContextRouter&,
@@ -323,12 +337,17 @@ namespace ESPressio::Threading::Detail {
             ) noexcept {}
 
 
+            // Terminal recursion operations.
+
+            /// Performs no semantic shutdown work because the terminal node owns no resource.
             void BeginShutdown() noexcept {}
 
+            /// Reports quiescence because the terminal node owns no execution resource.
             bool IsExecutionQuiescent() noexcept {
                 return true;
             }
 
+            /// Completes finalization because the terminal node owns no infrastructure resource.
             ThreadingFinalizationResult FinalizeShutdown() noexcept {
                 return ThreadingFinalizationResult::Completed;
             }
