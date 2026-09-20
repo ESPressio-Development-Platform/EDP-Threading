@@ -12,13 +12,13 @@
 namespace ESPressio::Threading {
 
     /// Concrete statically owned runtime for one declared Threading topology.
-    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TAtomicWord32Provider, class TMutexProvider>
+    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider>
     using StaticThreadingRuntime = Detail::StaticTopologyOwner<
         TTopology,
         TBindings,
         TSignalProvider,
         TExecutionContextProvider,
-        TAtomicWord32Provider,
+        TSpinLockProvider,
         TMutexProvider
     >;
 
