@@ -291,20 +291,46 @@ namespace ESPressio::Threading {
         template<class... TProperties>
         struct ResolvedExecutionResourceProperties {
 
-            static constexpr std::size_t StackCapacity =
-                (StackCapacityValue<TProperties>::Value + ... + 0U);
+            private:
 
-            static constexpr ThreadPriority Priority = []() constexpr {
-                ThreadPriority result = ThreadPriority::Normal;
-                ((result = PriorityValue<TProperties>::Value), ...);
-                return result;
-            }();
+                template<class TProperty>
+                static constexpr void ApplyPriority(
+                    ThreadPriority& result
+                ) noexcept {
+                    if constexpr (
+                        IsPriorityProperty<TProperty>::Value
+                    ) {
+                        result = PriorityValue<TProperty>::Value;
+                    }
+                }
 
-            static constexpr ProcessorAffinity Affinity = []() constexpr {
-                ProcessorAffinity result = ProcessorAffinity::Any();
-                ((result = AffinityValue<TProperties>::Value), ...);
-                return result;
-            }();
+                template<class TProperty>
+                static constexpr void ApplyAffinity(
+                    ProcessorAffinity& result
+                ) noexcept {
+                    if constexpr (
+                        IsAffinityProperty<TProperty>::Value
+                    ) {
+                        result = AffinityValue<TProperty>::Value;
+                    }
+                }
+
+            public:
+
+                static constexpr std::size_t StackCapacity =
+                    (StackCapacityValue<TProperties>::Value + ... + 0U);
+
+                static constexpr ThreadPriority Priority = []() constexpr {
+                    ThreadPriority result = ThreadPriority::Normal;
+                    (ApplyPriority<TProperties>(result), ...);
+                    return result;
+                }();
+
+                static constexpr ProcessorAffinity Affinity = []() constexpr {
+                    ProcessorAffinity result = ProcessorAffinity::Any();
+                    (ApplyAffinity<TProperties>(result), ...);
+                    return result;
+                }();
 
         };
 
