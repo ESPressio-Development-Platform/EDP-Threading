@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -837,16 +838,13 @@ namespace ESPressio::Threading::Detail {
 
             // Context identity.
 
-            /// Indicates whether this Dedicated Thread owns the current Platform execution context.
-            bool TryResolveCurrentContext(
-                ContextIndex& contextIndex
-            ) const noexcept {
+            /// Returns this Dedicated Thread's dense context index when it owns the current Platform context.
+            std::optional<ContextIndex> CurrentContextIndex() const noexcept {
                 if (!_provider.IsCurrentContext()) {
-                    return false;
+                    return std::nullopt;
                 }
 
-                contextIndex = _contextIndex;
-                return true;
+                return _contextIndex;
             }
 
             /// Indicates whether the addressed Dedicated Thread context currently has a cooperative interruption request.
