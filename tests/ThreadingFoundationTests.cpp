@@ -15,6 +15,7 @@
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
 #include "../src/threading/detail/ShutdownCoordinator.hpp"
 #include "../src/threading/detail/StaticTopologyPlan.hpp"
+#include "../src/threading/detail/StructuralContextResolver.hpp"
 #include "../src/threading/detail/ThreadingBootstrap.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
@@ -543,6 +544,18 @@ namespace Test {
             0U,
             ManagedContextRouter::ContextCapacity
         >;
+
+    using HeterogeneousResolver =
+        ESPressio::Threading::Detail::StructuralContextResolver<
+            ManagedContextRouter::ContextCapacity,
+            HeterogeneousOwnedRuntime
+        >;
+
+    static_assert(
+        sizeof(HeterogeneousResolver) == sizeof(HeterogeneousOwnedRuntime*),
+        "Structural context resolution must retain only static resource references, not a context pointer registry"
+    );
+
 
     static_assert(
         HeterogeneousOwnedRuntime::WorkerCount == 2U,
