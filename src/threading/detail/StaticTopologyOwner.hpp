@@ -164,7 +164,9 @@ namespace ESPressio::Threading::Detail {
                     const auto result = _resources.template Get<TIndex>().Initialize();
 
                     if (result != WorkerExecutionInitializationResult::Succeeded) {
-                        DestroyInitializedPrefix<TIndex>();
+                        static_cast<void>(
+                            DestroyInitializedPrefix<TIndex>()
+                        );
                         return ThreadingInitializationResult::ProviderFailure;
                     }
 
@@ -175,15 +177,20 @@ namespace ESPressio::Threading::Detail {
             /// Destroys an already-initialized prefix in reverse order during initialization rollback.
             /// @tparam TIndex Number of initialized resources remaining in the prefix.
             template<std::size_t TIndex>
-            void DestroyInitializedPrefix() noexcept {
+            ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInitializedPrefix() noexcept {
                 if constexpr (
-                    TIndex > 0U
+                    TIndex == 0U
                 ) {
-                    static_cast<void>(
-                        _resources.template Get<TIndex - 1U>().DestroyInfrastructure()
-                    );
+                    return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
+                } else {
+                    const auto result =
+                        _resources.template Get<TIndex - 1U>().DestroyInfrastructure();
 
-                    DestroyInitializedPrefix<TIndex - 1U>();
+                    const auto tailResult = DestroyInitializedPrefix<TIndex - 1U>();
+
+                    return result != ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+                        ? result
+                        : tailResult;
                 }
             }
 
@@ -211,20 +218,19 @@ namespace ESPressio::Threading::Detail {
             /// Locates and destroys one runtime resource selected by a runtime index during ordered rollback.
             /// @tparam TIndex Compile-time resource index currently being inspected.
             template<std::size_t TIndex>
-            void DestroyResourceAt(
+            ESPressio::Platform::Execution::ExecutionDestroyResult DestroyResourceAt(
                 std::size_t targetIndex
             ) noexcept {
                 if constexpr (
-                    TIndex < TTopology::ResourceCount
+                    TIndex == TTopology::ResourceCount
                 ) {
+                    return ESPressio::Platform::Execution::ExecutionDestroyResult::ProviderFailure;
+                } else {
                     if (TIndex == targetIndex) {
-                        static_cast<void>(
-                            _resources.template Get<TIndex>().DestroyInfrastructure()
-                        );
-                        return;
+                        return _resources.template Get<TIndex>().DestroyInfrastructure();
                     }
 
-                    DestroyResourceAt<TIndex + 1U>(
+                    return DestroyResourceAt<TIndex + 1U>(
                         targetIndex
                     );
                 }
@@ -248,8 +254,10 @@ namespace ESPressio::Threading::Detail {
                         ) != WorkerExecutionInitializationResult::Succeeded
                     ) {
                         for (std::size_t rollback = TOrderIndex; rollback > 0U; --rollback) {
-                            DestroyResourceAt<0U>(
-                                order[rollback - 1U]
+                            static_cast<void>(
+                                DestroyResourceAt<0U>(
+                                    order[rollback - 1U]
+                                )
                             );
                         }
 
