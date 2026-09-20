@@ -208,12 +208,12 @@ namespace ESPressio::Threading::Detail {
                     _resource.JoinInfrastructure(
                         ESPressio::Platform::Synchronization::WaitTimeout::Forever()
                     ) ==
-                    ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
+                    ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
 
                 const bool destroyed =
                     joined &&
                     _resource.DestroyInfrastructure() ==
-                    ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
+                    ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
 
                 const bool tailFinalized =
                     _tail.FinalizeShutdown();
