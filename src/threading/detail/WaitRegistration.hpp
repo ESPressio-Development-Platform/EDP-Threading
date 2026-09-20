@@ -14,6 +14,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `ExecutionContextIndexTraits`.
+    /// @tparam TContextCapacity Number of managed execution contexts represented by the topology.
     template<std::size_t TContextCapacity>
     struct ExecutionContextIndexTraits final {
 
@@ -31,6 +33,9 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskWaitRegistration`.
+    /// @tparam TRecordIndex Compact Task-record index Type stored by a wait registration.
+    /// @tparam TContextIndex Dense managed execution-context index Type stored by a registration.
     template<class TRecordIndex, class TContextIndex>
     struct TaskWaitRegistration final {
 
@@ -67,6 +72,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `ThreadJoinRegistration`.
+    /// @tparam TContextIndex Dense managed execution-context index Type stored by a registration.
     template<class TContextIndex>
     struct ThreadJoinRegistration final {
 
@@ -100,6 +107,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `AdmissionWaitRegistration`.
+    /// @tparam TContextIndex Dense managed execution-context index Type stored by a registration.
     template<class TContextIndex>
     struct AdmissionWaitRegistration final {
 
@@ -127,6 +136,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `ShutdownWaitRegistration`.
+    /// @tparam TContextIndex Dense managed execution-context index Type stored by a registration.
     template<class TContextIndex>
     struct ShutdownWaitRegistration final {
 
@@ -154,6 +165,9 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `RegistrationSet`.
+    /// @tparam TRegistration Registration record Type stored in the bounded registration set.
+    /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
     template<class TRegistration, std::size_t TCapacity>
     class RegistrationSet final {
 
@@ -219,6 +233,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Returns the number of active registrations satisfying one bounded predicate.
+            /// @tparam TPredicate Predicate callable Type used to locate a registration.
             template<class TPredicate>
             std::size_t MatchingCount(
                 TPredicate&& predicate
@@ -243,6 +258,7 @@ namespace ESPressio::Threading::Detail {
             // Iteration.
 
             /// Visits every active registration in bounded storage order.
+            /// @tparam TVisitor Visitor callable Type invoked for active registrations.
             template<class TVisitor>
             void VisitActive(
                 TVisitor&& visitor
