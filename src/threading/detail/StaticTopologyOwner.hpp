@@ -7,6 +7,7 @@
 
 #include "ManagedContextRouter.hpp"
 #include "ManagedContextWakeSet.hpp"
+#include "ShutdownWaitRuntime.hpp"
 #include "StaticTopologyResourceStorage.hpp"
 #include "StructuralContextResolver.hpp"
 #include "ThreadingBootstrap.hpp"
@@ -61,6 +62,13 @@ namespace ESPressio::Threading::Detail {
                 TAtomicWord8Provider
             >;
 
+            using ShutdownWait = ShutdownWaitRuntime<
+                typename Bootstrap::Lifecycle,
+                ContextCapacity,
+                TMutexProvider,
+                Router
+            >;
+
             using Resources = StaticTopologyResourceStorage<
                 TTopology,
                 TBindings,
@@ -96,6 +104,8 @@ namespace ESPressio::Threading::Detail {
             Resources _resources;
 
             Resolver _resolver;
+
+            ShutdownWait _shutdownWait;
 
 
             template<std::size_t... TIndices>
@@ -177,6 +187,10 @@ namespace ESPressio::Threading::Detail {
                         _resources,
                         std::make_index_sequence<TTopology::ResourceCount>{}
                     )
+                ),
+                _shutdownWait(
+                    _bootstrap.LifecycleState(),
+                    _router
                 ) {
                 if constexpr (
                     ContextCapacity > 0U
@@ -277,10 +291,7 @@ namespace ESPressio::Threading::Detail {
                 return _resources.IsExecutionQuiescent();
             }
 
-            template<class TShutdownWaitRuntime>
-            void FinalizeShutdown(
-                TShutdownWaitRuntime& shutdownWaitRuntime
-            ) noexcept {
+            void FinalizeShutdown() noexcept {
                 if (
                     _bootstrap.LifecycleState().State() !=
                     InfrastructureState::ShuttingDown ||
@@ -292,7 +303,28 @@ namespace ESPressio::Threading::Detail {
                 _resources.FinalizeShutdown();
 
                 _bootstrap.LifecycleState().PublishShutdownComplete();
-                shutdownWaitRuntime.WakeCompleted();
+                _shutdownWait.WakeCompleted();
+            }
+
+
+            ShutdownWaitResult WaitForShutdown() {
+                return _shutdownWait.Wait();
+            }
+
+            ShutdownWaitResult WaitForShutdownFor(
+                Duration duration
+            ) {
+                return _shutdownWait.WaitFor(
+                    duration
+                );
+            }
+
+            ShutdownWaitResult WaitForShutdownUntil(
+                MonotonicTimestamp deadline
+            ) {
+                return _shutdownWait.WaitUntil(
+                    deadline
+                );
             }
 
 
