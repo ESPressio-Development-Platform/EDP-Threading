@@ -15,6 +15,10 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `WorkerLeaseScheduler`.
+    /// @tparam TWorkerCount Number of Workers represented by the lease scheduler.
+    /// @tparam TFirstContextIndex First dense topology context index assigned to the Worker set.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<std::size_t TWorkerCount, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
     class WorkerLeaseScheduler final {
 
