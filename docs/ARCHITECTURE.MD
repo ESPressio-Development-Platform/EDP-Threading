@@ -1,35 +1,67 @@
 # Threading Architecture
 
-## Purpose
+## Purpose and ownership boundary
 
 EDP-Threading owns two execution models: finite `Task<TResult>` work executed by bounded Task facilities, and persistent topology-owned Dedicated Threads controlled through `Thread<TThreadIdentity>`.
 
-Tasks do not intrinsically own native execution contexts. Workers are internal reusable contexts. Dedicated Threads own independent persistent Platform execution contexts and never consume Task Worker capacity. A `DedicatedWorkerLease` is a separate critical-Task facility with exactly one isolated Worker; it is not a public Worker object and does not borrow from an ordinary pool.
+Tasks do not intrinsically own native execution contexts. Workers are internal reusable contexts. Dedicated Threads own independent persistent Platform execution contexts and never consume Task Worker capacity. A `DedicatedWorkerLease` is a separate critical-Task facility with exactly one isolated Worker; it does not borrow from an ordinary pool.
 
-## Platform boundary
+EDP-Platform owns native execution and synchronization mechanisms. EDP-Clock owns canonical monotonic time. Static Composition declares entitlement; Bootstrap realizes it. Threading does not expose FreeRTOS, ESP-IDF, Arduino or operating-system vocabulary through its public execution semantics.
 
-Threading consumes `EDP-Platform` execution and synchronization mechanisms. It does not expose FreeRTOS, ESP-IDF, Arduino or operating-system vocabulary through its public execution semantics.
+## Composition and topology
 
-Logical execution priority is Low, Normal, High or Critical. Processor affinity is expressed through Platform's logical affinity abstraction.
+`ThreadingTopology<...>` is the compile-time list of ordinary Task facilities, Dedicated Worker leases and Dedicated Threads. Each resource contributes a fixed number of managed sequential execution contexts. Prefix-sum topology metadata assigns every context a dense `ExecutionContextIndex`.
 
-Every managed sequential execution context owns one reusable targeted wake primitive. Dense topology-derived execution-context indices route wakes structurally; Threading does not maintain a RAM pointer registry.
+Requirements may constrain semantic identity, minimum stack capacity, minimum Worker concurrency, logical priority and affinity. Invalid or insufficient topology choices fail at compile time. Composition validates architecture; it is not a runtime service locator or dependency-injection container.
 
-## Time boundary
+## Concrete realization
 
-All monotonic deadlines and physical-duration calculations derive from the application-selected canonical `EDP-Clock` monotonic timeline. Native scheduler ticks are implementation mechanisms only. Internal wakes never restart a caller's timeout budget.
+`StaticThreadingRuntime` owns, in deterministic order:
 
-## Composition
+1. the authoritative infrastructure lifecycle;
+2. one targeted wake primitive per managed context;
+3. the structural managed-context router;
+4. application Dedicated Thread callable bindings;
+5. directly constructed heterogeneous runtime resources;
+6. the structural context resolver;
+7. the bounded shutdown-completion wait surface.
 
-`ThreadingTopology<...>` describes statically bounded execution resources. It derives resource counts and total managed execution-context capacity at compile time. A topology offers TaskExecution only when a general Task facility exists and DedicatedThreadExecution only when a Dedicated Thread exists.
+Routing is constructed in two phases: resources are constructed against the wake-capable router, then the completed structural resolver is bound. No managed execution is permitted during construction.
 
-Requirements may constrain semantic identity, minimum stack capacity, minimum Worker concurrency, logical priority and affinity. Invalid or insufficient topology choices fail at compile time.
+Resources are stored recursively in place, avoiding a requirement that already-constructed Platform provider or synchronization objects be movable merely to place them in a heterogeneous tuple.
 
-Composition validates architecture; it is not a runtime service locator or dependency-injection container.
+## Resource categories
+
+### TaskExecutionFacility
+
+Owns finite Task records, bounded callable/result payload storage, availability bitmap, intrusive FIFO admission state, bounded target-owned wait registrations and one persistent Platform execution context per declared Worker.
+
+### DedicatedWorkerLease
+
+Owns exactly one isolated Worker and one bounded Task facility. Ordinary Task facilities cannot consume that Worker. Storage and execution properties are declared with the lease.
+
+### DedicatedThread
+
+Owns one persistent Platform execution context and one stateful application callable. Infrastructure Start enters the persistent trampoline; semantic activation is controlled separately after global operational commit.
+
+## Platform and time boundaries
+
+Logical execution priority is Low, Normal, High or Critical. Processor affinity uses Platform's logical affinity abstraction.
+
+All monotonic deadlines and physical-duration calculations derive from the application-selected canonical EDP-Clock monotonic timeline. Native scheduler ticks are implementation mechanisms only. Internal wakes never restart a caller's timeout budget.
+
+## Wake and interruption routing
+
+Every managed sequential context owns one reusable targeted wake primitive. Wait targets store the smallest dense context index rather than context pointers. Current-context and interruption resolution scan the statically owned resource structure. There is no runtime service locator or per-context pointer registry.
 
 ## Bootstrap
 
-Initialization and infrastructure Start are separate phases. Initialization validates and realizes resources but starts no EDP-managed execution context. After the application's global initialization barrier, infrastructure contexts start in application-defined absolute order.
+Initialization and infrastructure Start are separate phases. Initialization validates and realizes resources but starts no EDP-managed execution context. Infrastructure contexts start only after initialization commits.
 
-Start is transactional: the first Platform Start failure prevents later Starts, requests cooperative termination of already-started trampolines, joins them, destroys all initialized context resources and never commits semantic activation.
+Start is transactional: the first Platform Start failure prevents later Starts, requests cooperative termination of already-started trampolines, joins them, destroys initialized context resources and never commits semantic activation.
 
 Task dispatch and Dedicated Thread semantic activation are valid only while the global Threading lifecycle is operational.
+
+## Empty topology
+
+`ThreadingTopology<>` is valid. It owns no Platform wake providers or managed execution resources. Wake-set, router, structural-resolver and shutdown-registration storage compile away.
