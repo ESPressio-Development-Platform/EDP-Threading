@@ -38,6 +38,7 @@ namespace Test {
     namespace Framework = ESPressio::System::CompositionFramework;
 
 
+    /// Deterministic test SpinLock provider used to validate lifecycle synchronization boundaries.
     class SpinLockProvider final : public Framework::Provider<
         ESPressio::Platform::Domain,
         Framework::Provides<
@@ -53,16 +54,34 @@ namespace Test {
 
         private:
 
+            // Test lock state.
+
+            /// Indicates whether the synthetic SpinLock is currently acquired.
             bool _acquired = false;
 
         public:
 
+            // Construction and lifetime.
+
+            /// Creates an initially released synthetic SpinLock.
             SpinLockProvider() noexcept = default;
+
+            /// Prevents copying synthetic lock ownership state.
             SpinLockProvider(const SpinLockProvider&) = delete;
+
+            /// Prevents copy assignment of synthetic lock ownership state.
             SpinLockProvider& operator =(const SpinLockProvider&) = delete;
+
+            /// Prevents moving synthetic lock ownership state.
             SpinLockProvider(SpinLockProvider&&) = delete;
+
+            /// Prevents move assignment of synthetic lock ownership state.
             SpinLockProvider& operator =(SpinLockProvider&&) = delete;
 
+
+            // Lock operations.
+
+            /// Acquires the synthetic SpinLock and asserts against recursive acquisition.
             void Acquire() noexcept {
                 assert(
                     !_acquired
@@ -71,6 +90,7 @@ namespace Test {
                 _acquired = true;
             }
 
+            /// Releases the synthetic SpinLock and asserts that it was owned.
             ESPressio::Platform::Synchronization::SpinLockReleaseResult Release() noexcept {
                 assert(
                     _acquired
@@ -80,11 +100,16 @@ namespace Test {
                 return ESPressio::Platform::Synchronization::SpinLockReleaseResult::Released;
             }
 
+
+            // Interrupt-context lock operations.
+
+            /// Acquires the synthetic SpinLock through the interrupt-context contract.
             ESPressio::Platform::Synchronization::SpinLockAcquireResult AcquireFromInterrupt() noexcept {
                 Acquire();
                 return ESPressio::Platform::Synchronization::SpinLockAcquireResult::Acquired;
             }
 
+            /// Releases the synthetic SpinLock through the interrupt-context contract.
             ESPressio::Platform::Synchronization::SpinLockReleaseResult ReleaseFromInterrupt() noexcept {
                 return Release();
             }
@@ -92,6 +117,7 @@ namespace Test {
     };
 
 
+    /// Reads one Boolean cancellation flag through the TaskContext type-erased predicate seam.
     inline bool CancellationFlag(
         const void* context
     ) noexcept {
@@ -101,6 +127,7 @@ namespace Test {
     }
 
 
+    /// Caller-storage-backed execution provider used by host-only Threading ownership tests.
     class ExecutionContextProvider final : public Framework::Provider<
         ESPressio::Platform::Domain,
         Framework::Provides<
@@ -121,16 +148,34 @@ namespace Test {
 
         private:
 
+            // Synthetic native-context state.
+
+            /// Indicates whether caller storage has been accepted successfully.
             bool _initialized = false;
 
         public:
 
+            // Construction and lifetime.
+
+            /// Creates an uninitialized synthetic execution provider.
             ExecutionContextProvider() noexcept = default;
+
+            /// Prevents copying synthetic execution state.
             ExecutionContextProvider(const ExecutionContextProvider&) = delete;
+
+            /// Prevents copy assignment of synthetic execution state.
             ExecutionContextProvider& operator =(const ExecutionContextProvider&) = delete;
+
+            /// Prevents moving synthetic execution state.
             ExecutionContextProvider(ExecutionContextProvider&&) = delete;
+
+            /// Prevents move assignment of synthetic execution state.
             ExecutionContextProvider& operator =(ExecutionContextProvider&&) = delete;
 
+
+            // Execution lifecycle.
+
+            /// Validates the expected caller-owned control and stack backing.
             ESPressio::Platform::Execution::ExecutionInitializationResult Initialize(
                 const ESPressio::Platform::Execution::ExecutionStorage& storage,
                 const ESPressio::Platform::Execution::ExecutionConfiguration&,
@@ -150,12 +195,14 @@ namespace Test {
                 return ESPressio::Platform::Execution::ExecutionInitializationResult::Succeeded;
             }
 
+            /// Starts execution only after successful initialization.
             ESPressio::Platform::Execution::ExecutionStartResult Start() noexcept {
                 return _initialized
                     ? ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
                     : ESPressio::Platform::Execution::ExecutionStartResult::InvalidState;
             }
 
+            /// Joins the synthetic execution context only while it remains initialized.
             ESPressio::Platform::Execution::ExecutionJoinResult Join(
                 ESPressio::Platform::Synchronization::WaitTimeout
             ) noexcept {
@@ -164,6 +211,7 @@ namespace Test {
                     : ESPressio::Platform::Execution::ExecutionJoinResult::InvalidState;
             }
 
+            /// Destroys the synthetic execution context and returns it to its initial state.
             ESPressio::Platform::Execution::ExecutionDestroyResult Destroy() noexcept {
                 if (!_initialized) {
                     return ESPressio::Platform::Execution::ExecutionDestroyResult::InvalidState;
@@ -173,32 +221,49 @@ namespace Test {
                 return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
             }
 
+
+            // Execution inspection.
+
+            /// Indicates that host test code is never executing inside this synthetic provider.
             bool IsCurrentContext() const noexcept {
                 return false;
             }
 
+            /// Returns unavailable stack telemetry for the synthetic provider.
             ESPressio::Platform::Execution::ExecutionStackTelemetry GetStackTelemetry() const noexcept {
                 return {};
             }
 
+
+            // Scheduling.
+
+            /// Provides a no-op yield implementation for host-only ownership tests.
             static void Yield() noexcept {}
 
     };
 
 
+    /// Minimal latched Signal provider used by deterministic host tests.
     class SignalProvider final {
 
         private:
 
+            // Signal state.
+
+            /// Indicates whether one synthetic wake notification is currently latched.
             bool _signaled = false;
 
         public:
 
+            // Signal operations.
+
+            /// Latches one wake notification.
             ESPressio::Platform::Synchronization::SignalNotifyResult Notify() noexcept {
                 _signaled = true;
                 return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
             }
 
+            /// Consumes one latched wake notification or reports timeout when none exists.
             ESPressio::Platform::Synchronization::SignalWaitResult Wait(
                 ESPressio::Platform::Synchronization::WaitTimeout
             ) noexcept {
@@ -213,16 +278,21 @@ namespace Test {
     };
 
 
+    /// Always-successful Mutex provider used to isolate Threading bookkeeping behavior in host tests.
     class MutexProvider final {
 
         public:
 
+            // Lock operations.
+
+            /// Reports immediate acquisition of the synthetic Mutex.
             ESPressio::Platform::Synchronization::LockAcquireResult Acquire(
                 ESPressio::Platform::Synchronization::WaitTimeout
             ) noexcept {
                 return ESPressio::Platform::Synchronization::LockAcquireResult::Acquired;
             }
 
+            /// Reports successful release of the synthetic Mutex.
             ESPressio::Platform::Synchronization::LockReleaseResult Release() noexcept {
                 return ESPressio::Platform::Synchronization::LockReleaseResult::Released;
             }
@@ -230,10 +300,14 @@ namespace Test {
     };
 
 
+    /// Fixed monotonic Clock returning the origin for deterministic wait-budget tests.
     class MonotonicClock final {
 
         public:
 
+            // Clock reading.
+
+            /// Returns the fixed monotonic origin.
             ESPressio::Clock::MonotonicTimestamp Now() const noexcept {
                 return ESPressio::Clock::MonotonicTimestamp::FromNanoseconds(
                     0U
@@ -243,28 +317,42 @@ namespace Test {
     };
 
 
+    /// Synthetic managed-context router used by facility and waiter tests.
     class ManagedContextRouter final {
-
-        public:
-
-            static constexpr std::size_t ContextCapacity = 3U;
 
         private:
 
+            // Wake accounting.
+
+            /// Counts targeted wake requests routed through the synthetic context.
             std::size_t _wakeCount = 0U;
 
         public:
 
+            // Context topology metadata.
+
+            /// Number of managed contexts represented by this synthetic router.
+            static constexpr std::size_t ContextCapacity = 3U;
+
+
+            // Context inspection.
+
+            /// Returns the first dense managed-context index as the active synthetic context.
             std::optional<std::uint8_t> CurrentContextIndex() const noexcept {
                 return static_cast<std::uint8_t>(0U);
             }
 
+            /// Indicates that the synthetic managed context has not been interrupted.
             bool IsInterrupted(
                 std::uint8_t
             ) const noexcept {
                 return false;
             }
 
+
+            // Wake operations.
+
+            /// Reports timeout for synthetic waits unless a higher-level test supplies another wake path.
             ESPressio::Platform::Synchronization::SignalWaitResult Wait(
                 std::uint8_t,
                 ESPressio::Platform::Synchronization::WaitTimeout
@@ -272,6 +360,7 @@ namespace Test {
                 return ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut;
             }
 
+            /// Records one targeted wake for the supplied managed context.
             ESPressio::Platform::Synchronization::SignalNotifyResult Wake(
                 std::uint8_t
             ) noexcept {
@@ -279,6 +368,10 @@ namespace Test {
                 return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
             }
 
+
+            // Wake inspection.
+
+            /// Returns the number of targeted wakes routed so far.
             std::size_t WakeCount() const noexcept {
                 return _wakeCount;
             }
@@ -286,14 +379,27 @@ namespace Test {
     };
 
 
+    /// Move-only result object used to verify exact destruction behavior.
     struct LifetimeResult final {
 
+        // Shared destruction accounting.
+
+        /// Counts active LifetimeResult instances whose destructors performed semantic destruction.
         inline static std::size_t DestructionCount = 0U;
 
+
+        // Instance lifetime state.
+
+        /// Indicates whether this instance still owns one destruction-accounting interest.
         bool Active = true;
 
+
+        // Construction and lifetime.
+
+        /// Creates an active result instance.
         LifetimeResult() noexcept = default;
 
+        /// Transfers destruction-accounting ownership from another result instance.
         LifetimeResult(
             LifetimeResult&& other
         ) noexcept :
@@ -301,10 +407,16 @@ namespace Test {
             other.Active = false;
         }
 
+        /// Prevents duplicating destruction-accounting ownership.
         LifetimeResult(const LifetimeResult&) = delete;
+
+        /// Prevents copy assignment of destruction-accounting ownership.
         LifetimeResult& operator =(const LifetimeResult&) = delete;
+
+        /// Prevents move assignment because only construction transfer is required by this test value.
         LifetimeResult& operator =(LifetimeResult&&) = delete;
 
+        /// Records destruction exactly once for the active ownership instance.
         ~LifetimeResult() {
             if (Active) {
                 ++DestructionCount;
@@ -314,14 +426,27 @@ namespace Test {
     };
 
 
+    /// Move-only callable used to verify exact callable destruction and result publication.
     struct LifetimeCallable final {
 
+        // Shared destruction accounting.
+
+        /// Counts active callable instances whose destructors performed semantic destruction.
         inline static std::size_t DestructionCount = 0U;
 
+
+        // Instance lifetime state.
+
+        /// Indicates whether this callable still owns one destruction-accounting interest.
         bool Active = true;
 
+
+        // Construction and lifetime.
+
+        /// Creates an active callable instance.
         LifetimeCallable() noexcept = default;
 
+        /// Transfers destruction-accounting ownership from another callable instance.
         LifetimeCallable(
             LifetimeCallable&& other
         ) noexcept :
@@ -329,16 +454,26 @@ namespace Test {
             other.Active = false;
         }
 
+        /// Prevents duplicating callable destruction-accounting ownership.
         LifetimeCallable(const LifetimeCallable&) = delete;
+
+        /// Prevents copy assignment of callable destruction-accounting ownership.
         LifetimeCallable& operator =(const LifetimeCallable&) = delete;
+
+        /// Prevents move assignment because only construction transfer is required by this test callable.
         LifetimeCallable& operator =(LifetimeCallable&&) = delete;
 
+        /// Records callable destruction exactly once for the active ownership instance.
         ~LifetimeCallable() {
             if (Active) {
                 ++DestructionCount;
             }
         }
 
+
+        // Invocation.
+
+        /// Produces a fresh lifetime-tracked Task result.
         LifetimeResult operator ()() noexcept {
             return LifetimeResult{};
         }
@@ -346,17 +481,28 @@ namespace Test {
     };
 
 
+    /// Synthetic Task resource used to validate shutdown cancellation traversal.
     class ShutdownTaskResource final {
 
         public:
 
+            // Shutdown test state.
+
+            /// Indicates whether shutdown cancellation traversal reached this resource.
             bool CancellationStarted = false;
+
+            /// Indicates whether the synthetic Task resource currently reports execution quiescence.
             bool Quiescent = true;
 
+
+            // Shutdown operations.
+
+            /// Records that shutdown cancellation has begun.
             void BeginShutdownCancellation() noexcept {
                 CancellationStarted = true;
             }
 
+            /// Indicates whether this synthetic Task resource is execution-quiescent.
             bool IsExecutionQuiescent() noexcept {
                 return Quiescent;
             }
@@ -364,18 +510,29 @@ namespace Test {
     };
 
 
+    /// Synthetic Dedicated Thread resource used to validate shutdown stop traversal.
     class ShutdownThreadResource final {
 
         public:
 
+            // Shutdown test state.
+
+            /// Indicates whether cooperative stop was requested.
             bool StopRequested = false;
+
+            /// Indicates whether the synthetic Dedicated Thread currently reports execution quiescence.
             bool Quiescent = true;
 
+
+            // Shutdown operations.
+
+            /// Records a cooperative stop request.
             ESPressio::Threading::ThreadStopRequestResult RequestStop() noexcept {
                 StopRequested = true;
                 return ESPressio::Threading::ThreadStopRequestResult::Accepted;
             }
 
+            /// Indicates whether this synthetic Dedicated Thread is execution-quiescent.
             bool IsExecutionQuiescent() noexcept {
                 return Quiescent;
             }
@@ -383,24 +540,45 @@ namespace Test {
     };
 
 
+    /// Synthetic infrastructure resource used to validate transactional Start rollback.
     class LifecycleResource final {
 
         private:
 
+            // Configured failure behavior.
+
+            /// Indicates whether StartInfrastructure should simulate provider failure.
             bool _failStart;
 
         public:
 
+            // Lifecycle call accounting.
+
+            /// Counts infrastructure Start attempts.
             std::size_t StartCount = 0U;
+
+            /// Counts infrastructure termination requests.
             std::size_t TerminationWakeCount = 0U;
+
+            /// Counts infrastructure Join attempts.
             std::size_t JoinCount = 0U;
+
+            /// Counts infrastructure Destroy attempts.
             std::size_t DestroyCount = 0U;
 
+
+            // Construction.
+
+            /// Creates one lifecycle resource with optional Start failure injection.
             explicit LifecycleResource(
                 bool failStart = false
             ) noexcept :
                 _failStart(failStart) {}
 
+
+            // Infrastructure lifecycle.
+
+            /// Starts synthetic infrastructure or returns the configured failure.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
                 ++StartCount;
 
@@ -409,10 +587,12 @@ namespace Test {
                     : ESPressio::Platform::Execution::ExecutionStartResult::Succeeded;
             }
 
+            /// Records one cooperative infrastructure termination request.
             void RequestInfrastructureTermination() noexcept {
                 ++TerminationWakeCount;
             }
 
+            /// Records one infrastructure Join and reports success.
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout
             ) noexcept {
@@ -420,6 +600,7 @@ namespace Test {
                 return ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
             }
 
+            /// Records one infrastructure Destroy and reports success.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 ++DestroyCount;
                 return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
@@ -428,15 +609,24 @@ namespace Test {
     };
 
 
+    /// Semantic identity used by Dedicated Thread handle tests.
     struct DedicatedThreadIdentity final {};
 
+
+    /// Semantic identity intentionally absent from the test topology.
     struct UndeclaredThreadIdentity final {};
 
+
+    /// Unsupported execution-property marker used by compile-time validation tests.
     struct UnknownExecutionProperty final {};
 
 
+    /// Application callable bound to the synthetic Dedicated Thread.
     struct DedicatedCallable final {
 
+        // Invocation.
+
+        /// Observes the current cooperative-stop predicate without retaining runtime state.
         void operator ()(
             ESPressio::Threading::ThreadContext& context
         ) noexcept {
@@ -448,17 +638,25 @@ namespace Test {
     };
 
 
+    /// Semantic identity of the ordinary Task facility used throughout foundation tests.
     struct OrdinaryPool final {};
 
 
+    /// Semantic identity of the Dedicated Thread used for telemetry-oriented topology checks.
     struct TelemetryThread final {};
 
 
+    /// Minimal record providing intrusive queue linkage for queue-behavior tests.
     struct QueueRecord final {
+
+        // Queue linkage.
 
         /// Compact intrusive queue-link storage.
         ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueLink =
             ESPressio::Threading::Detail::SmallestIndex<3U>::Invalid;
+
+
+        // Queue-link operations.
 
         /// Stores the next queued record index.
         void SetQueueNext(
@@ -475,7 +673,10 @@ namespace Test {
     };
 
 
+    /// Stateless callable returning a deterministic integer result.
     struct ReturningCallable final {
+
+        // Invocation.
 
         /// Produces one deterministic test result.
         int operator ()() const noexcept {
@@ -485,7 +686,10 @@ namespace Test {
     };
 
 
+    /// Callable that acknowledges cooperative Task cancellation through TaskCompletion.
     struct CancellationAwareCallable final {
+
+        // Invocation.
 
         /// Acknowledges cooperative cancellation when requested.
         ESPressio::Threading::TaskCompletion<int> operator ()(
