@@ -413,7 +413,9 @@ namespace ESPressio::Threading::Detail {
                 >;
 
                 record.PayloadOperations = &Adapter::Operations;
-                record.QueueNext = IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex;
+                record.SetQueueNext(
+                    IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex
+                );
 
                 _queue.Push(
                     _records,
