@@ -200,6 +200,7 @@ namespace ESPressio::Threading {
         };
 
 
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class... TProperties>
         struct ValidExecutionResourceProperties {
 
@@ -444,6 +445,7 @@ namespace ESPressio::Threading {
         };
 
 
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class... TProperties>
         struct ValidDedicatedWorkerStorage {
 
@@ -456,6 +458,7 @@ namespace ESPressio::Threading {
         };
 
 
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class... TProperties>
         struct ResolvedDedicatedWorkerStorage {
 
@@ -474,6 +477,7 @@ namespace ESPressio::Threading {
         };
 
 
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class... TProperties>
         struct ResolvedExecutionResourceProperties {
 
@@ -532,6 +536,7 @@ namespace ESPressio::Threading {
     } // ESPressio::Threading::Detail
 
 
+    /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
     template<class... TProperties>
     struct ResourceProperties final {
 
@@ -555,6 +560,7 @@ namespace ESPressio::Threading {
     };
 
 
+    /// @tparam TWorkerProperties Compile-time execution-property Types declared for the Worker.
     template<class... TWorkerProperties>
     struct Worker final {
 
@@ -569,6 +575,7 @@ namespace ESPressio::Threading {
     };
 
 
+    /// @tparam TWorkers Worker declaration Types contained by this Worker/resource pack.
     template<class... TWorkers>
     struct Workers final {
 
@@ -615,6 +622,7 @@ namespace ESPressio::Threading {
 
     /// Defines the compile-time contract for `DedicatedWorkerLease`.
     /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+    /// @tparam TWorkerProperties Compile-time execution-property Types declared for the Worker.
     template<class TTaskIdentity, class... TWorkerProperties>
     struct DedicatedWorkerLease final {
 
@@ -759,6 +767,7 @@ namespace ESPressio::Threading {
 
     /// Defines the compile-time contract for `DedicatedThread`.
     /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// @tparam TThreadProperties Compile-time execution-property Types declared for the Dedicated Thread.
     template<class TThreadIdentity, class... TThreadProperties>
     struct DedicatedThread final {
 
@@ -833,6 +842,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `ManagedContextCount`.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TTaskIdentity, class... TProperties>
         struct ManagedContextCount<
             DedicatedWorkerLease<TTaskIdentity, TProperties...>
@@ -846,6 +856,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `ManagedContextCount`.
         /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TThreadIdentity, class... TProperties>
         struct ManagedContextCount<
             DedicatedThread<TThreadIdentity, TProperties...>
@@ -870,6 +881,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `IsDedicatedWorkerLease`.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TTaskIdentity, class... TProperties>
         struct IsDedicatedWorkerLease<DedicatedWorkerLease<TTaskIdentity, TProperties...>> {
 
@@ -892,6 +904,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `IsDedicatedThread`.
         /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+        /// @tparam TThreadProperties Compile-time execution-property Types declared for the Dedicated Thread.
         template<class TThreadIdentity, class... TThreadProperties>
         struct IsDedicatedThread<DedicatedThread<TThreadIdentity, TThreadProperties...>> {
 
@@ -939,6 +952,8 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceIdentityConflict`.
         /// @tparam TLeftThreadIdentity Semantic identity Type of the left Dedicated Thread.
         /// @tparam TRightThreadIdentity Semantic identity Type of the right Dedicated Thread.
+        /// @tparam TLeftProperties Compile-time property Types declared by the left resource in this comparison.
+        /// @tparam TRightProperties Compile-time property Types declared by the right resource in this comparison.
         template<class TLeftThreadIdentity, class... TLeftProperties, class TRightThreadIdentity, class... TRightProperties>
         struct ResourceIdentityConflict<
             DedicatedThread<TLeftThreadIdentity, TLeftProperties...>,
@@ -954,6 +969,8 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceIdentityConflict`.
         /// @tparam TLeftTaskIdentity Semantic identity Type of the left Dedicated Worker task.
         /// @tparam TRightTaskIdentity Semantic identity Type of the right Dedicated Worker task.
+        /// @tparam TLeftProperties Compile-time property Types declared by the left resource in this comparison.
+        /// @tparam TRightProperties Compile-time property Types declared by the right resource in this comparison.
         template<class TLeftTaskIdentity, class... TLeftProperties, class TRightTaskIdentity, class... TRightProperties>
         struct ResourceIdentityConflict<
             DedicatedWorkerLease<TLeftTaskIdentity, TLeftProperties...>,
@@ -966,6 +983,7 @@ namespace ESPressio::Threading {
         };
 
 
+        /// @tparam TResources Topology resource Types inspected or represented by this compile-time operation.
         template<class... TResources>
         struct UniqueResourceIdentities;
 
@@ -981,6 +999,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `UniqueResourceIdentities`.
         /// @tparam TFirstResource First topology resource Type in the recursive uniqueness check.
+        /// @tparam TRestResources Remaining topology resource Types inspected by the recursive operation.
         template<class TFirstResource, class... TRestResources>
         struct UniqueResourceIdentities<TFirstResource, TRestResources...> {
 
@@ -1033,6 +1052,7 @@ namespace ESPressio::Threading {
     } // ESPressio::Threading::Detail
 
 
+    /// @tparam TResources Topology resource Types inspected or represented by this compile-time operation.
     template<class... TResources>
     struct ThreadingTopology final : Detail::TopologyProviderBase<
         (Detail::IsTaskFacility<TResources>::Value || ... || false),
@@ -1083,6 +1103,7 @@ namespace ESPressio::Threading {
 
     /// Defines the compile-time contract for `TaskPoolRequirement`.
     /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
+    /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
     template<class TPoolIdentity, class... TConstraints>
     struct TaskPoolRequirement final {
 
@@ -1094,6 +1115,7 @@ namespace ESPressio::Threading {
 
     /// Defines the compile-time contract for `DedicatedThreadRequirement`.
     /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
     template<class TThreadIdentity, class... TConstraints>
     struct DedicatedThreadRequirement final {
 
@@ -1105,6 +1127,7 @@ namespace ESPressio::Threading {
 
     /// Defines the compile-time contract for `DedicatedWorkerRequirement`.
     /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+    /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
     template<class TTaskIdentity, class... TConstraints>
     struct DedicatedWorkerRequirement final {
 
@@ -1160,6 +1183,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `MatchesDedicatedThreadIdentity`.
         /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TIdentity, class... TProperties>
         struct MatchesDedicatedThreadIdentity<
             TIdentity,
@@ -1186,6 +1210,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `MatchesDedicatedWorkerIdentity`.
         /// @tparam TIdentity Semantic identity Type being matched against the inspected topology resource.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TIdentity, class... TProperties>
         struct MatchesDedicatedWorkerIdentity<
             TIdentity,
@@ -1207,6 +1232,8 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `RequirementSatisfied`.
         /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
+        /// @tparam TResources Topology resource Types inspected or represented by this compile-time operation.
+        /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
         template<class... TResources, class TPoolIdentity, class... TConstraints>
         struct RequirementSatisfied<
             ThreadingTopology<TResources...>,
@@ -1222,6 +1249,8 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `RequirementSatisfied`.
         /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+        /// @tparam TResources Topology resource Types inspected or represented by this compile-time operation.
+        /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
         template<class... TResources, class TThreadIdentity, class... TConstraints>
         struct RequirementSatisfied<
             ThreadingTopology<TResources...>,
@@ -1237,6 +1266,8 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `RequirementSatisfied`.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+        /// @tparam TResources Topology resource Types inspected or represented by this compile-time operation.
+        /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
         template<class... TResources, class TTaskIdentity, class... TConstraints>
         struct RequirementSatisfied<
             ThreadingTopology<TResources...>,
@@ -1300,6 +1331,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `HasMinimumStackCapacity`.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<std::size_t TMinimum, class... TProperties>
         struct HasMinimumStackCapacity;
 
@@ -1318,6 +1350,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `HasMinimumStackCapacity`.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
         /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
+        /// @tparam TRest Remaining property/value Types inspected by the recursive compile-time operation.
         template<std::size_t TMinimum, std::size_t TCapacity, class... TRest>
         struct HasMinimumStackCapacity<
             TMinimum,
@@ -1334,6 +1367,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `HasMinimumStackCapacity`.
         /// @tparam TFirst First property Type in the recursive compile-time search.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TRest Remaining property/value Types inspected by the recursive compile-time operation.
         template<std::size_t TMinimum, class TFirst, class... TRest>
         struct HasMinimumStackCapacity<
             TMinimum,
@@ -1344,6 +1378,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `HasMinimumPriority`.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<ThreadPriority TMinimum, class... TProperties>
         struct HasMinimumPriority;
 
@@ -1362,6 +1397,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `HasMinimumPriority`.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
         /// @tparam TValue Compile-time value being compared with the minimum.
+        /// @tparam TRest Remaining property/value Types inspected by the recursive compile-time operation.
         template<ThreadPriority TMinimum, ThreadPriority TValue, class... TRest>
         struct HasMinimumPriority<
             TMinimum,
@@ -1380,6 +1416,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `HasMinimumPriority`.
         /// @tparam TFirst First property Type in the recursive compile-time search.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TRest Remaining property/value Types inspected by the recursive compile-time operation.
         template<ThreadPriority TMinimum, class TFirst, class... TRest>
         struct HasMinimumPriority<
             TMinimum,
@@ -1390,6 +1427,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `HasRequiredAffinity`.
         /// @tparam TRequiredAffinity Affinity Type required by the consumer constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TRequiredAffinity, class... TProperties>
         struct HasRequiredAffinity;
 
@@ -1408,6 +1446,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `HasRequiredAffinity`.
         /// @tparam TRequiredAffinity Affinity Type required by the consumer constraint.
         /// @tparam TFirst First property Type in the recursive compile-time search.
+        /// @tparam TRest Remaining property/value Types inspected by the recursive compile-time operation.
         template<class TRequiredAffinity, class TFirst, class... TRest>
         struct HasRequiredAffinity<
             TRequiredAffinity,
@@ -1437,6 +1476,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `WorkerConstraintSatisfied`.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class... TProperties, std::size_t TMinimum>
         struct WorkerConstraintSatisfied<
             Worker<TProperties...>,
@@ -1452,6 +1492,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `WorkerConstraintSatisfied`.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class... TProperties, ThreadPriority TMinimum>
         struct WorkerConstraintSatisfied<
             Worker<TProperties...>,
@@ -1467,6 +1508,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `WorkerConstraintSatisfied`.
         /// @tparam TAffinity Affinity requirement Type.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class... TProperties, class TAffinity>
         struct WorkerConstraintSatisfied<
             Worker<TProperties...>,
@@ -1489,6 +1531,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `EveryWorkerSatisfies`.
         /// @tparam TConstraint Constraint Type being evaluated.
+        /// @tparam TWorkers Worker declaration Types contained by this Worker/resource pack.
         template<class... TWorkers, class TConstraint>
         struct EveryWorkerSatisfies<
             Workers<TWorkers...>,
@@ -1556,6 +1599,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceConstraintSatisfied`.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TTaskIdentity, class... TProperties, std::size_t TMinimum>
         struct ResourceConstraintSatisfied<
             DedicatedWorkerLease<TTaskIdentity, TProperties...>,
@@ -1571,6 +1615,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceConstraintSatisfied`.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TTaskIdentity, class... TProperties, std::size_t TMinimum>
         struct ResourceConstraintSatisfied<
             DedicatedWorkerLease<TTaskIdentity, TProperties...>,
@@ -1587,6 +1632,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceConstraintSatisfied`.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TTaskIdentity, class... TProperties, ThreadPriority TMinimum>
         struct ResourceConstraintSatisfied<
             DedicatedWorkerLease<TTaskIdentity, TProperties...>,
@@ -1603,6 +1649,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceConstraintSatisfied`.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
         /// @tparam TAffinity Affinity requirement Type.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TTaskIdentity, class... TProperties, class TAffinity>
         struct ResourceConstraintSatisfied<
             DedicatedWorkerLease<TTaskIdentity, TProperties...>,
@@ -1619,6 +1666,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceConstraintSatisfied`.
         /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TThreadIdentity, class... TProperties, std::size_t TMinimum>
         struct ResourceConstraintSatisfied<
             DedicatedThread<TThreadIdentity, TProperties...>,
@@ -1635,6 +1683,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceConstraintSatisfied`.
         /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
         /// @tparam TMinimum Compile-time minimum value required by the constraint.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TThreadIdentity, class... TProperties, ThreadPriority TMinimum>
         struct ResourceConstraintSatisfied<
             DedicatedThread<TThreadIdentity, TProperties...>,
@@ -1651,6 +1700,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceConstraintSatisfied`.
         /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
         /// @tparam TAffinity Affinity requirement Type.
+        /// @tparam TProperties Compile-time resource/property Types supplied to this declaration or trait specialization.
         template<class TThreadIdentity, class... TProperties, class TAffinity>
         struct ResourceConstraintSatisfied<
             DedicatedThread<TThreadIdentity, TProperties...>,
@@ -1679,6 +1729,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceSatisfiesRequirement`.
         /// @tparam TResource Topology resource Type being classified or inspected.
         /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
+        /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
         template<class TResource, class TPoolIdentity, class... TConstraints>
         struct ResourceSatisfiesRequirement<
             TResource,
@@ -1696,6 +1747,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceSatisfiesRequirement`.
         /// @tparam TResource Topology resource Type being classified or inspected.
         /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+        /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
         template<class TResource, class TThreadIdentity, class... TConstraints>
         struct ResourceSatisfiesRequirement<
             TResource,
@@ -1713,6 +1765,7 @@ namespace ESPressio::Threading {
         /// Defines the compile-time contract for `ResourceSatisfiesRequirement`.
         /// @tparam TResource Topology resource Type being classified or inspected.
         /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+        /// @tparam TConstraints Compile-time requirement constraint Types evaluated by this requirement.
         template<class TResource, class TTaskIdentity, class... TConstraints>
         struct ResourceSatisfiesRequirement<
             TResource,
@@ -1736,6 +1789,7 @@ namespace ESPressio::Threading {
 
         /// Defines the compile-time contract for `ConstrainedRequirementSatisfied`.
         /// @tparam TRequirement Compile-time Threading requirement Type being evaluated.
+        /// @tparam TResources Topology resource Types inspected or represented by this compile-time operation.
         template<class... TResources, class TRequirement>
         struct ConstrainedRequirementSatisfied<
             ThreadingTopology<TResources...>,
