@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <tuple>
 #include <type_traits>
@@ -224,6 +225,48 @@ namespace ESPressio::Threading::Detail {
             ThreadingStartResult Start() noexcept {
                 return StartAll(
                     std::make_index_sequence<TTopology::ResourceCount>{}
+                );
+            }
+
+            template<std::size_t... TResourceIndices>
+            ThreadingStartResult StartInOrder() noexcept {
+                static_assert(
+                    sizeof...(TResourceIndices) == TTopology::ResourceCount,
+                    "StartInOrder must name every topology resource exactly once"
+                );
+
+                static_assert(
+                    (
+                        (TResourceIndices < TTopology::ResourceCount) &&
+                        ... &&
+                        true
+                    ),
+                    "StartInOrder contains a topology resource index outside the declared range"
+                );
+
+                constexpr std::array<std::size_t, TTopology::ResourceCount> order{
+                    TResourceIndices...
+                };
+
+                constexpr bool unique = []() constexpr {
+                    for (std::size_t left = 0U; left < order.size(); ++left) {
+                        for (std::size_t right = left + 1U; right < order.size(); ++right) {
+                            if (order[left] == order[right]) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    return true;
+                }();
+
+                static_assert(
+                    unique,
+                    "StartInOrder must name every topology resource exactly once"
+                );
+
+                return _bootstrap.Start(
+                    _resources.template Get<TResourceIndices>()...
                 );
             }
 
