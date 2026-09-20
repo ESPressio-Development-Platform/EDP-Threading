@@ -635,7 +635,13 @@ namespace ESPressio::Threading::Detail {
                 }
 
                 _bootstrap.LifecycleState().PublishShutdownComplete();
-                _shutdownWait.WakeCompleted();
+
+                if (
+                    _shutdownWait.WakeCompleted() !=
+                    ShutdownWaitWakeResult::Succeeded
+                ) {
+                    return ThreadingFinalizationResult::ProviderFailure;
+                }
 
                 return ThreadingFinalizationResult::Completed;
             }
