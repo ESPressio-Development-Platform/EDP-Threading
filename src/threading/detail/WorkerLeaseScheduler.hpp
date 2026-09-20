@@ -115,6 +115,29 @@ namespace ESPressio::Threading::Detail {
                 return WorkerAvailabilityResult::Available;
             }
 
+            /// Attempts to reserve one specific Worker when it belongs to this facility and is available.
+            std::optional<ContextIndex> TryClaimSpecific(
+                ContextIndex contextIndex
+            ) noexcept {
+                if (!IsWorkerContext(
+                    contextIndex
+                )) {
+                    return std::nullopt;
+                }
+
+                if (
+                    _availableWorkers.TryClaimSpecific(
+                        WorkerOrdinal(
+                            contextIndex
+                        )
+                    ) != AvailabilityClaimResult::Claimed
+                ) {
+                    return std::nullopt;
+                }
+
+                return contextIndex;
+            }
+
             /// Attempts to reserve the lowest-index currently available Worker.
             std::optional<ContextIndex> TryClaimAvailable() noexcept {
                 std::size_t workerOrdinal = 0U;
