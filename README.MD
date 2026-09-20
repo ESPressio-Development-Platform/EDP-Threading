@@ -6,9 +6,11 @@ The library is intentionally layered above `EDP-Platform`: Platform owns native 
 
 ## Current implementation status
 
-The v1 implementation is in active development on `main`. Public vocabulary, compile-time topology declarations, move-only Task/Thread handles and compact Task-record foundations are present. Runtime facility/Worker/Dedicated-Thread machinery is being completed under the normative architecture recorded in the Policy repository.
+The v1 runtime architecture is implemented on `main` through the host-validation stage. The implementation includes compile-time topology/requirements, bounded Task facilities, FIFO Worker-Lease scheduling, isolated single-Worker `DedicatedWorkerLease` resources, persistent restart-safe Dedicated Threads, dense targeted wake routing, canonical monotonic waits/sleep, transactional infrastructure Start/rollback, and terminal cooperative shutdown.
 
-No documentation below should be interpreted as validation of runtime behavior that has not yet been implemented and tested.
+The implementation deliberately contains no hidden heap fallback or unbounded EDP-controlled runtime growth.
+
+Host/provider/target compilation and resource-layout evidence remain completion gates. Runtime behavior should not be treated as released until those validation gates are recorded.
 
 ## Documentation
 
