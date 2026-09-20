@@ -549,6 +549,16 @@ namespace ESPressio::Threading {
     template<class TThreadIdentity, class TCallable>
     class DedicatedThreadBinding final {
 
+        static_assert(
+            std::is_move_constructible_v<TCallable>,
+            "Dedicated Thread callable bindings require move-constructible callables"
+        );
+
+        static_assert(
+            std::is_nothrow_destructible_v<TCallable>,
+            "Dedicated Thread callable bindings require nothrow-destructible callables"
+        );
+
         private:
 
             TCallable _callable;
