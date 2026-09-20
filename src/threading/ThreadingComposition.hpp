@@ -167,6 +167,91 @@ namespace ESPressio::Threading {
     } // ESPressio::Threading::Detail
 
 
+    namespace Detail {
+
+        template<class TProperty>
+        struct StackCapacityValue {
+
+            static constexpr std::size_t Value = 0U;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct StackCapacityValue<StackCapacity<TCapacity>> {
+
+            static constexpr std::size_t Value = TCapacity;
+
+        };
+
+
+        template<class TProperty>
+        struct PriorityValue {
+
+            static constexpr ThreadPriority Value = ThreadPriority::Normal;
+
+        };
+
+
+        template<ThreadPriority TPriority>
+        struct PriorityValue<Priority<TPriority>> {
+
+            static constexpr ThreadPriority Value = TPriority;
+
+        };
+
+
+        template<class TProperty>
+        struct AffinityValue {
+
+            static constexpr ProcessorAffinity Value = ProcessorAffinity::Any();
+
+        };
+
+
+        template<std::uint32_t TProcessorIndex>
+        struct AffinityValue<Affinity<TProcessorIndex>> {
+
+            static constexpr ProcessorAffinity Value = Affinity<TProcessorIndex>::Value;
+
+        };
+
+
+        template<>
+        struct AffinityValue<AnyAffinity> {
+
+            static constexpr ProcessorAffinity Value = AnyAffinity::Value;
+
+        };
+
+
+        template<class... TProperties>
+        struct ResolvedExecutionResourceProperties {
+
+            static constexpr std::size_t StackCapacity =
+                (StackCapacityValue<TProperties>::Value + ... + 0U);
+
+            static constexpr ThreadPriority Priority = []() constexpr {
+                ThreadPriority result = ThreadPriority::Normal;
+                ((result = IsPriorityProperty<TProperties>::Value
+                    ? PriorityValue<TProperties>::Value
+                    : result), ...);
+                return result;
+            }();
+
+            static constexpr ProcessorAffinity Affinity = []() constexpr {
+                ProcessorAffinity result = ProcessorAffinity::Any();
+                ((result = IsAffinityProperty<TProperties>::Value
+                    ? AffinityValue<TProperties>::Value
+                    : result), ...);
+                return result;
+            }();
+
+        };
+
+    } // ESPressio::Threading::Detail
+
+
     template<class... TProperties>
     struct ResourceProperties final {
 
@@ -176,6 +261,12 @@ namespace ESPressio::Threading {
         );
 
         static constexpr std::size_t Count = sizeof...(TProperties);
+        static constexpr std::size_t StackCapacity =
+            Detail::ResolvedExecutionResourceProperties<TProperties...>::StackCapacity;
+        static constexpr ThreadPriority Priority =
+            Detail::ResolvedExecutionResourceProperties<TProperties...>::Priority;
+        static constexpr ProcessorAffinity Affinity =
+            Detail::ResolvedExecutionResourceProperties<TProperties...>::Affinity;
 
     };
 
