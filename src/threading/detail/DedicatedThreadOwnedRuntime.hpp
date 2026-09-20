@@ -44,11 +44,15 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            // Realized declaration and runtime Types.
+
+            /// Static Dedicated Thread declaration Type realized by this owned resource.
             using Declaration = DedicatedThread<
                 TThreadIdentity,
                 TProperties...
             >;
 
+            /// Concrete Dedicated Thread runtime Type realized from the static declaration and bound callable.
             using Runtime = DedicatedThreadRuntime<
                 TThreadIdentity,
                 TCallable,
@@ -59,12 +63,20 @@ namespace ESPressio::Threading::Detail {
                 TManagedContextRouter
             >;
 
+            /// Topology-owned concrete Dedicated Thread runtime.
             Runtime _runtime;
 
         public:
 
+            // Public Type vocabulary.
+
+            /// Semantic identity Type of this Dedicated Thread.
             using ThreadIdentity = TThreadIdentity;
+
+            /// Application callable Type bound to this Dedicated Thread.
             using Callable = TCallable;
+
+            /// Public alias exposing the concrete owned runtime Type.
             using RuntimeType = Runtime;
 
 
