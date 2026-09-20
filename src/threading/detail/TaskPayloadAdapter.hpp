@@ -10,6 +10,10 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `TaskPayloadAdapter`.
+    /// @tparam TRecord Task-record Type whose callable/result payload is adapted.
+    /// @tparam TCallable Callable Type being dispatched or adapted.
+    /// @tparam TResult Result Type stored in the Task record.
     template<class TRecord, class TCallable, class TResult>
     struct TaskPayloadAdapter final {
 
@@ -120,6 +124,9 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskPayloadAdapter`.
+    /// @tparam TRecord Task-record Type whose callable/result payload is adapted.
+    /// @tparam TCallable Callable Type being dispatched or adapted.
     template<class TRecord, class TCallable>
     struct TaskPayloadAdapter<TRecord, TCallable, void> final {
 
