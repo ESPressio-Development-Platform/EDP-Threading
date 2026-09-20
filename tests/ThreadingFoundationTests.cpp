@@ -544,8 +544,9 @@ namespace Test {
             // Shutdown operations.
 
             /// Records that shutdown cancellation has begun.
-            void BeginShutdownCancellation() noexcept {
+            ESPressio::Threading::Detail::TaskFacilityShutdownCancellationResult BeginShutdownCancellation() noexcept {
                 CancellationStarted = true;
+                return ESPressio::Threading::Detail::TaskFacilityShutdownCancellationResult::Applied;
             }
 
             /// Indicates whether this synthetic Task resource is execution-quiescent.
