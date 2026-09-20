@@ -9,13 +9,21 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Resolves the currently executing managed context structurally from owned topology resources.
+    ///
+    /// @tparam TContextCapacity Number of managed execution contexts in the topology.
+    /// @tparam TResources Concrete statically owned runtime resource Types participating in resolution.
+    template<std::size_t TContextCapacity, class... TResources>
+    class StructuralContextResolver;
+
+
+    /// Empty-topology resolver specialization retaining no resource references.
     template<>
     class StructuralContextResolver<0U> final {
 
         public:
 
-            using ContextIndex =
-                typename ExecutionContextIndexTraits<0U>::Type;
+            using ContextIndex = typename SmallestIndex<1U>::Type;
 
 
             static std::optional<ContextIndex> ResolveCurrentThunk(
