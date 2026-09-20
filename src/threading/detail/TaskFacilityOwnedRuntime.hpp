@@ -164,38 +164,52 @@ namespace ESPressio::Threading::Detail {
             }
 
             template<std::size_t TIndex>
-            void JoinNext(
+            ESPressio::Platform::Execution::ExecutionJoinResult JoinNext(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
                 if constexpr (
-                    TIndex < sizeof...(TWorkers)
+                    TIndex == sizeof...(TWorkers)
                 ) {
-                    static_cast<void>(
-                        std::get<TIndex>(
-                            _workers
-                        ).Join(
-                            timeout
-                        )
+                    return ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
+                } else {
+                    const auto result = std::get<TIndex>(
+                        _workers
+                    ).Join(
+                        timeout
                     );
 
-                    JoinNext<TIndex + 1U>(
+                    if (
+                        result !=
+                        ESPressio::Platform::Execution::ExecutionJoinResult::Joined
+                    ) {
+                        return result;
+                    }
+
+                    return JoinNext<TIndex + 1U>(
                         timeout
                     );
                 }
             }
 
             template<std::size_t TIndex>
-            void DestroyNext() noexcept {
+            ESPressio::Platform::Execution::ExecutionDestroyResult DestroyNext() noexcept {
                 if constexpr (
-                    TIndex < sizeof...(TWorkers)
+                    TIndex == sizeof...(TWorkers)
                 ) {
-                    static_cast<void>(
-                        std::get<TIndex>(
-                            _workers
-                        ).Destroy()
-                    );
+                    return ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
+                } else {
+                    const auto result = std::get<TIndex>(
+                        _workers
+                    ).Destroy();
 
-                    DestroyNext<TIndex + 1U>();
+                    if (
+                        result !=
+                        ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed
+                    ) {
+                        return result;
+                    }
+
+                    return DestroyNext<TIndex + 1U>();
                 }
             }
 
@@ -257,17 +271,13 @@ namespace ESPressio::Threading::Detail {
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
-                JoinNext<0U>(
+                return JoinNext<0U>(
                     timeout
                 );
-
-                return ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
             }
 
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
-                DestroyNext<0U>();
-
-                return ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
+                return DestroyNext<0U>();
             }
 
 
