@@ -13,13 +13,13 @@
 
 namespace ESPressio::Threading::Detail {
 
-    /// Defines the compile-time contract for `IsDedicatedThreadBindingFor`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Determines whether one binding targets a specific Dedicated Thread identity.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread being matched.
     /// @tparam TBinding Dedicated Thread binding Type being inspected.
     template<class TThreadIdentity, class TBinding>
     struct IsDedicatedThreadBindingFor {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = false;
 
     };
@@ -34,18 +34,19 @@ namespace ESPressio::Threading::Detail {
         DedicatedThreadBinding<TThreadIdentity, TCallable>
     > {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = true;
 
     };
 
 
-    /// Defines the compile-time contract for `DedicatedThreadBindingCount`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Counts bindings that target one Dedicated Thread identity.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread being counted.
+    /// @tparam TBindings Binding Types searched for matching Thread identities.
     template<class TThreadIdentity, class... TBindings>
     struct DedicatedThreadBindingCount {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Number of matching Dedicated Thread bindings found in the supplied binding pack.
         static constexpr std::size_t Value =
             (
                 static_cast<std::size_t>(
@@ -61,21 +62,23 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `DedicatedThreadBindingType`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Resolves the binding Type associated with one Dedicated Thread identity.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread being resolved.
+    /// @tparam TBindings Binding Types searched for the matching Thread identity.
     template<class TThreadIdentity, class... TBindings>
     struct DedicatedThreadBindingType;
 
 
-    /// Defines the compile-time contract for `DedicatedThreadBindingTypeFromTuple`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Resolves one Dedicated Thread binding from an application binding tuple.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread being resolved.
     /// @tparam TBindings Tuple Type containing application Dedicated Thread callable bindings.
     template<class TThreadIdentity, class TBindings>
     struct DedicatedThreadBindingTypeFromTuple;
 
 
-    /// Defines the compile-time contract for `DedicatedThreadBindingTypeFromTuple`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Resolves one Dedicated Thread binding from a concrete tuple specialization.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread being resolved.
+    /// @tparam TBindings Binding Types contained by the application tuple.
     template<class TThreadIdentity, class... TBindings>
     struct DedicatedThreadBindingTypeFromTuple<
         TThreadIdentity,
@@ -91,8 +94,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `DedicatedThreadBindingType`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Terminates binding lookup when no matching Dedicated Thread binding exists.
+    /// @tparam TThreadIdentity Semantic identity Type whose binding lookup reached the empty tail.
     template<class TThreadIdentity>
     struct DedicatedThreadBindingType<TThreadIdentity> {
 
@@ -102,9 +105,10 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `DedicatedThreadBindingType`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
-    /// @tparam TFirstBinding First binding Type in the recursive binding search.
+    /// Resolves a Dedicated Thread binding recursively from the supplied binding pack.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread being resolved.
+    /// @tparam TFirstBinding First binding Type inspected by this recursive specialization.
+    /// @tparam TRestBindings Remaining binding Types searched when the first binding does not match.
     template<class TThreadIdentity, class TFirstBinding, class... TRestBindings>
     struct DedicatedThreadBindingType<
         TThreadIdentity,
@@ -128,26 +132,29 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `ResourceBindingIsValid`.
-    /// @tparam TResource Topology resource Type being classified or inspected.
+    /// Validates application binding requirements for one topology resource.
+    /// @tparam TResource Topology resource Type whose binding requirements are checked.
+    /// @tparam TBindings Application Dedicated Thread binding Types available to the topology.
     template<class TResource, class... TBindings>
     struct ResourceBindingIsValid {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = true;
 
     };
 
 
-    /// Defines the compile-time contract for `ResourceBindingIsValid`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// Validates that a Dedicated Thread declaration has exactly one matching application binding.
+    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread being validated.
+    /// @tparam TProperties Compile-time execution properties declared for the Dedicated Thread.
+    /// @tparam TBindings Application binding Types searched for the matching Thread identity.
     template<class TThreadIdentity, class... TProperties, class... TBindings>
     struct ResourceBindingIsValid<
         DedicatedThread<TThreadIdentity, TProperties...>,
         TBindings...
     > {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value =
             DedicatedThreadBindingCount<
                 TThreadIdentity,
@@ -157,27 +164,29 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `BindingMatchesDeclaredThread`.
+    /// Determines whether one supplied binding targets a Dedicated Thread declared by the topology.
     /// @tparam TBinding Dedicated Thread binding Type being inspected.
+    /// @tparam TResources Topology resource Types searched for the binding's Thread identity.
     template<class TBinding, class... TResources>
     struct BindingMatchesDeclaredThread {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = false;
 
     };
 
 
-    /// Defines the compile-time contract for `BindingMatchesDeclaredThread`.
-    /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
-    /// @tparam TCallable Callable Type being dispatched or adapted.
+    /// Matches one concrete Dedicated Thread binding against the topology resource pack.
+    /// @tparam TThreadIdentity Semantic identity Type carried by the binding.
+    /// @tparam TCallable Callable Type carried by the binding.
+    /// @tparam TResources Topology resource Types searched for the bound Thread identity.
     template<class TThreadIdentity, class TCallable, class... TResources>
     struct BindingMatchesDeclaredThread<
         DedicatedThreadBinding<TThreadIdentity, TCallable>,
         TResources...
     > {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value =
             (
                 IsDedicatedThreadIdentity<
@@ -196,7 +205,7 @@ namespace ESPressio::Threading::Detail {
     template<class TResource>
     struct IsTaskExecutionResource {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = false;
 
     };
@@ -219,14 +228,15 @@ namespace ESPressio::Threading::Detail {
         >
     > {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = true;
 
     };
 
 
-    /// Defines the compile-time contract for `IsTaskExecutionResource`.
+    /// Identifies a Dedicated Worker lease as a Task-execution resource.
     /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+    /// @tparam TProperties Compile-time capacities and execution properties declared by the lease.
     template<class TTaskIdentity, class... TProperties>
     struct IsTaskExecutionResource<
         DedicatedWorkerLease<
@@ -235,7 +245,7 @@ namespace ESPressio::Threading::Detail {
         >
     > {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = true;
 
     };
@@ -246,7 +256,7 @@ namespace ESPressio::Threading::Detail {
     template<class TBinding>
     struct IsDedicatedThreadBinding {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = false;
 
     };
@@ -260,7 +270,7 @@ namespace ESPressio::Threading::Detail {
         DedicatedThreadBinding<TThreadIdentity, TCallable>
     > {
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value = true;
 
     };
@@ -273,6 +283,9 @@ namespace ESPressio::Threading::Detail {
     struct ValidDedicatedThreadBindings;
 
 
+    /// Validates all Dedicated Thread declarations and supplied bindings as a complete topology relationship.
+    /// @tparam TResources Topology resource Types whose Dedicated Threads require bindings.
+    /// @tparam TBindings Application binding Types that must each target a declared Dedicated Thread.
     template<class... TResources, class... TBindings>
     struct ValidDedicatedThreadBindings<
         ThreadingTopology<TResources...>,
@@ -304,7 +317,7 @@ namespace ESPressio::Threading::Detail {
                 true
             );
 
-        /// Compile-time result or index produced by this trait/specialization.
+        /// Indicates whether this compile-time trait specialization matches its requested condition.
         static constexpr bool Value =
             EveryThreadBound &&
             EveryBindingDeclared;
@@ -324,7 +337,7 @@ namespace ESPressio::Threading::Detail {
     struct OwnedResourceType;
 
 
-    /// Defines the compile-time contract for `OwnedResourceType`.
+    /// Maps one ordinary Task facility declaration to its concrete statically owned runtime Type.
     /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
     /// @tparam TRecordCapacity Task-record capacity declaration Type or bounded capacity.
     /// @tparam TCallableCapacity Callable-storage capacity declaration Type or byte capacity.
@@ -334,6 +347,7 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     /// @tparam TContextIndex Dense topology execution-context index assigned to the resource.
+    /// @tparam TBindings Application Dedicated Thread binding Types carried through the uniform resource-mapping interface.
     /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers, class... TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     struct OwnedResourceType<
@@ -371,8 +385,10 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `OwnedResourceType`.
+    /// Maps one Dedicated Worker lease declaration to its concrete statically owned runtime Type.
     /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+    /// @tparam TProperties Compile-time capacities and execution properties declared by the Dedicated Worker lease.
+    /// @tparam TBindings Application Dedicated Thread binding Types carried through the uniform resource-mapping interface.
     /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
@@ -405,8 +421,10 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `OwnedResourceType`.
+    /// Maps one Dedicated Thread declaration and its binding to the concrete statically owned runtime Type.
     /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
+    /// @tparam TProperties Compile-time execution properties declared by the Dedicated Thread.
+    /// @tparam TBindings Application binding Types used to resolve the Thread callable.
     /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
@@ -454,12 +472,13 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `OwnedResourceTupleType`.
-    /// @tparam TTopology Compile-time Threading topology being realized or inspected.
+    /// Constructs the tuple Type containing every concrete topology-owned runtime resource.
+    /// @tparam TTopology Compile-time Threading topology being realized.
     /// @tparam TBindings Tuple Type containing application Dedicated Thread callable bindings.
     /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TIndices Compile-time topology resource indices expanded into the resulting tuple Type.
     template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t... TIndices>
     auto OwnedResourceTupleType(
         std::index_sequence<TIndices...>
@@ -476,14 +495,13 @@ namespace ESPressio::Threading::Detail {
     >;
 
 
-    /// Defines the compile-time contract for `OwnedResourceTuple`.
+    /// Resolves the concrete owned-resource tuple Type for a complete Threading topology.
     /// @tparam TTopology Compile-time Threading topology being realized or inspected.
     /// @tparam TBindings Tuple Type containing application Dedicated Thread callable bindings.
     /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider>
-    /// Tuple Type containing all concrete resource runtime Types for a topology.
     using OwnedResourceTuple = decltype(
         OwnedResourceTupleType<
             TTopology,
