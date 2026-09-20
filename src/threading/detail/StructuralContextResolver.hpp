@@ -68,15 +68,11 @@ namespace ESPressio::Threading::Detail {
                 ) {
                     return std::nullopt;
                 } else {
-                    ContextIndex contextIndex = 0U;
+                    const auto contextIndex = std::get<TIndex>(
+                        _resources
+                    )->CurrentContextIndex();
 
-                    if (
-                        std::get<TIndex>(
-                            _resources
-                        )->TryResolveCurrentContext(
-                            contextIndex
-                        )
-                    ) {
+                    if (contextIndex.has_value()) {
                         return contextIndex;
                     }
 
