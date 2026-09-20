@@ -21,6 +21,8 @@ done
 OUTPUT="${ROOT}/tests/.threading-foundation-tests"
 
 SANITIZER_FLAGS=()
+echo "EDP-Threading host foundation tests: executing"
+
 if [[ "${EDP_THREADING_SANITIZERS:-1}" != "0" ]]; then
     SANITIZER_FLAGS=(
         -g
@@ -33,6 +35,8 @@ cleanup() {
     rm -f "${OUTPUT}"
 }
 trap cleanup EXIT
+
+echo "EDP-Threading host foundation tests: compiling"
 
 c++ \
     -std=c++17 \
