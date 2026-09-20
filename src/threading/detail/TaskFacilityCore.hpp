@@ -39,6 +39,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskRecordBinding`.
+    /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
     template<class TIndex>
     struct TaskRecordBinding final {
 
@@ -51,6 +53,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskAdmissionCoreResult`.
+    /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
     template<class TIndex>
     class TaskAdmissionCoreResult final {
 
@@ -122,6 +126,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskWorkerClaimResult`.
+    /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
     template<class TIndex>
     class TaskWorkerClaimResult final {
 
@@ -233,6 +239,11 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskFacilityCore`.
+    /// @tparam TRecordCapacity Task-record capacity declaration Type or bounded capacity.
+    /// @tparam TCallableCapacity Callable-storage capacity declaration Type or byte capacity.
+    /// @tparam TResultCapacity Result-storage capacity declaration Type or byte capacity.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TExecutionContextCapacity>
     class TaskFacilityCore final {
 
@@ -328,6 +339,7 @@ namespace ESPressio::Threading::Detail {
             ///
             /// The owning facility runtime must serialize this operation with queue mutation,
             /// cancellation, Worker claim, owner release and reclamation.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             AdmissionResult Admit(
                 TCallable&& callable
@@ -868,6 +880,7 @@ namespace ESPressio::Threading::Detail {
             // Bounded traversal.
 
             /// Visits every structurally allocated Task incarnation while the owning facility lock is held.
+            /// @tparam TVisitor Visitor callable Type invoked for each selected bounded record.
             template<class TVisitor>
             void VisitAllocated(
                 TVisitor&& visitor
