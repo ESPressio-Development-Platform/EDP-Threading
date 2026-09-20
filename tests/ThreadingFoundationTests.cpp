@@ -1792,6 +1792,28 @@ int main() {
         claimedIndex == 4U
     );
 
+    availability.Release(
+        7U
+    );
+
+    assert(
+        availability.TryClaimSpecific(
+            7U
+        ) == ESPressio::Threading::Detail::AvailabilityClaimResult::Claimed
+    );
+
+    assert(
+        availability.TryClaimSpecific(
+            7U
+        ) == ESPressio::Threading::Detail::AvailabilityClaimResult::Unavailable
+    );
+
+    assert(
+        availability.TryClaimSpecific(
+            10U
+        ) == ESPressio::Threading::Detail::AvailabilityClaimResult::Unavailable
+    );
+
 
     Test::QueueRecord records[3U];
     ESPressio::Threading::Detail::IntrusiveTaskQueue<3U> queue;
@@ -2265,6 +2287,30 @@ int main() {
         workerScheduler.AvailableCount() == 2U
     );
 
+    const auto specificWorkerLease = workerScheduler.TryClaimSpecific(
+        4U
+    );
+
+    assert(
+        specificWorkerLease.has_value()
+    );
+
+    assert(
+        specificWorkerLease.value() == 4U
+    );
+
+    assert(
+        !workerScheduler.TryClaimSpecific(
+            4U
+        ).has_value()
+    );
+
+    assert(
+        !workerScheduler.TryClaimSpecific(
+            1U
+        ).has_value()
+    );
+
     const auto firstWorkerLease = workerScheduler.TryClaimAvailable();
 
     assert(
@@ -2273,16 +2319,6 @@ int main() {
 
     assert(
         firstWorkerLease.value() == 2U
-    );
-
-    const auto secondWorkerLease = workerScheduler.TryClaimAvailable();
-
-    assert(
-        secondWorkerLease.has_value()
-    );
-
-    assert(
-        secondWorkerLease.value() == 4U
     );
 
     assert(
