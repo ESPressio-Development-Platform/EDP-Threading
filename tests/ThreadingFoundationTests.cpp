@@ -1898,6 +1898,46 @@ int main() {
     );
 
 
+    bool dedicatedWorkerShutdown = false;
+
+    const auto dedicatedWorkerShutdownPredicate = [](
+        const void* context
+    ) noexcept {
+        return *static_cast<const bool*>(
+            context
+        );
+    };
+
+    Test::TestDedicatedWorkerLeaseRuntime dedicatedWorkerRuntime(
+        runtimeRouter,
+        &dedicatedWorkerShutdown,
+        dedicatedWorkerShutdownPredicate
+    );
+
+    assert(
+        dedicatedWorkerRuntime.Initialize(
+            ESPressio::Platform::Execution::ExecutionPriority::Critical,
+            ESPressio::Platform::Execution::ProcessorAffinity::Any(),
+            "test-critical-worker"
+        ) == ESPressio::Threading::Detail::WorkerExecutionInitializationResult::Succeeded
+    );
+
+    const auto dedicatedUnavailable = dedicatedWorkerRuntime.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        dedicatedUnavailable.Status() ==
+        ESPressio::Threading::TaskDispatchStatus::Unavailable
+    );
+
+    assert(
+        dedicatedWorkerRuntime.DestroyInfrastructure() ==
+        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+    );
+
+
     bool dedicatedCanActivate = false;
     bool dedicatedShouldTerminate = false;
 
