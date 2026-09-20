@@ -108,10 +108,6 @@ namespace ESPressio::Threading::Detail {
 
 
             bool TryResolveCurrentContext(
-                typename Runtime::ContextIndex& contextIndex
-            ) const noexcept = delete;
-
-            bool TryResolveCurrentContext(
                 typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type& contextIndex
             ) const noexcept {
                 return _runtime.TryResolveCurrentContext(
