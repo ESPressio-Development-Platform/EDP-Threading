@@ -3,6 +3,10 @@
 #include <tuple>
 #include <utility>
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
+
 #include <FreeRTOS.h>
 #include <task.h>
 
@@ -11,6 +15,22 @@
 #include <ESPressio_Threading.hpp>
 
 namespace Demo {
+
+    void Print(
+        const char* message
+    ) noexcept {
+#ifdef ARDUINO
+        Serial.println(
+            message
+        );
+#else
+        std::printf(
+            "%s\n",
+            message
+        );
+#endif
+    }
+
 
     namespace Threading = ESPressio::Threading;
 
@@ -93,7 +113,7 @@ namespace Demo {
             runtime.Initialize() !=
             Threading::ThreadingInitializationResult::Succeeded
         ) {
-            std::printf("EDP-Threading demo: initialization failed\n");
+            Print("EDP-Threading demo: initialization failed");
             return false;
         }
 
@@ -101,9 +121,13 @@ namespace Demo {
             runtime.Start() !=
             Threading::ThreadingStartResult::Succeeded
         ) {
-            std::printf("EDP-Threading demo: infrastructure start failed\n");
+            Print("EDP-Threading demo: infrastructure start failed");
             return false;
         }
+
+        vTaskDelay(
+            pdMS_TO_TICKS(25U)
+        );
 
         auto dispatch = runtime.Dispatch<WorkPool>(
             []() noexcept {
@@ -113,7 +137,7 @@ namespace Demo {
         );
 
         if (!dispatch.IsSucceeded()) {
-            std::printf("EDP-Threading demo: Task dispatch failed\n");
+            Print("EDP-Threading demo: Task dispatch failed");
             return false;
         }
 
@@ -131,7 +155,7 @@ namespace Demo {
             !result.IsSucceeded() ||
             result.TakeResult() != 42
         ) {
-            std::printf("EDP-Threading demo: Task result mismatch\n");
+            Print("EDP-Threading demo: Task result mismatch");
             return false;
         }
 
@@ -141,7 +165,7 @@ namespace Demo {
             thread.Start() !=
             Threading::ThreadStartResult::Started
         ) {
-            std::printf("EDP-Threading demo: Dedicated Thread activation failed\n");
+            Print("EDP-Threading demo: Dedicated Thread activation failed");
             return false;
         }
 
@@ -153,7 +177,7 @@ namespace Demo {
             thread.RequestStop() !=
             Threading::ThreadStopRequestResult::Accepted
         ) {
-            std::printf("EDP-Threading demo: Dedicated Thread stop request failed\n");
+            Print("EDP-Threading demo: Dedicated Thread stop request failed");
             return false;
         }
 
@@ -167,7 +191,7 @@ namespace Demo {
             runtime.BeginShutdown() !=
             Threading::ThreadingShutdownResult::Accepted
         ) {
-            std::printf("EDP-Threading demo: shutdown initiation failed\n");
+            Print("EDP-Threading demo: shutdown initiation failed");
             return false;
         }
 
@@ -181,7 +205,7 @@ namespace Demo {
             runtime.FinalizeShutdown() !=
             Threading::ThreadingFinalizationResult::Completed
         ) {
-            std::printf("EDP-Threading demo: finalization failed\n");
+            Print("EDP-Threading demo: finalization failed");
             return false;
         }
 
@@ -189,17 +213,25 @@ namespace Demo {
             runtime.WaitForShutdown() !=
             Threading::ShutdownWaitResult::Completed
         ) {
-            std::printf("EDP-Threading demo: terminal wait failed\n");
+            Print("EDP-Threading demo: terminal wait failed");
             return false;
         }
 
-        std::printf("EDP-Threading demo: PASS\n");
+        Print("EDP-Threading demo: PASS");
         return true;
     }
 
 } // Demo
 
 void setup() {
+    Serial.begin(
+        115200
+    );
+
+    delay(
+        250
+    );
+
     static_cast<void>(
         Demo::Run()
     );
