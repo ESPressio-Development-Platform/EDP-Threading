@@ -17,6 +17,7 @@
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
 #include "../src/threading/detail/ShutdownCoordinator.hpp"
 #include "../src/threading/detail/StaticTopologyPlan.hpp"
+#include "../src/threading/detail/StaticTopologyResourceTypes.hpp"
 #include "../src/threading/detail/StructuralContextResolver.hpp"
 #include "../src/threading/detail/ThreadingBootstrap.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
@@ -932,6 +933,21 @@ namespace Test {
         ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::High>,
         ESPressio::Threading::AnyAffinity
     >;
+
+    using DedicatedThreadBindingType = decltype(
+        ESPressio::Threading::BindDedicatedThread<DedicatedThreadIdentity>(
+            DedicatedCallable{}
+        )
+    );
+
+    static_assert(
+        ESPressio::Threading::Detail::DedicatedThreadBindingCount<
+            DedicatedThreadIdentity,
+            DedicatedThreadBindingType
+        >::Value == 1U,
+        "Dedicated Thread callable binding must resolve by semantic Thread identity"
+    );
+
 
     using TestDedicatedThreadOwnedRuntime =
         ESPressio::Threading::Detail::DedicatedThreadOwnedRuntime<
