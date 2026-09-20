@@ -1464,7 +1464,8 @@ int main() {
         assert(
             availability.TryClaim(
                 claimedIndex
-            )
+            ) ==
+            ESPressio::Threading::Detail::AvailabilityClaimResult::Claimed
         );
 
         assert(
@@ -1473,9 +1474,10 @@ int main() {
     }
 
     assert(
-        !availability.TryClaim(
+        availability.TryClaim(
             claimedIndex
-        )
+        ) ==
+        ESPressio::Threading::Detail::AvailabilityClaimResult::Unavailable
     );
 
     availability.Release(
@@ -1491,7 +1493,8 @@ int main() {
     assert(
         availability.TryClaim(
             claimedIndex
-        )
+        ) ==
+        ESPressio::Threading::Detail::AvailabilityClaimResult::Claimed
     );
 
     assert(
@@ -1525,7 +1528,8 @@ int main() {
         queue.Remove(
             records,
             1U
-        )
+        ) ==
+        ESPressio::Threading::Detail::TaskQueueRemovalResult::Removed
     );
 
     assert(
@@ -1554,7 +1558,8 @@ int main() {
     assert(
         threadControl.TryStart(
             activationPhase
-        )
+        ) ==
+        ESPressio::Threading::Detail::DedicatedThreadControlStartResult::Started
     );
 
     assert(
@@ -1563,7 +1568,8 @@ int main() {
     );
 
     assert(
-        threadControl.TryRequestStop()
+        threadControl.TryRequestStop() ==
+        ESPressio::Threading::Detail::DedicatedThreadControlStopRequestResult::Accepted
     );
 
     assert(
@@ -1573,7 +1579,8 @@ int main() {
     assert(
         threadControl.TryPublishStopped(
             activationPhase
-        )
+        ) ==
+        ESPressio::Threading::Detail::DedicatedThreadControlPublicationResult::Published
     );
 
     assert(
