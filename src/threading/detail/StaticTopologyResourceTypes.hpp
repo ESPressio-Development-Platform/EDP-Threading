@@ -83,6 +83,93 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    template<class TResource, class... TBindings>
+    struct ResourceBindingIsValid {
+
+        static constexpr bool Value = true;
+
+    };
+
+
+    template<class TThreadIdentity, class... TProperties, class... TBindings>
+    struct ResourceBindingIsValid<
+        DedicatedThread<TThreadIdentity, TProperties...>,
+        TBindings...
+    > {
+
+        static constexpr bool Value =
+            DedicatedThreadBindingCount<
+                TThreadIdentity,
+                TBindings...
+            >::Value == 1U;
+
+    };
+
+
+    template<class TBinding, class... TResources>
+    struct BindingMatchesDeclaredThread {
+
+        static constexpr bool Value = false;
+
+    };
+
+
+    template<class TThreadIdentity, class TCallable, class... TResources>
+    struct BindingMatchesDeclaredThread<
+        DedicatedThreadBinding<TThreadIdentity, TCallable>,
+        TResources...
+    > {
+
+        static constexpr bool Value =
+            (
+                IsDedicatedThreadIdentity<
+                    TResources,
+                    TThreadIdentity
+                >::Value ||
+                ... ||
+                false
+            );
+
+    };
+
+
+    template<class TTopology, class TBindings>
+    struct ValidDedicatedThreadBindings;
+
+
+    template<class... TResources, class... TBindings>
+    struct ValidDedicatedThreadBindings<
+        ThreadingTopology<TResources...>,
+        std::tuple<TBindings...>
+    > {
+
+        static constexpr bool EveryThreadBound =
+            (
+                ResourceBindingIsValid<
+                    TResources,
+                    TBindings...
+                >::Value &&
+                ... &&
+                true
+            );
+
+        static constexpr bool EveryBindingDeclared =
+            (
+                BindingMatchesDeclaredThread<
+                    TBindings,
+                    TResources...
+                >::Value &&
+                ... &&
+                true
+            );
+
+        static constexpr bool Value =
+            EveryThreadBound &&
+            EveryBindingDeclared;
+
+    };
+
+
     template<class TDeclaration, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     struct OwnedResourceType;
 
