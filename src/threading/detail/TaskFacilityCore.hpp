@@ -35,7 +35,8 @@ namespace ESPressio::Threading::Detail {
 
     enum class TaskReclaimResult : std::uint8_t {
         Reclaimed = 0,
-        NotEligible = 1
+        NotEligible = 1,
+        ProviderFailure = 2
     };
 
 
