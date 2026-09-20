@@ -75,6 +75,7 @@ namespace ESPressio::Threading::Detail {
 
             // Construction.
 
+            /// Constructs the isolated Worker lease runtime against topology routing and shutdown state.
             DedicatedWorkerLeaseRuntime(
                 TManagedContextRouter& router,
                 const void* shutdownContext,
@@ -94,6 +95,7 @@ namespace ESPressio::Threading::Detail {
 
             // Infrastructure lifecycle.
 
+            /// Validates facility synchronization and initializes the isolated persistent Worker context.
             WorkerExecutionInitializationResult Initialize(
                 ESPressio::Platform::Execution::ExecutionPriority priority,
                 ESPressio::Platform::Execution::ProcessorAffinity affinity,
@@ -121,14 +123,17 @@ namespace ESPressio::Threading::Detail {
                 return result;
             }
 
+            /// Starts the isolated persistent Worker after topology initialization commits.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
                 return _worker.StartInfrastructure();
             }
 
+            /// Wakes the isolated Worker so rollback or shutdown termination can be observed.
             void RequestInfrastructureTermination() noexcept {
                 _worker.RequestInfrastructureTermination();
             }
 
+            /// Joins the isolated Worker context using the supplied Platform wait budget.
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
@@ -137,6 +142,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Destroys the isolated Worker execution context and releases its native provider state.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return _worker.Destroy();
             }
@@ -147,6 +153,7 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `Dispatch`.
             /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
+            /// Dispatches one callable through this isolated lease's bounded Task facility.
             auto Dispatch(
                 TCallable&& callable,
                 TaskDispatchPolicy policy,
@@ -172,10 +179,12 @@ namespace ESPressio::Threading::Detail {
 
             // Shutdown cooperation.
 
+            /// Cancels queued work and requests cooperative cancellation of any running lease Task.
             void BeginShutdownCancellation() noexcept {
                 _facility.BeginShutdownCancellation();
             }
 
+            /// Indicates whether this isolated Worker lease has no remaining executable Task work.
             bool IsExecutionQuiescent() noexcept {
                 return _facility.IsExecutionQuiescent();
             }
@@ -194,6 +203,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Indicates whether the isolated Worker context currently carries cancellation or shutdown interruption.
             bool IsContextInterrupted(
                 typename Facility::ManagedContextIndex contextIndex
             ) noexcept {
@@ -212,14 +222,17 @@ namespace ESPressio::Threading::Detail {
                 return TRecordCapacity;
             }
 
+            /// Returns the number of structurally allocated Task records currently in use.
             std::size_t RecordsInUse() noexcept {
                 return _facility.RecordsInUse();
             }
 
+            /// Returns the number of Tasks currently queued in this isolated lease.
             std::size_t QueuedTasks() noexcept {
                 return _facility.QueuedTasks();
             }
 
+            /// Returns whether the single isolated Worker is currently granted to Task execution.
             std::size_t WorkersInUse() noexcept {
                 return _facility.WorkersInUse();
             }
