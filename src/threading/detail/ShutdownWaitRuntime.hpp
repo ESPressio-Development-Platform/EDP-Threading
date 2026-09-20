@@ -9,6 +9,21 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Owns bounded terminal-shutdown wait registration and targeted wake behavior.
+    ///
+    /// @tparam TInfrastructureLifecycle Authoritative Threading infrastructure lifecycle Type.
+    /// @tparam TExecutionContextCapacity Number of managed execution contexts eligible to wait.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider protecting waiter registration state.
+    /// @tparam TManagedContextRouter Topology router used for context identity and targeted wake delivery.
+    template<class TInfrastructureLifecycle, std::size_t TExecutionContextCapacity, class TMutexProvider, class TManagedContextRouter>
+    class ShutdownWaitRuntime;
+
+
+    /// Empty-topology shutdown wait specialization retaining only the lifecycle reference.
+    ///
+    /// @tparam TInfrastructureLifecycle Authoritative Threading infrastructure lifecycle Type.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type selected by Bootstrap.
+    /// @tparam TManagedContextRouter Empty-topology router Type selected by Bootstrap.
     template<class TInfrastructureLifecycle, class TMutexProvider, class TManagedContextRouter>
     class ShutdownWaitRuntime<
         TInfrastructureLifecycle,
