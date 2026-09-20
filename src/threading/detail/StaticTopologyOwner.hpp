@@ -148,6 +148,30 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            template<std::size_t TIndex>
+            void FinalizeNext() noexcept {
+                if constexpr (
+                    TIndex < TTopology::ResourceCount
+                ) {
+                    auto& resource = _resources.template Get<TIndex>();
+
+                    resource.RequestInfrastructureTermination();
+
+                    static_cast<void>(
+                        resource.JoinInfrastructure(
+                            ESPressio::Platform::Synchronization::WaitTimeout::Infinite()
+                        )
+                    );
+
+                    static_cast<void>(
+                        resource.DestroyInfrastructure()
+                    );
+
+                    FinalizeNext<TIndex + 1U>();
+                }
+            }
+
+
             template<std::size_t... TIndices>
             ThreadingStartResult StartAll(
                 std::index_sequence<TIndices...>
@@ -276,6 +300,29 @@ namespace ESPressio::Threading::Detail {
 
             bool IsExecutionQuiescent() noexcept {
                 return _resources.IsExecutionQuiescent();
+            }
+
+            ThreadingShutdownResult FinalizeShutdown() noexcept {
+                if (
+                    _bootstrap.LifecycleState().State() ==
+                    InfrastructureState::ShutdownComplete
+                ) {
+                    return ThreadingShutdownResult::AlreadyCompleted;
+                }
+
+                if (
+                    _bootstrap.LifecycleState().State() !=
+                    InfrastructureState::ShuttingDown ||
+                    !IsExecutionQuiescent()
+                ) {
+                    return ThreadingShutdownResult::AlreadyShuttingDown;
+                }
+
+                FinalizeNext<0U>();
+
+                _bootstrap.LifecycleState().CommitShutdownComplete();
+
+                return ThreadingShutdownResult::Accepted;
             }
 
 
