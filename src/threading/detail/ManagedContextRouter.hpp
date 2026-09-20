@@ -70,6 +70,9 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `ManagedContextRouter`.
+    /// @tparam TSignalProvider Concrete Platform Signal provider Type backing targeted wakes.
+    /// @tparam TContextCapacity Number of managed execution contexts represented by the topology.
     template<std::size_t TContextCapacity, class TSignalProvider>
     class ManagedContextRouter final {
 
