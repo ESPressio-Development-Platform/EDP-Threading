@@ -12,10 +12,27 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `TaskFacilityOwnedRuntime`.
+    /// @tparam TFacility Task facility declaration Type being realized.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TFirstContextIndex First dense topology execution-context index assigned to the resource.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TFacility, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
     class TaskFacilityOwnedRuntime;
 
 
+    /// Defines the compile-time contract for `TaskFacilityOwnedRuntime`.
+    /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
+    /// @tparam TRecordCapacity Task-record capacity declaration Type or bounded capacity.
+    /// @tparam TCallableCapacity Callable-storage capacity declaration Type or byte capacity.
+    /// @tparam TResultCapacity Result-storage capacity declaration Type or byte capacity.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TFirstContextIndex First dense topology execution-context index assigned to the resource.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class... TWorkers, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
     class TaskFacilityOwnedRuntime<
         TaskExecutionFacility<
@@ -45,12 +62,16 @@ namespace ESPressio::Threading::Detail {
                 TManagedContextRouter
             >;
 
+            /// Defines the compile-time contract for `WorkerDeclaration`.
+            /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
             template<std::size_t TWorkerIndex>
             using WorkerDeclaration = std::tuple_element_t<
                 TWorkerIndex,
                 std::tuple<TWorkers...>
             >;
 
+            /// Defines the compile-time contract for `WorkerContext`.
+            /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
             template<std::size_t TWorkerIndex>
             using WorkerContext = TaskWorkerExecutionContext<
                 TExecutionContextProvider,
@@ -64,6 +85,8 @@ namespace ESPressio::Threading::Detail {
                 WorkerContext<TIndices>...
             >;
 
+            /// Defines the compile-time contract for `WorkerArguments`.
+            /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
             template<std::size_t TWorkerIndex>
             static typename WorkerContext<TWorkerIndex>::ConstructionArguments WorkerArguments(
                 Facility& facility,
@@ -117,6 +140,8 @@ namespace ESPressio::Threading::Detail {
 
             // Infrastructure lifecycle helpers.
 
+            /// Defines the compile-time contract for `DestroyInitializedPrefix`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             void DestroyInitializedPrefix() noexcept {
                 if constexpr (
@@ -133,6 +158,8 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Defines the compile-time contract for `InitializeNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             WorkerExecutionInitializationResult InitializeNext() noexcept {
                 if constexpr (
@@ -159,6 +186,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `RequestTerminationPrefix`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             void RequestTerminationPrefix(
                 std::size_t startedCount
@@ -178,6 +207,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `JoinPrefix`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             void JoinPrefix(
                 std::size_t startedCount
@@ -201,6 +232,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `StartNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             ESPressio::Platform::Execution::ExecutionStartResult StartNext(
                 std::size_t& startedCount
@@ -237,6 +270,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `RequestTerminationNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             void RequestTerminationNext() noexcept {
                 if constexpr (
@@ -250,6 +285,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `JoinNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             ESPressio::Platform::Execution::ExecutionJoinResult JoinNext(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
@@ -278,6 +315,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `DestroyNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyNext() noexcept {
                 if constexpr (
@@ -300,6 +339,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `IsCurrentContextNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             bool IsCurrentContextNext(
                 typename Facility::ManagedContextIndex& contextIndex
@@ -331,9 +372,13 @@ namespace ESPressio::Threading::Detail {
             using PoolIdentity = TPoolIdentity;
             using FacilityRuntime = Facility;
 
+            /// Defines the compile-time contract for `TaskForCallable`.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             using TaskForCallable = typename Facility::template TaskForCallable<TCallable>;
 
+            /// Defines the compile-time contract for `DispatchResultFor`.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             using DispatchResultFor = typename Facility::template DispatchResultFor<TCallable>;
 
@@ -399,6 +444,8 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle-gated owner dispatch target.
 
+            /// Defines the compile-time contract for `Dispatch`.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             auto Dispatch(
                 TCallable&& callable,
