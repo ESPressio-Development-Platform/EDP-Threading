@@ -1068,15 +1068,6 @@ namespace ESPressio::Threading::Detail {
                         : MonotonicWaitBudget::Forever();
 
                 for (;;) {
-                    if (
-                        policy == TaskDispatchPolicy::QueueWithTimeout &&
-                        budget.Remaining().IsNoWait()
-                    ) {
-                        return DispatchResult(
-                            TaskDispatchStatus::TimedOut
-                        );
-                    }
-
                     if (AcquireLock() != TaskFacilityLockResult::Acquired) {
                         return DispatchResult(
                             TaskDispatchStatus::Interrupted
