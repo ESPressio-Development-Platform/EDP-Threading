@@ -965,6 +965,27 @@ namespace Test {
         >;
 
 
+    using EmptyTopology = ESPressio::Threading::ThreadingTopology<>;
+
+    static_assert(
+        EmptyTopology::ResourceCount == 0U &&
+        EmptyTopology::ManagedExecutionContextCount == 0U,
+        "The optional empty Threading topology must remain valid"
+    );
+
+    using EmptyBindings = std::tuple<>;
+
+    using EmptyOwner =
+        ESPressio::Threading::Detail::StaticTopologyOwner<
+            EmptyTopology,
+            EmptyBindings,
+            SignalProvider,
+            ExecutionContextProvider,
+            AtomicByteProvider,
+            MutexProvider
+        >;
+
+
     using MixedOwnedTopology = ESPressio::Threading::ThreadingTopology<
         std::tuple_element_t<
             0U,
@@ -1120,6 +1141,20 @@ namespace Test {
 
 /// Exercises compact Threading foundation primitives.
 int main() {
+    Test::EmptyOwner emptyOwner(
+        Test::EmptyBindings{}
+    );
+
+    assert(
+        emptyOwner.Initialize() ==
+        ESPressio::Threading::ThreadingInitializationResult::Succeeded
+    );
+
+    assert(
+        emptyOwner.Start() ==
+        ESPressio::Threading::ThreadingStartResult::Succeeded
+    );
+
     ESPressio::Threading::Detail::ManagedContextWakeSet<
         Test::MixedOwnedTopology::ManagedExecutionContextCount,
         Test::SignalProvider
