@@ -47,6 +47,9 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            // Construction.
+
+            /// Creates control state in the never-started activation phase.
             DedicatedThreadControl() noexcept :
                 _value(
                     static_cast<std::uint8_t>(
