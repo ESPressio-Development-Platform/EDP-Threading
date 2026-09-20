@@ -176,17 +176,16 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `InitializeResourceAt`.
             /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
-            bool InitializeResourceAt(
+            WorkerExecutionInitializationResult InitializeResourceAt(
                 std::size_t targetIndex
             ) noexcept {
                 if constexpr (
                     TIndex == TTopology::ResourceCount
                 ) {
-                    return false;
+                    return WorkerExecutionInitializationResult::ProviderFailure;
                 } else {
                     if (TIndex == targetIndex) {
-                        return _resources.template Get<TIndex>().Initialize() ==
-                            WorkerExecutionInitializationResult::Succeeded;
+                        return _resources.template Get<TIndex>().Initialize();
                     }
 
                     return InitializeResourceAt<TIndex + 1U>(
@@ -229,7 +228,11 @@ namespace ESPressio::Threading::Detail {
                 ) {
                     return ThreadingInitializationResult::Succeeded;
                 } else {
-                    if (!InitializeResourceAt<0U>(order[TOrderIndex])) {
+                    if (
+                        InitializeResourceAt<0U>(
+                            order[TOrderIndex]
+                        ) != WorkerExecutionInitializationResult::Succeeded
+                    ) {
                         for (std::size_t rollback = TOrderIndex; rollback > 0U; --rollback) {
                             DestroyResourceAt<0U>(
                                 order[rollback - 1U]
