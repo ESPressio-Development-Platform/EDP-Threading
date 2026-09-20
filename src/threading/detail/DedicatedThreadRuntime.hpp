@@ -14,9 +14,10 @@
 
 namespace ESPressio::Threading::Detail {
 
-    /// Defines the compile-time contract for `IsVoidThreadCallableWithoutContext`.
-    /// @tparam TCallable Callable Type being invoked, stored, or adapted.
-    template<class TCallable, class = void>
+    /// Detects whether a Dedicated Thread callable returns void when invoked without ThreadContext.
+    /// @tparam TCallable Callable Type being inspected.
+    /// @tparam TEnable SFINAE helper Type used to select the invocable specialization.
+    template<class TCallable, class TEnable = void>
     struct IsVoidThreadCallableWithoutContext final {
 
         /// Compile-time result produced by this trait specialization.
@@ -44,9 +45,10 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    /// Defines the compile-time contract for `IsVoidThreadCallableWithContext`.
-    /// @tparam TCallable Callable Type being invoked, stored, or adapted.
-    template<class TCallable, class = void>
+    /// Detects whether a Dedicated Thread callable returns void when invoked with ThreadContext.
+    /// @tparam TCallable Callable Type being inspected.
+    /// @tparam TEnable SFINAE helper Type used to select the invocable specialization.
+    template<class TCallable, class TEnable = void>
     struct IsVoidThreadCallableWithContext final {
 
         /// Compile-time result produced by this trait specialization.
