@@ -102,7 +102,7 @@ namespace ESPressio::Threading::Detail {
                             ).JoinInfrastructure(
                                 ESPressio::Platform::Synchronization::WaitTimeout::Forever()
                             ) ==
-                            ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
+                            ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded;
                     }
 
                     return JoinStarted<TIndex + 1U>(
@@ -126,7 +126,7 @@ namespace ESPressio::Threading::Detail {
                         std::get<TIndex>(
                             resources
                         ).DestroyInfrastructure() ==
-                        ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
+                        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
 
                     return DestroyAll<TIndex + 1U>(
                         resources
