@@ -472,6 +472,31 @@ namespace Test {
     );
 
     static_assert(
+        ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::TaskPoolRequirement<OrdinaryPool>
+        >,
+        "Topology must satisfy requirements for its configured Task Pool identity"
+    );
+
+    static_assert(
+        ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::DedicatedWorkerRequirement<ReturningCallable>
+        >,
+        "Topology must satisfy requirements for its configured DedicatedWorkerLease identity"
+    );
+
+    static_assert(
+        ESPressio::Threading::SatisfiesThreadingRequirement<
+            Topology,
+            ESPressio::Threading::DedicatedThreadRequirement<TelemetryThread>
+        >,
+        "Topology must satisfy requirements for its configured Dedicated Thread identity"
+    );
+
+
+    static_assert(
         sizeof(ESPressio::Threading::Detail::TaskControl<AtomicByteProvider>) == 1U,
         "Task intrinsic control must remain one byte"
     );
