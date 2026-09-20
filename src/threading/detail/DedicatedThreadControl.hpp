@@ -21,7 +21,9 @@ namespace ESPressio::Threading::Detail {
             /// Packed operational state and activation Phase.
             std::uint8_t _value;
 
+            /// Bit mask containing the encoded Dedicated Thread operational state.
             static constexpr std::uint8_t StateMask = 0x03U;
+            /// Bit mask containing the one-bit Dedicated Thread activation Phase.
             static constexpr std::uint8_t PhaseMask = 0x04U;
 
         public:
