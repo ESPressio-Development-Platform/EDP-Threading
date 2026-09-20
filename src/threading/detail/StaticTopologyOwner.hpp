@@ -35,11 +35,6 @@ namespace ESPressio::Threading::Detail {
     class StaticTopologyOwner final {
 
         static_assert(
-            TTopology::ManagedExecutionContextCount > 0U,
-            "StaticTopologyOwner requires at least one managed execution context"
-        );
-
-        static_assert(
             ValidDedicatedThreadBindings<
                 TTopology,
                 TBindings
