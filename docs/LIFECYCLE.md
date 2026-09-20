@@ -23,4 +23,4 @@ After operational commit:
 
 `IsExecutionQuiescent()` scans every resource. A non-cooperating user callable can therefore prevent shutdown forever by design.
 
-After quiescence, `FinalizeShutdown(shutdownWaitRuntime)` requests infrastructure termination, joins and destroys all persistent contexts, publishes `ShutdownComplete`, then wakes shutdown waiters. Completion publication occurs once and only after teardown.
+After quiescence, `FinalizeShutdown()` requests infrastructure termination, joins and destroys all persistent contexts, publishes `ShutdownComplete`, then wakes shutdown waiters. Completion publication occurs once and only after teardown.
