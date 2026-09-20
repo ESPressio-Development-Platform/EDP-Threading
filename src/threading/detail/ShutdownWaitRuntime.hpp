@@ -77,6 +77,11 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `ShutdownWaitRuntime`.
+    /// @tparam TInfrastructureLifecycle Authoritative Threading infrastructure lifecycle Type.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TInfrastructureLifecycle, std::size_t TExecutionContextCapacity, class TMutexProvider, class TManagedContextRouter>
     class ShutdownWaitRuntime final {
 
