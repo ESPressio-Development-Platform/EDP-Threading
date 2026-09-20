@@ -291,7 +291,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Reclaims one ownerless terminal record when no waiter still retains its incarnation.
-            bool ReclaimIfQuiescent(
+            TaskReclaimResult ReclaimIfQuiescent(
                 Index recordIndex,
                 bool phase
             ) noexcept {
@@ -305,20 +305,20 @@ namespace ESPressio::Threading::Detail {
                         phase
                     ) != 0U
                 ) {
-                    return false;
+                    return TaskReclaimResult::NotEligible;
                 }
 
-                if (
-                    _core.Reclaim(
-                        recordIndex,
-                        phase
-                    ) != TaskReclaimResult::Reclaimed
-                ) {
-                    return false;
+                const auto reclaimResult = _core.Reclaim(
+                    recordIndex,
+                    phase
+                );
+
+                if (reclaimResult != TaskReclaimResult::Reclaimed) {
+                    return reclaimResult;
                 }
 
                 WakeAdmissionWaiters();
-                return true;
+                return TaskReclaimResult::Reclaimed;
             }
 
 
