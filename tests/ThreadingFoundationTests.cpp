@@ -18,6 +18,7 @@
 #include "../src/threading/detail/ThreadingBootstrap.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
+#include "../src/threading/detail/TaskFacilityOwnedRuntime.hpp"
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
 #include "../src/threading/detail/TaskRecord.hpp"
 #include "../src/threading/detail/TaskWorkerExecutionContext.hpp"
@@ -526,6 +527,28 @@ namespace Test {
             >
         >
     >;
+
+    using HeterogeneousFacilityDeclaration = std::tuple_element_t<
+        0U,
+        typename HeterogeneousPool::Resources
+    >;
+
+    using HeterogeneousOwnedRuntime =
+        ESPressio::Threading::Detail::TaskFacilityOwnedRuntime<
+            HeterogeneousFacilityDeclaration,
+            ManagedContextRouter,
+            ExecutionContextProvider,
+            AtomicByteProvider,
+            MutexProvider,
+            0U,
+            ManagedContextRouter::ContextCapacity
+        >;
+
+    static_assert(
+        HeterogeneousOwnedRuntime::WorkerCount == 2U,
+        "Owned Task facility runtime must materialize every heterogeneous Worker declaration"
+    );
+
 
     using FirstHeterogeneousWorker =
         ESPressio::Threading::Detail::FacilityWorkerDescriptor<
