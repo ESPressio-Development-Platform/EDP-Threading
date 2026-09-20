@@ -1064,6 +1064,14 @@ int main() {
         immediateTask.State() == ESPressio::Threading::TaskState::Completed
     );
 
+    {
+        auto result = immediateTask.TakeResult();
+
+        assert(
+            result.IsSucceeded()
+        );
+    }
+
     assert(
         runtime.WorkerBecameAvailable(
             1U
@@ -1140,49 +1148,67 @@ int main() {
         secondQueuedOutcome
     );
 
+    {
+        auto result = firstQueuedTask.TakeResult();
+
+        assert(
+            result.IsSucceeded()
+        );
+    }
+
+    {
+        auto result = secondQueuedTask.TakeResult();
+
+        assert(
+            result.IsSucceeded()
+        );
+    }
+
     Test::LifetimeCallable::DestructionCount = 0U;
     Test::LifetimeResult::DestructionCount = 0U;
 
-    auto lifetimeDispatch = runtime.Dispatch(
-        Test::LifetimeCallable{},
-        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
-    );
+    {
+        auto lifetimeDispatch = runtime.Dispatch(
+            Test::LifetimeCallable{},
+            ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+        );
+
+        assert(
+            lifetimeDispatch.IsSucceeded()
+        );
+
+        auto lifetimeTask = lifetimeDispatch.TakeTask();
+        const auto lifetimeBinding = runtime.AssignedTaskForContext(
+            1U
+        );
+
+        assert(
+            lifetimeBinding.has_value()
+        );
+
+        const auto lifetimeOutcome = runtime.Invoke(
+            lifetimeBinding->RecordIndex,
+            lifetimeBinding->Phase
+        );
+
+        assert(
+            Test::LifetimeCallable::DestructionCount == 1U
+        );
+
+        runtime.CompleteWorkerTask(
+            1U,
+            lifetimeBinding->RecordIndex,
+            lifetimeBinding->Phase,
+            lifetimeOutcome
+        );
+
+        assert(
+            Test::LifetimeResult::DestructionCount == 0U
+        );
+    }
 
     assert(
-        lifetimeDispatch.IsSucceeded()
-    );
-
-    auto lifetimeTask = lifetimeDispatch.TakeTask();
-    const auto lifetimeBinding = runtime.AssignedTaskForContext(
-        1U
-    );
-
-    assert(
-        lifetimeBinding.has_value()
-    );
-
-    const auto lifetimeOutcome = runtime.Invoke(
-        lifetimeBinding->RecordIndex,
-        lifetimeBinding->Phase
-    );
-
-    assert(
-        Test::LifetimeCallable::DestructionCount == 1U
-    );
-
-    runtime.CompleteWorkerTask(
-        1U,
-        lifetimeBinding->RecordIndex,
-        lifetimeBinding->Phase,
-        lifetimeOutcome
-    );
-
-    lifetimeTask = decltype(lifetimeTask)(
-        std::move(lifetimeTask)
-    );
-
-    assert(
-        Test::LifetimeResult::DestructionCount == 0U
+        Test::LifetimeResult::DestructionCount == 1U
     );
 
     return 0;
