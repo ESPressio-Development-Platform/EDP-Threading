@@ -822,6 +822,9 @@ namespace ESPressio::Threading::Detail {
                     return ThreadStopRequestResult::NotRunning;
                 }
 
+                // Stop-request acceptance is the authoritative semantic transition. The targeted
+                // wake is only a mechanism for promptly interrupting blocked execution; wake failure
+                // does not retract the already-published cooperative stop request.
                 static_cast<void>(
                     _router->Wake(
                         _contextIndex
