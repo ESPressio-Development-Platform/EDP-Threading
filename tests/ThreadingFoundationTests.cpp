@@ -506,6 +506,56 @@ namespace Test {
     >;
 
 
+    using HeterogeneousPool = ESPressio::Threading::ThreadingTopology<
+        ESPressio::Threading::TaskExecutionFacility<
+            OrdinaryPool,
+            ESPressio::Threading::TaskRecordCapacity<4U>,
+            ESPressio::Threading::CallableCapacity<32U>,
+            ESPressio::Threading::ResultCapacity<16U>,
+            ESPressio::Threading::Workers<
+                ESPressio::Threading::Worker<
+                    ESPressio::Threading::StackCapacity<2048U>,
+                    ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::Low>,
+                    ESPressio::Threading::Affinity<0U>
+                >,
+                ESPressio::Threading::Worker<
+                    ESPressio::Threading::StackCapacity<4096U>,
+                    ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::High>,
+                    ESPressio::Threading::Affinity<1U>
+                >
+            >
+        >
+    >;
+
+    using FirstHeterogeneousWorker =
+        ESPressio::Threading::Detail::FacilityWorkerDescriptor<
+            HeterogeneousPool,
+            0U,
+            0U
+        >;
+
+    using SecondHeterogeneousWorker =
+        ESPressio::Threading::Detail::FacilityWorkerDescriptor<
+            HeterogeneousPool,
+            0U,
+            1U
+        >;
+
+    static_assert(
+        FirstHeterogeneousWorker::ContextIndex == 0U &&
+        FirstHeterogeneousWorker::Properties::StackCapacity == 2048U &&
+        FirstHeterogeneousWorker::Properties::Priority == ESPressio::Threading::ThreadPriority::Low,
+        "First heterogeneous Worker must preserve its own topology properties and dense index"
+    );
+
+    static_assert(
+        SecondHeterogeneousWorker::ContextIndex == 1U &&
+        SecondHeterogeneousWorker::Properties::StackCapacity == 4096U &&
+        SecondHeterogeneousWorker::Properties::Priority == ESPressio::Threading::ThreadPriority::High,
+        "Second heterogeneous Worker must preserve its own topology properties and dense index"
+    );
+
+
     using TestTaskRecord = ESPressio::Threading::Detail::TaskRecord<
         32U,
         16U,
