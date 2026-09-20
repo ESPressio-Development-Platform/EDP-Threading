@@ -139,12 +139,27 @@ namespace ESPressio::Threading::Detail {
 
             // Context identity and interruption.
 
-            bool IsCurrentContext() const noexcept {
-                return _worker.IsCurrentContext();
+            bool TryResolveCurrentContext(
+                typename Facility::ManagedContextIndex& contextIndex
+            ) const noexcept {
+                if (!_worker.IsCurrentContext()) {
+                    return false;
+                }
+
+                contextIndex = static_cast<typename Facility::ManagedContextIndex>(
+                    TExecutionContextIndex
+                );
+                return true;
             }
 
-            bool IsInterrupted() noexcept {
-                return _worker.IsInterrupted();
+            bool IsContextInterrupted(
+                typename Facility::ManagedContextIndex contextIndex
+            ) noexcept {
+                return
+                    contextIndex == static_cast<typename Facility::ManagedContextIndex>(
+                        TExecutionContextIndex
+                    ) &&
+                    _worker.IsInterrupted();
             }
 
 
