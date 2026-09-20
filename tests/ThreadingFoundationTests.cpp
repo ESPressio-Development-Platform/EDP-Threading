@@ -10,6 +10,7 @@
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
 #include "../src/threading/detail/TaskRecord.hpp"
+#include "../src/threading/detail/TaskWorkerExecutionContext.hpp"
 #include "../src/threading/detail/WaitRegistration.hpp"
 #include "../src/threading/detail/WorkerLeaseScheduler.hpp"
 
@@ -71,6 +72,88 @@ namespace Test {
                     }
 
             };
+
+    };
+
+
+    namespace Framework = ESPressio::System::CompositionFramework;
+
+
+    class ExecutionContextProvider final : public Framework::Provider<
+        ESPressio::Platform::Domain,
+        Framework::Provides<
+            Framework::Offer<
+                ESPressio::Platform::Execution::ExecutionContext,
+                Framework::PropertyValue<ESPressio::Platform::Execution::CallerSuppliedStorage, true>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::SupportsPriority, true>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::SupportsProcessorAffinity, true>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::SupportsStackTelemetry, false>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::ControlStorageBytes, 24U>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::ControlStorageAlignment, 8U>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::StackStorageAlignment, 16U>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::StackAllocationGranularityBytes, 32U>,
+                Framework::PropertyValue<ESPressio::Platform::Execution::JoinWaitResolutionNanoseconds, 1U>
+            >
+        >
+    > {
+
+        private:
+
+            bool _initialized = false;
+
+        public:
+
+            ESPressio::Platform::Execution::ExecutionInitializationResult Initialize(
+                const ESPressio::Platform::Execution::ExecutionStorage& storage,
+                const ESPressio::Platform::Execution::ExecutionConfiguration&,
+                ESPressio::Platform::Execution::ExecutionEntry,
+                void*
+            ) noexcept {
+                if (
+                    storage.ControlAddress == nullptr ||
+                    storage.ControlBytes != 24U ||
+                    storage.StackAddress == nullptr ||
+                    storage.StackBytes != 128U
+                ) {
+                    return ESPressio::Platform::Execution::ExecutionInitializationResult::InvalidStorage;
+                }
+
+                _initialized = true;
+                return ESPressio::Platform::Execution::ExecutionInitializationResult::Succeeded;
+            }
+
+            ESPressio::Platform::Execution::ExecutionStartResult Start() noexcept {
+                return _initialized
+                    ? ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
+                    : ESPressio::Platform::Execution::ExecutionStartResult::InvalidState;
+            }
+
+            ESPressio::Platform::Execution::ExecutionJoinResult Join(
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept {
+                return _initialized
+                    ? ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded
+                    : ESPressio::Platform::Execution::ExecutionJoinResult::InvalidState;
+            }
+
+            ESPressio::Platform::Execution::ExecutionDestroyResult Destroy() noexcept {
+                if (!_initialized) {
+                    return ESPressio::Platform::Execution::ExecutionDestroyResult::InvalidState;
+                }
+
+                _initialized = false;
+                return ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded;
+            }
+
+            bool IsCurrentContext() const noexcept {
+                return false;
+            }
+
+            ESPressio::Platform::Execution::ExecutionStackTelemetry GetStackTelemetry() const noexcept {
+                return {};
+            }
+
+            static void Yield() noexcept {}
 
     };
 
@@ -354,6 +437,25 @@ namespace Test {
         MutexProvider,
         ManagedContextRouter
     >;
+
+
+    using TestWorkerExecutionContext = ESPressio::Threading::Detail::TaskWorkerExecutionContext<
+        ExecutionContextProvider,
+        100U,
+        TestFacilityRuntime,
+        ManagedContextRouter
+    >;
+
+
+    static_assert(
+        TestWorkerExecutionContext::ControlBackingBytes() == 24U,
+        "Worker control backing must follow provider-declared physical storage"
+    );
+
+    static_assert(
+        TestWorkerExecutionContext::StackBackingBytes() == 128U,
+        "Worker stack backing must round semantic capacity to provider granularity"
+    );
 
 
     using TestWorkerScheduler = ESPressio::Threading::Detail::WorkerLeaseScheduler<
@@ -1209,6 +1311,50 @@ int main() {
 
     assert(
         Test::LifetimeResult::DestructionCount == 1U
+    );
+
+
+
+    bool shutdownRequested = false;
+
+    const auto shutdownPredicate = [](
+        const void* context
+    ) noexcept {
+        return *static_cast<const bool*>(
+            context
+        );
+    };
+
+    Test::TestWorkerExecutionContext workerExecutionContext(
+        runtime,
+        runtimeRouter,
+        1U,
+        &shutdownRequested,
+        shutdownPredicate
+    );
+
+    assert(
+        workerExecutionContext.Initialize(
+            ESPressio::Platform::Execution::ExecutionPriority::Normal,
+            ESPressio::Platform::Execution::ProcessorAffinity::Any(),
+            "test-worker"
+        ) == ESPressio::Threading::Detail::WorkerExecutionInitializationResult::Succeeded
+    );
+
+    assert(
+        workerExecutionContext.Start() ==
+        ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
+    );
+
+    assert(
+        workerExecutionContext.Join(
+            ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
+        ) == ESPressio::Platform::Execution::ExecutionJoinResult::Succeeded
+    );
+
+    assert(
+        workerExecutionContext.Destroy() ==
+        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
     );
 
     return 0;
