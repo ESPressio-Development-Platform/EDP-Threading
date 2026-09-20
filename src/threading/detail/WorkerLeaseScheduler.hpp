@@ -119,9 +119,11 @@ namespace ESPressio::Threading::Detail {
             std::optional<ContextIndex> TryClaimAvailable() noexcept {
                 std::size_t workerOrdinal = 0U;
 
-                if (!_availableWorkers.TryClaim(
-                    workerOrdinal
-                )) {
+                if (
+                    _availableWorkers.TryClaim(
+                        workerOrdinal
+                    ) != AvailabilityClaimResult::Claimed
+                ) {
                     return std::nullopt;
                 }
 
