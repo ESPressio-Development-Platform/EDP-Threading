@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -345,10 +346,10 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
-            /// Defines the compile-time contract for `IsCurrentContextNext`.
+            /// Defines the compile-time contract for `CurrentContextIndexNext`.
             /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
-            bool IsCurrentContextNext(
+            bool CurrentContextIndexNext(
                 typename Facility::ManagedContextIndex& contextIndex
             ) const noexcept {
                 if constexpr (
@@ -367,7 +368,7 @@ namespace ESPressio::Threading::Detail {
                         return true;
                     }
 
-                    return IsCurrentContextNext<TIndex + 1U>(
+                    return CurrentContextIndexNext<TIndex + 1U>(
                         contextIndex
                     );
                 }
@@ -486,12 +487,9 @@ namespace ESPressio::Threading::Detail {
 
             // Structural context resolution.
 
-            bool TryResolveCurrentContext(
-                typename Facility::ManagedContextIndex& contextIndex
-            ) const noexcept {
-                return IsCurrentContextNext<0U>(
-                    contextIndex
-                );
+            /// Returns the dense Worker context index owned by this facility when one is currently executing.
+            std::optional<typename Facility::ManagedContextIndex> CurrentContextIndex() const noexcept {
+                return CurrentContextIndexNext<0U>();
             }
 
             bool IsContextInterrupted(
