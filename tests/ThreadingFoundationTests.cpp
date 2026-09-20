@@ -467,7 +467,8 @@ namespace Test {
         Topology::HasDedicatedWorkerLease &&
         Topology::TaskFacilityCount == 1U &&
         Topology::DedicatedWorkerLeaseCount == 1U &&
-        Topology::DedicatedThreadCount == 1U,
+        Topology::DedicatedThreadCount == 1U &&
+        Topology::ManagedExecutionContextCount == 3U,
         "Topology must expose compile-time execution-resource counts without runtime registry state"
     );
 
