@@ -7,7 +7,9 @@
 
 #include "../src/threading/detail/DedicatedThreadControl.hpp"
 #include "../src/threading/detail/DedicatedThreadRuntime.hpp"
+#include "../src/threading/detail/DedicatedThreadOwnedRuntime.hpp"
 #include "../src/threading/detail/DedicatedWorkerLeaseRuntime.hpp"
+#include "../src/threading/detail/DedicatedWorkerOwnedRuntime.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/ExecutionControl.hpp"
 #include "../src/threading/detail/InfrastructureLifecycle.hpp"
@@ -894,6 +896,54 @@ namespace Test {
         ExecutionContextProvider,
         ManagedContextRouter
     >;
+
+
+    using DedicatedWorkerDeclaration = ESPressio::Threading::DedicatedWorkerLease<
+        ReturningCallable,
+        ESPressio::Threading::TaskRecordCapacity<3U>,
+        ESPressio::Threading::CallableCapacity<32U>,
+        ESPressio::Threading::ResultCapacity<16U>,
+        ESPressio::Threading::StackCapacity<100U>,
+        ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::Critical>,
+        ESPressio::Threading::AnyAffinity
+    >;
+
+    static_assert(
+        DedicatedWorkerDeclaration::RecordCapacity == 3U &&
+        DedicatedWorkerDeclaration::CallableStorageCapacity == 32U &&
+        DedicatedWorkerDeclaration::ResultStorageCapacity == 16U,
+        "Dedicated Worker declaration must resolve bounded facility storage"
+    );
+
+    using TestDedicatedWorkerOwnedRuntime =
+        ESPressio::Threading::Detail::DedicatedWorkerOwnedRuntime<
+            DedicatedWorkerDeclaration,
+            ManagedContextRouter,
+            ExecutionContextProvider,
+            AtomicByteProvider,
+            MutexProvider,
+            1U,
+            ManagedContextRouter::ContextCapacity
+        >;
+
+    using DedicatedThreadDeclaration = ESPressio::Threading::DedicatedThread<
+        DedicatedThreadIdentity,
+        ESPressio::Threading::StackCapacity<100U>,
+        ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::High>,
+        ESPressio::Threading::AnyAffinity
+    >;
+
+    using TestDedicatedThreadOwnedRuntime =
+        ESPressio::Threading::Detail::DedicatedThreadOwnedRuntime<
+            DedicatedThreadDeclaration,
+            DedicatedCallable,
+            ManagedContextRouter,
+            ExecutionContextProvider,
+            AtomicByteProvider,
+            MutexProvider,
+            2U,
+            ManagedContextRouter::ContextCapacity
+        >;
 
 
     static_assert(
