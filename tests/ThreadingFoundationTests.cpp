@@ -1174,6 +1174,26 @@ int main() {
         mixedOwner.ContextRouter().IsTopologyBound()
     );
 
+    const auto gatedMixedDispatch = mixedOwner.template Dispatch<Test::OrdinaryPool>(
+        []() {},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        gatedMixedDispatch.Status() ==
+        ESPressio::Threading::TaskDispatchStatus::ShuttingDown
+    );
+
+    assert(
+        mixedOwner.template StartThread<Test::DedicatedThreadIdentity>() ==
+        ESPressio::Threading::ThreadStartResult::ShuttingDown
+    );
+
+    assert(
+        mixedOwner.BeginShutdown() ==
+        ESPressio::Threading::ThreadingShutdownResult::NotStarted
+    );
+
     static_cast<void>(
         mixedOwner.template TaskFacility<Test::OrdinaryPool>()
     );
