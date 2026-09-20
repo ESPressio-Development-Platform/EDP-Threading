@@ -24,6 +24,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `SmallestIndex`.
+    /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
     template<std::size_t TCapacity>
     struct SmallestIndex {
 
@@ -159,6 +161,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskPayloadOperations`.
+    /// @tparam TTaskRecord Task-record Type inspected by the helper.
     template<class TTaskRecord>
     struct TaskPayloadOperations final {
 
@@ -182,6 +186,11 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskRecord`.
+    /// @tparam TCallableCapacity Callable-storage capacity declaration Type.
+    /// @tparam TResultCapacity Result-storage capacity declaration Type.
+    /// @tparam TRecordCapacity Task-record capacity declaration Type.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity, std::size_t TExecutionContextCapacity>
     struct TaskRecord final {
 
