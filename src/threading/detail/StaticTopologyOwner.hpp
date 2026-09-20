@@ -516,21 +516,26 @@ namespace ESPressio::Threading::Detail {
                 return _resources.IsExecutionQuiescent();
             }
 
-            void FinalizeShutdown() noexcept {
+            ThreadingFinalizationResult FinalizeShutdown() noexcept {
                 if (
                     _bootstrap.LifecycleState().State() !=
-                    InfrastructureState::ShuttingDown ||
-                    !IsExecutionQuiescent()
+                    InfrastructureState::ShuttingDown
                 ) {
-                    return;
+                    return ThreadingFinalizationResult::NotShuttingDown;
+                }
+
+                if (!IsExecutionQuiescent()) {
+                    return ThreadingFinalizationResult::ExecutionNotQuiescent;
                 }
 
                 if (!_resources.FinalizeShutdown()) {
-                    return;
+                    return ThreadingFinalizationResult::ProviderFailure;
                 }
 
                 _bootstrap.LifecycleState().PublishShutdownComplete();
                 _shutdownWait.WakeCompleted();
+
+                return ThreadingFinalizationResult::Completed;
             }
 
 
