@@ -10,6 +10,7 @@
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/InfrastructureLifecycle.hpp"
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
+#include "../src/threading/detail/ShutdownCoordinator.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
 #include "../src/threading/detail/TaskFacilityRuntime.hpp"
 #include "../src/threading/detail/TaskPayloadAdapter.hpp"
@@ -284,6 +285,43 @@ namespace Test {
         LifetimeResult operator ()() noexcept {
             return LifetimeResult{};
         }
+
+    };
+
+
+    class ShutdownTaskResource final {
+
+        public:
+
+            bool CancellationStarted = false;
+            bool Quiescent = true;
+
+            void BeginShutdownCancellation() noexcept {
+                CancellationStarted = true;
+            }
+
+            bool IsExecutionQuiescent() noexcept {
+                return Quiescent;
+            }
+
+    };
+
+
+    class ShutdownThreadResource final {
+
+        public:
+
+            bool StopRequested = false;
+            bool Quiescent = true;
+
+            ESPressio::Threading::ThreadStopRequestResult RequestStop() noexcept {
+                StopRequested = true;
+                return ESPressio::Threading::ThreadStopRequestResult::Accepted;
+            }
+
+            bool IsExecutionQuiescent() noexcept {
+                return Quiescent;
+            }
 
     };
 
@@ -1714,6 +1752,55 @@ int main() {
     assert(
         successfulLifecycle.BeginShutdown() ==
         ESPressio::Threading::ThreadingShutdownResult::AlreadyCompleted
+    );
+
+
+    ESPressio::Threading::Detail::InfrastructureLifecycle<
+        Test::AtomicByteProvider
+    > coordinatedLifecycle;
+
+    assert(
+        coordinatedLifecycle.CommitInitialization() ==
+        ESPressio::Threading::ThreadingInitializationResult::Succeeded
+    );
+
+    Test::LifecycleResource coordinatedInfrastructureResource;
+
+    assert(
+        coordinatedLifecycle.Start(
+            coordinatedInfrastructureResource
+        ) == ESPressio::Threading::ThreadingStartResult::Succeeded
+    );
+
+    Test::ShutdownTaskResource shutdownTaskResource;
+    Test::ShutdownThreadResource shutdownThreadResource;
+
+    auto shutdownTaskResources = std::tie(
+        shutdownTaskResource
+    );
+
+    auto shutdownThreadResources = std::tie(
+        shutdownThreadResource
+    );
+
+    assert(
+        ESPressio::Threading::Detail::ShutdownCoordinator::Begin(
+            coordinatedLifecycle,
+            shutdownTaskResources,
+            shutdownThreadResources
+        ) == ESPressio::Threading::ThreadingShutdownResult::Accepted
+    );
+
+    assert(
+        shutdownTaskResource.CancellationStarted &&
+        shutdownThreadResource.StopRequested
+    );
+
+    assert(
+        ESPressio::Threading::Detail::ShutdownCoordinator::IsExecutionQuiescent(
+            shutdownTaskResources,
+            shutdownThreadResources
+        )
     );
 
 
