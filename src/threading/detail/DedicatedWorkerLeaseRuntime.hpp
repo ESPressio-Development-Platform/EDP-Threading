@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -182,17 +183,15 @@ namespace ESPressio::Threading::Detail {
 
             // Context identity and interruption.
 
-            bool TryResolveCurrentContext(
-                typename Facility::ManagedContextIndex& contextIndex
-            ) const noexcept {
+            /// Returns this isolated Worker's dense context index when it owns the current Platform context.
+            std::optional<typename Facility::ManagedContextIndex> CurrentContextIndex() const noexcept {
                 if (!_worker.IsCurrentContext()) {
-                    return false;
+                    return std::nullopt;
                 }
 
-                contextIndex = static_cast<typename Facility::ManagedContextIndex>(
+                return static_cast<typename Facility::ManagedContextIndex>(
                     TExecutionContextIndex
                 );
-                return true;
             }
 
             bool IsContextInterrupted(
