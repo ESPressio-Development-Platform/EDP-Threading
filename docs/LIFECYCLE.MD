@@ -39,6 +39,8 @@ After operational commit:
 
 ## Shutdown
 
+The application-wide lifecycle state is one byte protected by the selected Platform SpinLock provider. Reads from Worker/Dedicated-Thread contexts and writes from bootstrap/shutdown therefore cross an explicit synchronization boundary without requiring a target-wide lock-free atomic guarantee.
+
 Shutdown is terminal and initiation is nonblocking. `BeginShutdown()` changes the authoritative lifecycle first, then structurally traverses the topology. New Task admission and Dedicated Thread activation cease, queued Tasks are cancelled, running Tasks receive cancellation requests and active Dedicated Threads receive stop requests.
 
 `IsExecutionQuiescent()` scans every resource. Execution quiescence is distinct from Task-record retention: completed/cancelled records may remain because a public handle or waiter still exists without keeping Worker infrastructure alive. Arbitrary user code is never forcefully terminated; a noncooperating callable may therefore prevent terminal shutdown forever.
