@@ -719,15 +719,28 @@ namespace ESPressio::Threading::Detail {
             // Context identity.
 
             /// Indicates whether this Dedicated Thread owns the current Platform execution context.
-            bool IsCurrentContext() const noexcept {
-                return _provider.IsCurrentContext();
+            bool TryResolveCurrentContext(
+                ContextIndex& contextIndex
+            ) const noexcept {
+                if (!_provider.IsCurrentContext()) {
+                    return false;
+                }
+
+                contextIndex = _contextIndex;
+                return true;
             }
 
-            /// Indicates whether this Dedicated Thread context currently has a cooperative interruption request.
-            bool IsInterrupted() const noexcept {
-                return IsStopRequested() ||
-                    _shouldTerminate(
-                        _lifecycleContext
+            /// Indicates whether the addressed Dedicated Thread context currently has a cooperative interruption request.
+            bool IsContextInterrupted(
+                ContextIndex contextIndex
+            ) const noexcept {
+                return
+                    contextIndex == _contextIndex &&
+                    (
+                        IsStopRequested() ||
+                        _shouldTerminate(
+                            _lifecycleContext
+                        )
                     );
             }
 
