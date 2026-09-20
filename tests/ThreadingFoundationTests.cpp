@@ -18,6 +18,7 @@
 #include "../src/threading/detail/ShutdownCoordinator.hpp"
 #include "../src/threading/detail/StaticTopologyPlan.hpp"
 #include "../src/threading/detail/StaticTopologyResourceTypes.hpp"
+#include "../src/threading/detail/StaticTopologyResourceStorage.hpp"
 #include "../src/threading/detail/StructuralContextResolver.hpp"
 #include "../src/threading/detail/TopologyResourceLookup.hpp"
 #include "../src/threading/detail/ThreadingBootstrap.hpp"
@@ -1034,6 +1035,24 @@ namespace Test {
     );
 
 
+    using MixedActualRouter =
+        ESPressio::Threading::Detail::ManagedContextRouter<
+            MixedOwnedTopology::ManagedExecutionContextCount,
+            SignalProvider
+        >;
+
+    using MixedOwnedStorage =
+        ESPressio::Threading::Detail::StaticTopologyResourceStorage<
+            MixedOwnedTopology,
+            MixedOwnedBindings,
+            MixedActualRouter,
+            ExecutionContextProvider,
+            AtomicByteProvider,
+            MutexProvider,
+            0U
+        >;
+
+
     static_assert(
         std::tuple_size_v<MixedOwnedResources> == 3U,
         "Every heterogeneous topology declaration must map to exactly one owned runtime resource"
@@ -1100,6 +1119,41 @@ namespace Test {
 
 /// Exercises compact Threading foundation primitives.
 int main() {
+    ESPressio::Threading::Detail::ManagedContextWakeSet<
+        Test::MixedOwnedTopology::ManagedExecutionContextCount,
+        Test::SignalProvider
+    > mixedWakeSet;
+
+    Test::MixedActualRouter mixedRouter(
+        mixedWakeSet
+    );
+
+    ESPressio::Threading::Detail::InfrastructureLifecycle<
+        Test::AtomicByteProvider
+    > mixedLifecycle;
+
+    Test::MixedOwnedBindings mixedBindings(
+        ESPressio::Threading::BindDedicatedThread<Test::DedicatedThreadIdentity>(
+            Test::DedicatedCallable{}
+        )
+    );
+
+    Test::MixedOwnedStorage mixedStorage(
+        mixedBindings,
+        mixedRouter,
+        mixedLifecycle
+    );
+
+    static_cast<void>(
+        mixedStorage.template Get<0U>()
+    );
+    static_cast<void>(
+        mixedStorage.template Get<1U>()
+    );
+    static_cast<void>(
+        mixedStorage.template Get<2U>()
+    );
+
     ESPressio::Threading::Detail::TaskControl<Test::AtomicByteProvider> control;
 
     control.InitializeQueued();
