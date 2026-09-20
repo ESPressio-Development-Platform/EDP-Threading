@@ -52,7 +52,6 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TAtomicWord8Provider>
     class TaskControl final {
 
         private:
@@ -60,7 +59,7 @@ namespace ESPressio::Threading::Detail {
             // Packed control byte.
 
             /// Packed operational state, public ownership and incarnation Phase.
-            typename TAtomicWord8Provider::Word _value;
+            std::uint8_t _value;
 
             /// Bit mask selecting the internal Task operational state.
             static constexpr std::uint8_t StateMask = 0x07U;
@@ -73,11 +72,8 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
-            TaskControl() noexcept {
-                _value.StoreRelaxed(
-                    0U
-                );
-            }
+            TaskControl() noexcept :
+                _value(0U) {}
 
 
             // State inspection.
@@ -85,18 +81,18 @@ namespace ESPressio::Threading::Detail {
             /// Returns the internal operational state.
             TaskOperationalState State() const noexcept {
                 return static_cast<TaskOperationalState>(
-                    _value.LoadAcquire() & StateMask
+                    _value & StateMask
                 );
             }
 
             /// Indicates whether the sole public Task ownership interest exists.
             bool HasOwner() const noexcept {
-                return (_value.LoadAcquire() & OwnerMask) != 0U;
+                return (_value & OwnerMask) != 0U;
             }
 
             /// Returns the current one-bit record-incarnation Phase.
             bool Phase() const noexcept {
-                return (_value.LoadAcquire() & PhaseMask) != 0U;
+                return (_value & PhaseMask) != 0U;
             }
 
             /// Indicates whether cooperative cancellation has been requested while Running.
@@ -109,17 +105,15 @@ namespace ESPressio::Threading::Detail {
 
             /// Initializes a newly claimed record and toggles its incarnation Phase.
             void InitializeQueued() noexcept {
-                const auto current = _value.LoadRelaxed();
+                const auto current = _value;
                 const auto nextPhase = static_cast<std::uint8_t>(
                     (current ^ PhaseMask) & PhaseMask
                 );
 
-                _value.StoreRelease(
-                    static_cast<std::uint8_t>(
-                        nextPhase |
-                        OwnerMask |
-                        static_cast<std::uint8_t>(TaskOperationalState::Queued)
-                    )
+                _value = static_cast<std::uint8_t>(
+                    nextPhase |
+                    OwnerMask |
+                    static_cast<std::uint8_t>(TaskOperationalState::Queued)
                 );
             }
 
@@ -127,65 +121,37 @@ namespace ESPressio::Threading::Detail {
             void SetState(
                 TaskOperationalState state
             ) noexcept {
-                auto expected = _value.LoadAcquire();
-
-                for (;;) {
-                    const auto desired = static_cast<std::uint8_t>(
-                        (expected & static_cast<std::uint8_t>(~StateMask)) |
-                        static_cast<std::uint8_t>(state)
-                    );
-
-                    if (_value.CompareExchangeAcqRel(
-                        expected,
-                        desired
-                    )) { return; }
-                }
+                _value = static_cast<std::uint8_t>(
+                    (_value & static_cast<std::uint8_t>(~StateMask)) |
+                    static_cast<std::uint8_t>(state)
+                );
             }
 
-            /// Atomically changes the operational state only when the expected state still owns the transition.
+            /// Changes the operational state only when the expected state still owns the transition.
+            ///
+            /// The owning facility runtime serializes every mutation through its mutex.
             bool CompareExchangeState(
                 TaskOperationalState expectedState,
                 TaskOperationalState desiredState
             ) noexcept {
-                auto expected = _value.LoadAcquire();
-
-                for (;;) {
-                    if (
-                        static_cast<TaskOperationalState>(
-                            expected & StateMask
-                        ) != expectedState
-                    ) {
-                        return false;
-                    }
-
-                    const auto desired = static_cast<std::uint8_t>(
-                        (expected & static_cast<std::uint8_t>(~StateMask)) |
-                        static_cast<std::uint8_t>(desiredState)
-                    );
-
-                    if (_value.CompareExchangeAcqRel(
-                        expected,
-                        desired
-                    )) {
-                        return true;
-                    }
+                if (State() != expectedState) {
+                    return false;
                 }
+
+                SetState(
+                    desiredState
+                );
+
+                return true;
             }
 
             /// Releases the sole public ownership interest.
+            ///
+            /// The owning facility runtime serializes every mutation through its mutex.
             void ReleaseOwner() noexcept {
-                auto expected = _value.LoadAcquire();
-
-                for (;;) {
-                    const auto desired = static_cast<std::uint8_t>(
-                        expected & static_cast<std::uint8_t>(~OwnerMask)
-                    );
-
-                    if (_value.CompareExchangeAcqRel(
-                        expected,
-                        desired
-                    )) { return; }
-                }
+                _value = static_cast<std::uint8_t>(
+                    _value & static_cast<std::uint8_t>(~OwnerMask)
+                );
             }
 
     };
@@ -197,7 +163,7 @@ namespace ESPressio::Threading::Detail {
         // Payload lifecycle.
 
         /// Executes the callable and establishes any result payload without publishing terminal lifecycle state.
-        TaskInvocationOutcome (*Invoke)(TTaskRecord&);
+        TaskInvocationOutcome (*Invoke)(TTaskRecord&, TaskContext&);
 
         /// Destroys the callable payload before execution has consumed it.
         void (*DestroyCallable)(TTaskRecord&) noexcept;
@@ -214,7 +180,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider>
+    template<std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TRecordCapacity, std::size_t TExecutionContextCapacity>
     struct TaskRecord final {
 
         static_assert(
@@ -228,7 +194,7 @@ namespace ESPressio::Threading::Detail {
         );
 
         static_assert(
-            sizeof(TaskControl<TAtomicWord8Provider>) == 1U,
+            sizeof(TaskControl) == 1U,
             "TaskControl must remain a one-byte intrinsic Task control representation"
         );
 
@@ -275,7 +241,7 @@ namespace ESPressio::Threading::Detail {
         // Compact intrinsic control.
 
         /// One-byte Task lifecycle/ownership/Phase representation.
-        TaskControl<TAtomicWord8Provider> Control;
+        TaskControl Control;
 
 
         // Type-erased payload lifecycle.
