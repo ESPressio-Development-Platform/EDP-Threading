@@ -714,6 +714,9 @@ namespace ESPressio::Threading {
 
         private:
 
+            // Bound callable state.
+
+            /// Application callable owned by this Dedicated Thread binding.
             TCallable _callable;
 
         public:
