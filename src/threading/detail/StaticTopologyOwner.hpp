@@ -278,6 +278,25 @@ namespace ESPressio::Threading::Detail {
                 return _resources.IsExecutionQuiescent();
             }
 
+            template<class TShutdownWaitRuntime>
+            void FinalizeShutdown(
+                TShutdownWaitRuntime& shutdownWaitRuntime
+            ) noexcept {
+                if (
+                    _bootstrap.LifecycleState().State() !=
+                    InfrastructureState::ShuttingDown ||
+                    !IsExecutionQuiescent()
+                ) {
+                    return;
+                }
+
+                _resources.FinalizeShutdown(
+                    shutdownWaitRuntime
+                );
+
+                _bootstrap.LifecycleState().PublishShutdownComplete();
+            }
+
 
             template<class TPoolIdentity>
             auto& TaskFacility() noexcept {
