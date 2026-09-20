@@ -214,16 +214,28 @@ namespace ESPressio::Threading::Detail {
             }
 
             template<std::size_t TIndex>
-            bool IsCurrentContextNext() const noexcept {
+            bool IsCurrentContextNext(
+                typename Facility::ManagedContextIndex& contextIndex
+            ) const noexcept {
                 if constexpr (
                     TIndex == sizeof...(TWorkers)
                 ) {
                     return false;
                 } else {
-                    return std::get<TIndex>(
-                        _workers
-                    ).IsCurrentContext() ||
-                        IsCurrentContextNext<TIndex + 1U>();
+                    if (
+                        std::get<TIndex>(
+                            _workers
+                        ).IsCurrentContext()
+                    ) {
+                        contextIndex = static_cast<typename Facility::ManagedContextIndex>(
+                            TFirstContextIndex + TIndex
+                        );
+                        return true;
+                    }
+
+                    return IsCurrentContextNext<TIndex + 1U>(
+                        contextIndex
+                    );
                 }
             }
 
@@ -294,12 +306,31 @@ namespace ESPressio::Threading::Detail {
 
             // Structural context resolution.
 
-            bool IsCurrentContext() const noexcept {
-                return IsCurrentContextNext<0U>();
+            bool TryResolveCurrentContext(
+                typename Facility::ManagedContextIndex& contextIndex
+            ) const noexcept {
+                return IsCurrentContextNext<0U>(
+                    contextIndex
+                );
             }
 
-            bool IsInterrupted() noexcept {
-                return false;
+            bool IsContextInterrupted(
+                typename Facility::ManagedContextIndex contextIndex
+            ) noexcept {
+                if (
+                    contextIndex < static_cast<typename Facility::ManagedContextIndex>(
+                        TFirstContextIndex
+                    ) ||
+                    contextIndex >= static_cast<typename Facility::ManagedContextIndex>(
+                        TFirstContextIndex + WorkerCount
+                    )
+                ) {
+                    return false;
+                }
+
+                return _facility.IsCancellationRequestedForContext(
+                    contextIndex
+                );
             }
 
 
