@@ -11,7 +11,8 @@ namespace ESPressio::Threading::Detail {
 
     enum class WorkerAvailabilityResult : std::uint8_t {
         Available = 0,
-        OutsideFacilityRange = 1
+        OutsideFacilityRange = 1,
+        ProviderFailure = 2
     };
 
 
