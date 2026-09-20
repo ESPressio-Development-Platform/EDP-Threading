@@ -225,8 +225,8 @@ namespace Measurement {
                     return 3;
                 },
                 Threading::TaskDispatchPolicy::QueueWithTimeout,
-                Threading::Duration::FromMilliseconds(
-                    10U
+                Threading::Duration::FromNanoseconds(
+                    10000000LL
                 )
             );
 
