@@ -591,7 +591,10 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingFinalizationResult::ExecutionNotQuiescent;
                 }
 
-                if (!_resources.FinalizeShutdown()) {
+                if (
+                    _resources.FinalizeShutdown() !=
+                    ThreadingFinalizationResult::Completed
+                ) {
                     return ThreadingFinalizationResult::ProviderFailure;
                 }
 
