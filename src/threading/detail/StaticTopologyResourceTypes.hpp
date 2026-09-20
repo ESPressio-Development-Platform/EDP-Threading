@@ -152,6 +152,43 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    template<class TResource>
+    struct IsTaskExecutionResource {
+
+        static constexpr bool Value = false;
+
+    };
+
+
+    template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers>
+    struct IsTaskExecutionResource<
+        TaskExecutionFacility<
+            TPoolIdentity,
+            TRecordCapacity,
+            TCallableCapacity,
+            TResultCapacity,
+            TWorkers
+        >
+    > {
+
+        static constexpr bool Value = true;
+
+    };
+
+
+    template<class TTaskIdentity, class... TProperties>
+    struct IsTaskExecutionResource<
+        DedicatedWorkerLease<
+            TTaskIdentity,
+            TProperties...
+        >
+    > {
+
+        static constexpr bool Value = true;
+
+    };
+
+
     template<class TTopology, class TBindings>
     struct ValidDedicatedThreadBindings;
 
