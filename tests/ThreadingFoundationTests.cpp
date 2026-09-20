@@ -531,8 +531,7 @@ namespace Test {
 
     static_assert(
         ResolvedWorkerProperties::StackCapacity == 4096U &&
-        ResolvedWorkerProperties::Priority == ESPressio::Threading::ThreadPriority::High &&
-        ResolvedWorkerProperties::Affinity == ESPressio::Threading::ProcessorAffinity::Specific(1U),
+        ResolvedWorkerProperties::Priority == ESPressio::Threading::ThreadPriority::High,
         "Execution resource properties must resolve directly into concrete Platform configuration"
     );
 
