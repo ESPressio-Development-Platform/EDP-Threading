@@ -56,7 +56,7 @@ Every managed sequential context owns one reusable targeted wake primitive. Wait
 
 ## Bootstrap
 
-Initialization and infrastructure Start are separate phases. Initialization validates and realizes resources but starts no EDP-managed execution context. Infrastructure contexts start only after initialization commits.
+Initialization and infrastructure Start are separate phases. Initialization validates and realizes resources but starts no EDP-managed execution context. Infrastructure contexts start only after initialization commits. Declaration order is the default deterministic order; applications that require an absolute cross-resource order can supply a compile-time permutation with `InitializeInOrder<...>()` and `StartInOrder<...>()`. The permutation must name every resource exactly once.
 
 Start is transactional: the first Platform Start failure prevents later Starts, requests cooperative termination of already-started trampolines, joins them, destroys initialized context resources and never commits semantic activation.
 
