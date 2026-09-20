@@ -56,7 +56,7 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle transitions.
 
-            /// Atomically starts a new activation and toggles the activation Phase.
+            /// Starts a new activation and toggles the activation Phase under the owning runtime mutex.
             bool TryStart(
                 bool& activationPhase
             ) noexcept {
