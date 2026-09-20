@@ -123,6 +123,10 @@ namespace ESPressio::Threading::Detail {
                     const auto result = _resources.template Get<TIndex>().Initialize();
 
                     if (result != WorkerExecutionInitializationResult::Succeeded) {
+                        static_cast<void>(
+                            _resources.template Get<TIndex>().DestroyInfrastructure()
+                        );
+
                         DestroyInitializedPrefix<TIndex>();
                         return ThreadingInitializationResult::ProviderFailure;
                     }
