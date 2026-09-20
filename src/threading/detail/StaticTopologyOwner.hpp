@@ -611,7 +611,9 @@ namespace ESPressio::Threading::Detail {
                 const auto result = _bootstrap.LifecycleState().BeginShutdown();
 
                 if (result == ThreadingShutdownResult::Accepted) {
-                    _resources.BeginShutdown();
+                    static_cast<void>(
+                        _resources.BeginShutdown()
+                    );
                 }
 
                 return result;
