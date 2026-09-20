@@ -10,6 +10,7 @@
 #include "../src/threading/detail/DedicatedWorkerLeaseRuntime.hpp"
 #include "../src/threading/detail/FacilityStorage.hpp"
 #include "../src/threading/detail/InfrastructureLifecycle.hpp"
+#include "../src/threading/detail/ManagedContextRouter.hpp"
 #include "../src/threading/detail/ShutdownWaitRuntime.hpp"
 #include "../src/threading/detail/ShutdownCoordinator.hpp"
 #include "../src/threading/detail/TaskFacilityCore.hpp"
@@ -166,6 +167,33 @@ namespace Test {
             }
 
             static void Yield() noexcept {}
+
+    };
+
+
+    class SignalProvider final {
+
+        private:
+
+            bool _signaled = false;
+
+        public:
+
+            ESPressio::Platform::Synchronization::SignalNotifyResult Notify() noexcept {
+                _signaled = true;
+                return ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+            }
+
+            ESPressio::Platform::Synchronization::SignalWaitResult Wait(
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept {
+                if (_signaled) {
+                    _signaled = false;
+                    return ESPressio::Platform::Synchronization::SignalWaitResult::Signaled;
+                }
+
+                return ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut;
+            }
 
     };
 
@@ -1364,6 +1392,52 @@ int main() {
         registrationIndex == 0U
     );
 
+
+
+    ESPressio::Threading::Detail::ManagedContextWakeSet<
+        3U,
+        Test::SignalProvider
+    > structuralWakeSet;
+
+    const auto currentContextResolver = [](
+        const void*
+    ) noexcept -> std::optional<std::uint8_t> {
+        return static_cast<std::uint8_t>(0U);
+    };
+
+    const auto interruptionResolver = [](
+        const void*,
+        std::uint8_t
+    ) noexcept {
+        return false;
+    };
+
+    ESPressio::Threading::Detail::ManagedContextRouter<
+        3U,
+        Test::SignalProvider
+    > structuralRouter(
+        structuralWakeSet,
+        nullptr,
+        currentContextResolver,
+        interruptionResolver
+    );
+
+    assert(
+        structuralRouter.CurrentContextIndex().value() == 0U
+    );
+
+    assert(
+        structuralRouter.Wake(
+            2U
+        ) == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+    );
+
+    assert(
+        structuralRouter.Wait(
+            2U,
+            ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
+        ) == ESPressio::Platform::Synchronization::SignalWaitResult::Signaled
+    );
 
 
     Test::ManagedContextRouter runtimeRouter;
