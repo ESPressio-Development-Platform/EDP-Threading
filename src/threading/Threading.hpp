@@ -19,6 +19,7 @@ namespace ESPressio::Threading {
     /// @tparam TSpinLockProvider Concrete Platform SpinLock provider Type protecting topology lifecycle publication.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider>
+    /// Concrete statically owned runtime Type realizing one complete Threading topology.
     using StaticThreadingRuntime = Detail::StaticTopologyOwner<
         TTopology,
         TBindings,
