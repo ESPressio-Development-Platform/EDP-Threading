@@ -126,9 +126,13 @@ namespace ESPressio::Threading {
     };
 
 
+    /// Logical execution-priority vocabulary shared with the Platform execution contract.
     using ThreadPriority = ESPressio::Platform::Execution::ExecutionPriority;
+    /// Logical processor-affinity vocabulary shared with the Platform execution contract.
     using ProcessorAffinity = ESPressio::Platform::Execution::ProcessorAffinity;
+    /// Canonical physical-duration Type supplied by EDP-Clock.
     using Duration = ESPressio::Clock::Duration;
+    /// Canonical monotonic-coordinate Type supplied by EDP-Clock.
     using MonotonicTimestamp = ESPressio::Clock::MonotonicTimestamp;
 
 
