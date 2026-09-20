@@ -9,6 +9,31 @@
 
 namespace ESPressio::Threading::Detail {
 
+    template<>
+    class StructuralContextResolver<0U> final {
+
+        public:
+
+            using ContextIndex =
+                typename ExecutionContextIndexTraits<0U>::Type;
+
+
+            static std::optional<ContextIndex> ResolveCurrentThunk(
+                const void*
+            ) noexcept {
+                return std::nullopt;
+            }
+
+            static bool IsInterruptedThunk(
+                const void*,
+                ContextIndex
+            ) noexcept {
+                return true;
+            }
+
+    };
+
+
     template<std::size_t TContextCapacity, class... TResources>
     class StructuralContextResolver final {
 
