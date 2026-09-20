@@ -559,13 +559,10 @@ namespace ESPressio::Threading::Detail {
             }
 
 
-            Router& ContextRouter() noexcept {
-                return _router;
+            InfrastructureState LifecycleState() const noexcept {
+                return _bootstrap.LifecycleState().State();
             }
 
-            Bootstrap& BootstrapState() noexcept {
-                return _bootstrap;
-            }
 
     };
 
