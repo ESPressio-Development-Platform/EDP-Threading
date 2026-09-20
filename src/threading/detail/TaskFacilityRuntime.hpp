@@ -402,15 +402,17 @@ namespace ESPressio::Threading::Detail {
                     return reclaimResult;
                 }
 
-                WakeAdmissionWaiters();
-                return TaskReclaimResult::Reclaimed;
+                return WakeAdmissionWaiters() ==
+                    ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                    ? TaskReclaimResult::Reclaimed
+                    : TaskReclaimResult::ProviderFailure;
             }
 
 
             // Wait registration lifecycle.
 
             /// Removes one wait registration and applies final waiter-dependent reclamation.
-            void UnregisterWaiter(
+            TaskReclaimResult UnregisterWaiter(
                 std::size_t registrationIndex,
                 Index recordIndex,
                 bool phase
@@ -419,7 +421,7 @@ namespace ESPressio::Threading::Detail {
                     registrationIndex
                 );
 
-                ReclaimIfQuiescent(
+                return ReclaimIfQuiescent(
                     recordIndex,
                     phase
                 );
@@ -720,11 +722,13 @@ namespace ESPressio::Threading::Detail {
                 std::uint32_t recordIndex,
                 bool phase
             ) noexcept {
-                static_cast<TaskFacilityRuntime*>(owner)->ReleaseOwner(
-                    static_cast<Index>(
-                        recordIndex
-                    ),
-                    phase
+                static_cast<void>(
+                    static_cast<TaskFacilityRuntime*>(owner)->ReleaseOwner(
+                        static_cast<Index>(
+                            recordIndex
+                        ),
+                        phase
+                    )
                 );
             }
 
@@ -832,7 +836,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Releases an admitted Task that cannot be returned to the caller and reclaims it when immediately eligible.
-            void WithdrawUnreturnedDispatch(
+            TaskReclaimResult WithdrawUnreturnedDispatch(
                 Index recordIndex,
                 bool phase
             ) noexcept {
@@ -842,11 +846,10 @@ namespace ESPressio::Threading::Detail {
                         phase
                     )
                 );
-                static_cast<void>(
-                    ReclaimIfQuiescent(
-                        recordIndex,
-                        phase
-                    )
+
+                return ReclaimIfQuiescent(
+                    recordIndex,
+                    phase
                 );
             }
 
@@ -1279,15 +1282,17 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Publishes one Worker outcome, releases that Worker Lease, and atomically schedules FIFO work.
-            void CompleteWorkerTask(
+            TaskFacilityCompletionResult CompleteWorkerTask(
                 ContextIndex contextIndex,
                 Index recordIndex,
                 bool phase,
                 TaskInvocationOutcome outcome
             ) noexcept {
                 if (AcquireLock() != TaskFacilityLockResult::Acquired) {
-                    return;
+                    return TaskFacilityCompletionResult::ProviderFailure;
                 }
+
+                bool providerFailure = false;
 
                 _core.PublishInvocationOutcome(
                     recordIndex,
@@ -1295,27 +1300,47 @@ namespace ESPressio::Threading::Detail {
                     outcome
                 );
 
-                WakeMatchingWaiters(
-                    recordIndex,
-                    phase
-                );
+                if (
+                    WakeMatchingWaiters(
+                        recordIndex,
+                        phase
+                    ) != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                ) {
+                    providerFailure = true;
+                }
 
-                static_cast<void>(
+                if (
                     ReclaimIfQuiescent(
                         recordIndex,
                         phase
-                    )
-                );
+                    ) == TaskReclaimResult::ProviderFailure
+                ) {
+                    providerFailure = true;
+                }
 
                 if (
                     _workerScheduler.MarkAvailable(
                         contextIndex
-                    ) == WorkerAvailabilityResult::Available
+                    ) != WorkerAvailabilityResult::Available
                 ) {
-                    ScheduleAvailableWorkers();
+                    providerFailure = true;
+                } else if (
+                    ScheduleAvailableWorkers() !=
+                    ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                ) {
+                    providerFailure = true;
                 }
 
-                ReleaseLock();
+                if (
+                    ReleaseLock() !=
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                ) {
+                    providerFailure = true;
+                }
+
+                return providerFailure
+                    ? TaskFacilityCompletionResult::ProviderFailure
+                    : TaskFacilityCompletionResult::Completed;
             }
 
 
@@ -1446,32 +1471,49 @@ namespace ESPressio::Threading::Detail {
             // Public ownership release.
 
             /// Releases one Task handle's sole public ownership interest without blocking.
-            void ReleaseOwner(
+            TaskFacilityOwnerReleaseResult ReleaseOwner(
                 Index recordIndex,
                 bool phase
             ) noexcept {
                 if (AcquireLock() != TaskFacilityLockResult::Acquired) {
-                    return;
+                    return TaskFacilityOwnerReleaseResult::ProviderFailure;
                 }
 
+                bool providerFailure = false;
                 const auto effect = _core.ReleaseOwner(
                     recordIndex,
                     phase
                 );
 
-                if (effect == TaskReleaseEffect::TerminalPublished) {
+                if (
+                    effect == TaskReleaseEffect::TerminalPublished &&
                     WakeMatchingWaiters(
                         recordIndex,
                         phase
-                    );
+                    ) != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                ) {
+                    providerFailure = true;
                 }
 
-                ReclaimIfQuiescent(
-                    recordIndex,
-                    phase
-                );
+                if (
+                    ReclaimIfQuiescent(
+                        recordIndex,
+                        phase
+                    ) == TaskReclaimResult::ProviderFailure
+                ) {
+                    providerFailure = true;
+                }
 
-                ReleaseLock();
+                if (
+                    ReleaseLock() !=
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                ) {
+                    providerFailure = true;
+                }
+
+                return providerFailure
+                    ? TaskFacilityOwnerReleaseResult::ProviderFailure
+                    : TaskFacilityOwnerReleaseResult::Released;
             }
 
 
@@ -1527,13 +1569,15 @@ namespace ESPressio::Threading::Detail {
             // Shutdown cooperation.
 
             /// Cancels queued Tasks, requests cooperative cancellation of running Tasks, and wakes affected waiters/contexts.
-            void BeginShutdownCancellation() noexcept {
+            TaskFacilityShutdownCancellationResult BeginShutdownCancellation() noexcept {
                 if (AcquireLock() != TaskFacilityLockResult::Acquired) {
-                    return;
+                    return TaskFacilityShutdownCancellationResult::ProviderFailure;
                 }
 
+                bool providerFailure = false;
+
                 _core.VisitAllocated(
-                    [this](const auto& binding) {
+                    [this, &providerFailure](const auto& binding) {
                         const auto before = _core.PublicState(
                             binding.RecordIndex,
                             binding.Phase
@@ -1553,10 +1597,15 @@ namespace ESPressio::Threading::Detail {
                         );
 
                         if (before == TaskState::Queued && after == TaskState::Cancelled) {
-                            WakeMatchingWaiters(
-                                binding.RecordIndex,
-                                binding.Phase
-                            );
+                            if (
+                                WakeMatchingWaiters(
+                                    binding.RecordIndex,
+                                    binding.Phase
+                                ) != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                            ) {
+                                providerFailure = true;
+                            }
+
                             return;
                         }
 
@@ -1566,15 +1615,35 @@ namespace ESPressio::Threading::Detail {
                                 binding.Phase
                             );
 
-                            if (contextIndex.has_value()) {
-                                static_cast<void>(_router->Wake(contextIndex.value()));
+                            if (
+                                contextIndex.has_value() &&
+                                _router->Wake(
+                                    contextIndex.value()
+                                ) != ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                            ) {
+                                providerFailure = true;
                             }
                         }
                     }
                 );
 
-                WakeAdmissionWaiters();
-                ReleaseLock();
+                if (
+                    WakeAdmissionWaiters() !=
+                    ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                ) {
+                    providerFailure = true;
+                }
+
+                if (
+                    ReleaseLock() !=
+                    ESPressio::Platform::Synchronization::LockReleaseResult::Released
+                ) {
+                    providerFailure = true;
+                }
+
+                return providerFailure
+                    ? TaskFacilityShutdownCancellationResult::ProviderFailure
+                    : TaskFacilityShutdownCancellationResult::Applied;
             }
 
             /// Indicates whether this facility has no queued or actively executing Task work.
