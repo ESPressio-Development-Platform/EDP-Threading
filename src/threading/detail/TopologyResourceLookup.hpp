@@ -62,6 +62,9 @@ namespace ESPressio::Threading::Detail {
 
     /// Defines the compile-time contract for `IsDedicatedWorkerIdentity`.
     /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+    /// Matches one Dedicated Worker lease declaration against a requested Task identity.
+    /// @tparam TTaskIdentity Semantic Task identity Type carried by the Dedicated Worker lease.
+    /// @tparam TProperties Compile-time capacity/execution-property Types carried by the lease.
     template<class TTaskIdentity, class... TProperties>
     struct IsDedicatedWorkerIdentity<
         DedicatedWorkerLease<
