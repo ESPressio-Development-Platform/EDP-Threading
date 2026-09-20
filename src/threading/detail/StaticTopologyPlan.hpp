@@ -70,6 +70,69 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    template<class TWorkers, std::size_t TWorkerIndex>
+    struct WorkerDescriptor;
+
+
+    template<class... TWorkers, std::size_t TWorkerIndex>
+    struct WorkerDescriptor<
+        Workers<TWorkers...>,
+        TWorkerIndex
+    > final {
+
+        static_assert(
+            TWorkerIndex < sizeof...(TWorkers),
+            "Worker descriptor index exceeds the statically declared Worker count"
+        );
+
+        using WorkerType = std::tuple_element_t<
+            TWorkerIndex,
+            std::tuple<TWorkers...>
+        >;
+
+        using Properties = typename WorkerType::Properties;
+
+    };
+
+
+    template<class TTopology, std::size_t TResourceIndex, std::size_t TWorkerIndex>
+    struct FacilityWorkerDescriptor final {
+
+        private:
+
+            using ResourceDescriptor = TopologyResourceDescriptor<
+                TTopology,
+                TResourceIndex
+            >;
+
+        public:
+
+            using Facility = typename ResourceDescriptor::Resource;
+
+            static_assert(
+                IsTaskFacility<Facility>::Value,
+                "FacilityWorkerDescriptor requires a TaskExecutionFacility resource"
+            );
+
+            using Worker = WorkerDescriptor<
+                typename Facility::WorkerSet,
+                TWorkerIndex
+            >;
+
+            using Properties = typename Worker::Properties;
+
+            static constexpr std::size_t ContextIndex =
+                ResourceDescriptor::FirstContextIndex +
+                TWorkerIndex;
+
+            static_assert(
+                TWorkerIndex < ResourceDescriptor::ContextCount,
+                "Worker index exceeds the Task facility's statically declared Worker range"
+            );
+
+    };
+
+
     template<class TTopology>
     class StaticTopologyPlan final {
 
