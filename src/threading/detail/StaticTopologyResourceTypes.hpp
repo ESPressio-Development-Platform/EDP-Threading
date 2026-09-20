@@ -247,11 +247,11 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TDeclaration, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
+    template<class TDeclaration, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     struct OwnedResourceType;
 
 
-    template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers, class... TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
+    template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers, class... TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     struct OwnedResourceType<
         TaskExecutionFacility<
             TPoolIdentity,
@@ -263,7 +263,6 @@ namespace ESPressio::Threading::Detail {
         std::tuple<TBindings...>,
         TManagedContextRouter,
         TExecutionContextProvider,
-        TAtomicWord8Provider,
         TMutexProvider,
         TContextIndex,
         TExecutionContextCapacity
@@ -279,7 +278,6 @@ namespace ESPressio::Threading::Detail {
             >,
             TManagedContextRouter,
             TExecutionContextProvider,
-            TAtomicWord8Provider,
             TMutexProvider,
             TContextIndex,
             TExecutionContextCapacity
@@ -288,13 +286,12 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TTaskIdentity, class... TProperties, class... TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
+    template<class TTaskIdentity, class... TProperties, class... TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     struct OwnedResourceType<
         DedicatedWorkerLease<TTaskIdentity, TProperties...>,
         std::tuple<TBindings...>,
         TManagedContextRouter,
         TExecutionContextProvider,
-        TAtomicWord8Provider,
         TMutexProvider,
         TContextIndex,
         TExecutionContextCapacity
@@ -307,7 +304,6 @@ namespace ESPressio::Threading::Detail {
             >,
             TManagedContextRouter,
             TExecutionContextProvider,
-            TAtomicWord8Provider,
             TMutexProvider,
             TContextIndex,
             TExecutionContextCapacity
@@ -316,13 +312,12 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TThreadIdentity, class... TProperties, class... TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
+    template<class TThreadIdentity, class... TProperties, class... TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     struct OwnedResourceType<
         DedicatedThread<TThreadIdentity, TProperties...>,
         std::tuple<TBindings...>,
         TManagedContextRouter,
         TExecutionContextProvider,
-        TAtomicWord8Provider,
         TMutexProvider,
         TContextIndex,
         TExecutionContextCapacity
@@ -349,7 +344,6 @@ namespace ESPressio::Threading::Detail {
             typename Binding::Callable,
             TManagedContextRouter,
             TExecutionContextProvider,
-            TAtomicWord8Provider,
             TMutexProvider,
             TContextIndex,
             TExecutionContextCapacity
@@ -358,7 +352,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t... TIndices>
+    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t... TIndices>
     auto OwnedResourceTupleType(
         std::index_sequence<TIndices...>
     ) -> std::tuple<
@@ -367,7 +361,6 @@ namespace ESPressio::Threading::Detail {
             TBindings,
             TManagedContextRouter,
             TExecutionContextProvider,
-            TAtomicWord8Provider,
             TMutexProvider,
             StaticTopologyPlan<TTopology>::template Resource<TIndices>::FirstContextIndex,
             TTopology::ManagedExecutionContextCount
@@ -375,14 +368,13 @@ namespace ESPressio::Threading::Detail {
     >;
 
 
-    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider>
+    template<class TTopology, class TBindings, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider>
     using OwnedResourceTuple = decltype(
         OwnedResourceTupleType<
             TTopology,
             TBindings,
             TManagedContextRouter,
             TExecutionContextProvider,
-            TAtomicWord8Provider,
             TMutexProvider
         >(
             std::make_index_sequence<TTopology::ResourceCount>{}
