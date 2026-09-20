@@ -44,6 +44,11 @@ namespace ESPressio::Threading::Detail {
             "Dedicated Thread callable bindings must exactly match the statically declared Dedicated Threads"
         );
 
+        static_assert(
+            std::is_nothrow_destructible_v<TBindings>,
+            "Static Threading callable bindings must be nothrow destructible"
+        );
+
         private:
 
             static constexpr std::size_t ContextCapacity =
