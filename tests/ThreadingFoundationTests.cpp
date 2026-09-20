@@ -1119,6 +1119,30 @@ namespace Test {
     >;
 
 
+    using FailingWakeFacilityRuntime = ESPressio::Threading::Detail::TaskFacilityRuntime<
+        3U,
+        32U,
+        16U,
+        1U,
+        1U,
+        FailingManagedContextRouter::ContextCapacity,
+        MutexProvider,
+        FailingManagedContextRouter
+    >;
+
+
+    using CurrentWorkerFailingWakeFacilityRuntime = ESPressio::Threading::Detail::TaskFacilityRuntime<
+        3U,
+        32U,
+        16U,
+        1U,
+        0U,
+        FailingManagedContextRouter::ContextCapacity,
+        MutexProvider,
+        FailingManagedContextRouter
+    >;
+
+
     using TestWorkerExecutionContext = ESPressio::Threading::Detail::TaskWorkerExecutionContext<
         ExecutionContextProvider,
         100U,
@@ -2253,6 +2277,102 @@ int main() {
             abandonedRunningClaim.Binding()->Phase
         ) == ESPressio::Threading::Detail::TaskReclaimResult::Reclaimed
     );
+
+
+    HostValidationStage(
+        "task Worker wake failure"
+    );
+
+    Test::FailingManagedContextRouter failingTaskWakeRouter;
+    Test::FailingWakeFacilityRuntime failingWakeFacility(
+        failingTaskWakeRouter
+    );
+
+    assert(
+        failingWakeFacility.ValidateSynchronization() ==
+        ESPressio::Threading::Detail::TaskFacilitySynchronizationResult::Ready
+    );
+
+    assert(
+        failingWakeFacility.WorkerBecameAvailable(
+            1U
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::Available
+    );
+
+    const auto failedWorkerWakeDispatch = failingWakeFacility.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::Queue
+    );
+
+    assert(
+        failedWorkerWakeDispatch.Status() ==
+        ESPressio::Threading::TaskDispatchStatus::Interrupted
+    );
+
+    assert(
+        failingWakeFacility.RecordsInUse() == 0U &&
+        failingWakeFacility.QueuedTasks() == 0U &&
+        failingWakeFacility.WorkersInUse() == 0U
+    );
+
+
+    Test::CurrentWorkerFailingWakeFacilityRuntime currentWorkerFacility(
+        failingTaskWakeRouter
+    );
+
+    assert(
+        currentWorkerFacility.ValidateSynchronization() ==
+        ESPressio::Threading::Detail::TaskFacilitySynchronizationResult::Ready
+    );
+
+    assert(
+        currentWorkerFacility.WorkerBecameAvailable(
+            0U
+        ) == ESPressio::Threading::Detail::WorkerAvailabilityResult::Available
+    );
+
+    auto currentWorkerDispatch = currentWorkerFacility.Dispatch(
+        Test::ReturningCallable{},
+        ESPressio::Threading::TaskDispatchPolicy::AbandonImmediately
+    );
+
+    assert(
+        currentWorkerDispatch.IsSucceeded()
+    );
+
+    auto currentWorkerTask = currentWorkerDispatch.TakeTask();
+    const auto currentWorkerBinding = currentWorkerFacility.AssignedTaskForContext(
+        0U
+    );
+
+    assert(
+        currentWorkerTask.State() == ESPressio::Threading::TaskState::Running &&
+        currentWorkerBinding.has_value()
+    );
+
+    const auto currentWorkerOutcome = currentWorkerFacility.Invoke(
+        currentWorkerBinding->RecordIndex,
+        currentWorkerBinding->Phase
+    );
+
+    currentWorkerFacility.CompleteWorkerTask(
+        0U,
+        currentWorkerBinding->RecordIndex,
+        currentWorkerBinding->Phase,
+        currentWorkerOutcome
+    );
+
+    assert(
+        currentWorkerTask.State() == ESPressio::Threading::TaskState::Completed
+    );
+
+    {
+        auto result = currentWorkerTask.TakeResult();
+
+        assert(
+            result.IsSucceeded()
+        );
+    }
 
 
     HostValidationStage(
