@@ -84,8 +84,8 @@ namespace Demo {
         ESPressio::Platform::ESPIDF::Execution::ExecutionContextProvider;
 #endif
 
-    using AtomicWord32Provider =
-        ESPressio::Platform::ESPIDF::Concurrency::AtomicWord32Provider;
+    using SpinLockProvider =
+        ESPressio::Platform::ESPIDF::Synchronization::SpinLockProvider;
 
     using MutexProvider =
         ESPressio::Platform::FreeRTOS::Synchronization::MutexProvider;
@@ -104,7 +104,7 @@ namespace Demo {
             Bindings,
             SignalProvider,
             ExecutionContextProvider,
-            AtomicWord32Provider,
+            SpinLockProvider,
             MutexProvider
         >;
 
