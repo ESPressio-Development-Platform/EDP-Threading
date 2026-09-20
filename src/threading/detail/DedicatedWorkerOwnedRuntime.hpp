@@ -51,6 +51,12 @@ namespace ESPressio::Threading::Detail {
             using TaskIdentity = TTaskIdentity;
             using RuntimeType = Runtime;
 
+            template<class TCallable>
+            using TaskForCallable = typename Runtime::template TaskForCallable<TCallable>;
+
+            template<class TCallable>
+            using DispatchResultFor = typename Runtime::template DispatchResultFor<TCallable>;
+
 
             DedicatedWorkerOwnedRuntime(
                 TManagedContextRouter& router,
