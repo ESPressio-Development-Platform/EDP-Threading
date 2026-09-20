@@ -9,7 +9,7 @@
 
 namespace ESPressio::Threading::Detail {
 
-    template<class TInfrastructureLifecycle, std::size_t TExecutionContextCapacity, class TManagedContextRouter>
+    template<class TInfrastructureLifecycle, std::size_t TExecutionContextCapacity, class TMutexProvider, class TManagedContextRouter>
     class ShutdownWaitRuntime final {
 
         private:
@@ -31,9 +31,38 @@ namespace ESPressio::Threading::Detail {
                 TExecutionContextCapacity
             > _waiters;
 
+            /// Serializes registration publication/removal with terminal wake discovery.
+            TMutexProvider _mutex;
+
+
+            bool AcquireLock() noexcept {
+                return _mutex.Acquire(
+                    ESPressio::Platform::Synchronization::WaitTimeout::Forever()
+                ) == ESPressio::Platform::Synchronization::LockAcquireResult::Acquired;
+            }
+
+            void ReleaseLock() noexcept {
+                static_cast<void>(
+                    _mutex.Release()
+                );
+            }
 
             bool IsComplete() const noexcept {
                 return _lifecycle->State() == InfrastructureState::ShutdownComplete;
+            }
+
+            void Unregister(
+                std::size_t registrationIndex
+            ) noexcept {
+                if (!AcquireLock()) {
+                    return;
+                }
+
+                _waiters.Unregister(
+                    registrationIndex
+                );
+
+                ReleaseLock();
             }
 
             ShutdownWaitResult WaitWithBudget(
@@ -45,7 +74,12 @@ namespace ESPressio::Threading::Detail {
                     return ShutdownWaitResult::Interrupted;
                 }
 
+                if (!AcquireLock()) {
+                    return ShutdownWaitResult::Interrupted;
+                }
+
                 if (IsComplete()) {
+                    ReleaseLock();
                     return ShutdownWaitResult::Completed;
                 }
 
@@ -60,6 +94,7 @@ namespace ESPressio::Threading::Detail {
                         registrationIndex
                     ) != WaitRegistrationStatus::Registered
                 ) {
+                    ReleaseLock();
                     return ShutdownWaitResult::Interrupted;
                 }
 
@@ -69,8 +104,11 @@ namespace ESPressio::Threading::Detail {
                     _waiters.Unregister(
                         registrationIndex
                     );
+                    ReleaseLock();
                     return ShutdownWaitResult::Completed;
                 }
+
+                ReleaseLock();
 
                 for (;;) {
                     const auto remaining = budget.Remaining();
@@ -78,7 +116,7 @@ namespace ESPressio::Threading::Detail {
                     if (remaining.IsNoWait()) {
                         const auto complete = IsComplete();
 
-                        _waiters.Unregister(
+                        Unregister(
                             registrationIndex
                         );
 
@@ -93,7 +131,7 @@ namespace ESPressio::Threading::Detail {
                     );
 
                     if (IsComplete()) {
-                        _waiters.Unregister(
+                        Unregister(
                             registrationIndex
                         );
                         return ShutdownWaitResult::Completed;
@@ -102,7 +140,7 @@ namespace ESPressio::Threading::Detail {
                     if (_router->IsInterrupted(
                         contextIndex.value()
                     )) {
-                        _waiters.Unregister(
+                        Unregister(
                             registrationIndex
                         );
                         return ShutdownWaitResult::Interrupted;
@@ -111,7 +149,7 @@ namespace ESPressio::Threading::Detail {
                     if (
                         waitResult == ESPressio::Platform::Synchronization::SignalWaitResult::ProviderFailure
                     ) {
-                        _waiters.Unregister(
+                        Unregister(
                             registrationIndex
                         );
                         return ShutdownWaitResult::Interrupted;
@@ -123,7 +161,7 @@ namespace ESPressio::Threading::Detail {
                     ) {
                         const auto complete = IsComplete();
 
-                        _waiters.Unregister(
+                        Unregister(
                             registrationIndex
                         );
 
@@ -177,6 +215,10 @@ namespace ESPressio::Threading::Detail {
 
             /// Wakes every context registered against the non-restartable terminal shutdown predicate.
             void WakeCompleted() {
+                if (!AcquireLock()) {
+                    return;
+                }
+
                 _waiters.VisitActive(
                     [this](
                         Registration& registration
@@ -188,6 +230,8 @@ namespace ESPressio::Threading::Detail {
                         );
                     }
                 );
+
+                ReleaseLock();
             }
 
     };
