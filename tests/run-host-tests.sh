@@ -20,6 +20,15 @@ done
 
 OUTPUT="${ROOT}/tests/.threading-foundation-tests"
 
+SANITIZER_FLAGS=()
+if [[ "${EDP_THREADING_SANITIZERS:-1}" != "0" ]]; then
+    SANITIZER_FLAGS=(
+        -g
+        -fno-omit-frame-pointer
+        -fsanitize=address,undefined
+    )
+fi
+
 cleanup() {
     rm -f "${OUTPUT}"
 }
@@ -31,6 +40,7 @@ c++ \
     -Wextra \
     -Wpedantic \
     -Werror \
+    "${SANITIZER_FLAGS[@]}" \
     -I"${ROOT}/src" \
     -I"${WORKSPACE}/EDP-System/src" \
     -I"${WORKSPACE}/EDP-Platform/src" \
@@ -38,6 +48,12 @@ c++ \
     "${ROOT}/tests/ThreadingFoundationTests.cpp" \
     -o "${OUTPUT}"
 
-"${OUTPUT}"
+if [[ "${EDP_THREADING_SANITIZERS:-1}" != "0" ]]; then
+    ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0:abort_on_error=1}" \
+    UBSAN_OPTIONS="${UBSAN_OPTIONS:-halt_on_error=1:print_stacktrace=1}" \
+        "${OUTPUT}"
+else
+    "${OUTPUT}"
+fi
 
 echo "EDP-Threading host foundation tests: PASS"
