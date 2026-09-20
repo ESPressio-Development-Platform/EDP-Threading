@@ -19,6 +19,7 @@
 #include "../src/threading/detail/StaticTopologyPlan.hpp"
 #include "../src/threading/detail/StaticTopologyResourceTypes.hpp"
 #include "../src/threading/detail/StaticTopologyResourceStorage.hpp"
+#include "../src/threading/detail/StaticTopologyOwner.hpp"
 #include "../src/threading/detail/StructuralContextResolver.hpp"
 #include "../src/threading/detail/TopologyResourceLookup.hpp"
 #include "../src/threading/detail/ThreadingBootstrap.hpp"
@@ -1152,6 +1153,35 @@ int main() {
     );
     static_cast<void>(
         mixedStorage.template Get<2U>()
+    );
+
+    ESPressio::Threading::Detail::StaticTopologyOwner<
+        Test::MixedOwnedTopology,
+        Test::MixedOwnedBindings,
+        Test::SignalProvider,
+        Test::ExecutionContextProvider,
+        Test::AtomicByteProvider,
+        Test::MutexProvider
+    > mixedOwner(
+        Test::MixedOwnedBindings(
+            ESPressio::Threading::BindDedicatedThread<Test::DedicatedThreadIdentity>(
+                Test::DedicatedCallable{}
+            )
+        )
+    );
+
+    assert(
+        mixedOwner.ContextRouter().IsTopologyBound()
+    );
+
+    static_cast<void>(
+        mixedOwner.template TaskFacility<Test::OrdinaryPool>()
+    );
+    static_cast<void>(
+        mixedOwner.template DedicatedWorker<Test::ReturningCallable>()
+    );
+    static_cast<void>(
+        mixedOwner.template DedicatedThreadResource<Test::DedicatedThreadIdentity>()
     );
 
     ESPressio::Threading::Detail::TaskControl<Test::AtomicByteProvider> control;
