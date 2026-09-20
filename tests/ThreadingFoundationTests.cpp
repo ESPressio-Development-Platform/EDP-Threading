@@ -1264,6 +1264,36 @@ int main() {
         mixedOwner.template DedicatedThreadResource<Test::DedicatedThreadIdentity>()
     );
 
+    auto movedThreadHandle =
+        mixedOwner.template ThreadHandle<Test::DedicatedThreadIdentity>();
+
+    auto validThreadHandle = std::move(
+        movedThreadHandle
+    );
+
+    assert(
+        !movedThreadHandle.IsValid()
+    );
+
+    assert(
+        movedThreadHandle.State() ==
+        ESPressio::Threading::ThreadState::NeverStarted
+    );
+
+    assert(
+        movedThreadHandle.RequestStop() ==
+        ESPressio::Threading::ThreadStopRequestResult::NotRunning
+    );
+
+    assert(
+        movedThreadHandle.Join() ==
+        ESPressio::Threading::ThreadJoinResult::NeverStarted
+    );
+
+    assert(
+        validThreadHandle.IsValid()
+    );
+
     ESPressio::Threading::Detail::TaskControl<Test::AtomicByteProvider> control;
 
     control.InitializeQueued();
