@@ -20,39 +20,37 @@ done
 
 OUTPUT="${ROOT}/tests/.threading-foundation-tests"
 
-SANITIZER_FLAGS=()
-if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" ]]; then
-    SANITIZER_FLAGS=(
-        -g
-        -fno-omit-frame-pointer
-        -fsanitize=address,undefined
-    )
-fi
-
 cleanup() {
     rm -f "${OUTPUT}"
 }
 trap cleanup EXIT
 
+compile_tests() {
+    c++ \
+        -std=c++17 \
+        -Wall \
+        -Wextra \
+        -Wpedantic \
+        -Werror \
+        "$@" \
+        -I"${ROOT}/src" \
+        -I"${WORKSPACE}/EDP-System/src" \
+        -I"${WORKSPACE}/EDP-Platform/src" \
+        -I"${WORKSPACE}/EDP-Clock/src" \
+        "${ROOT}/tests/ThreadingFoundationTests.cpp" \
+        -o "${OUTPUT}"
+}
+
 if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" ]]; then
     echo "EDP-Threading host foundation tests: compiling (ASan+UBSan)"
+    compile_tests \
+        -g \
+        -fno-omit-frame-pointer \
+        -fsanitize=address,undefined
 else
     echo "EDP-Threading host foundation tests: compiling"
+    compile_tests
 fi
-
-c++ \
-    -std=c++17 \
-    -Wall \
-    -Wextra \
-    -Wpedantic \
-    -Werror \
-    "${SANITIZER_FLAGS[@]}" \
-    -I"${ROOT}/src" \
-    -I"${WORKSPACE}/EDP-System/src" \
-    -I"${WORKSPACE}/EDP-Platform/src" \
-    -I"${WORKSPACE}/EDP-Clock/src" \
-    "${ROOT}/tests/ThreadingFoundationTests.cpp" \
-    -o "${OUTPUT}"
 
 echo "EDP-Threading host foundation tests: executing"
 
