@@ -7,8 +7,8 @@
 #include <Arduino.h>
 #endif
 
-#include <FreeRTOS.h>
-#include <task.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include <ESPressio_Platform_FreeRTOS.hpp>
 #include <ESPressio_Platform_Portable.hpp>
