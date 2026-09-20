@@ -233,7 +233,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider>
+    template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TExecutionContextCapacity>
     class TaskFacilityCore final {
 
         static_assert(
@@ -260,8 +260,7 @@ namespace ESPressio::Threading::Detail {
                 TCallableCapacity,
                 TResultCapacity,
                 TRecordCapacity,
-                TExecutionContextCapacity,
-                TAtomicWord8Provider
+                TExecutionContextCapacity
             >;
 
             /// Smallest record-index Type satisfying the configured facility capacity.
@@ -287,9 +286,7 @@ namespace ESPressio::Threading::Detail {
 
             /// Indicates whether the supplied index and Phase identify the same record incarnation.
             ///
-            /// This check intentionally reads only atomic record control. Worker execution and
-            /// public handle observation may occur outside the facility lock, while the byte-level
-            /// availability bitmap is mutated under that lock and therefore must not be read here.
+            /// The owning facility runtime must serialize this check with every control mutation.
             bool IsCurrentIncarnation(
                 IndexType recordIndex,
                 bool phase
@@ -501,19 +498,13 @@ namespace ESPressio::Threading::Detail {
             /// Executes one Worker-owned Task payload outside the facility serialization boundary.
             TaskInvocationOutcome Invoke(
                 Index recordIndex,
-                bool phase
+                TaskContext& context
             ) {
                 auto& record = _records[recordIndex];
 
-                if (!IsCurrentIncarnation(
-                    recordIndex,
-                    phase
-                )) {
-                    return TaskInvocationOutcome::Cancelled;
-                }
-
                 return record.PayloadOperations->Invoke(
-                    record
+                    record,
+                    context
                 );
             }
 
@@ -968,6 +959,24 @@ namespace ESPressio::Threading::Detail {
                 }
 
                 return queued;
+            }
+
+
+            // Cooperative cancellation observation.
+
+            /// Reads cancellation for one current Task incarnation.
+            ///
+            /// The owning facility runtime must serialize this read with every control mutation.
+            bool IsCancellationRequested(
+                Index recordIndex,
+                bool phase
+            ) const noexcept {
+                return
+                    IsCurrentIncarnation(
+                        recordIndex,
+                        phase
+                    ) &&
+                    _records[recordIndex].Control.IsCancellationRequested();
             }
 
 
