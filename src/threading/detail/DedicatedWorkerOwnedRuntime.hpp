@@ -81,6 +81,7 @@ namespace ESPressio::Threading::Detail {
             using DispatchResultFor = typename Runtime::template DispatchResultFor<TCallable>;
 
 
+            /// Constructs the topology-owned Dedicated Worker runtime against routing and shutdown services.
             DedicatedWorkerOwnedRuntime(
                 TManagedContextRouter& router,
                 const void* shutdownContext,
@@ -93,6 +94,7 @@ namespace ESPressio::Threading::Detail {
                 ) {}
 
 
+            /// Initializes synchronization and the isolated persistent Worker context without starting execution.
             WorkerExecutionInitializationResult Initialize() noexcept {
                 return _runtime.Initialize(
                     Declaration::Properties::Priority,
@@ -100,14 +102,17 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Starts the isolated persistent Worker after the topology initialization barrier.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
                 return _runtime.StartInfrastructure();
             }
 
+            /// Wakes the isolated Worker so rollback or shutdown termination can be observed.
             void RequestInfrastructureTermination() noexcept {
                 _runtime.RequestInfrastructureTermination();
             }
 
+            /// Joins the isolated Worker context using the supplied Platform wait budget.
             ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
                 ESPressio::Platform::Synchronization::WaitTimeout timeout
             ) noexcept {
@@ -116,6 +121,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Destroys the isolated Worker context and releases its native provider state.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return _runtime.DestroyInfrastructure();
             }
@@ -124,6 +130,7 @@ namespace ESPressio::Threading::Detail {
             /// Defines the compile-time contract for `Dispatch`.
             /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
+            /// Dispatches one callable through the isolated Dedicated Worker facility.
             auto Dispatch(
                 TCallable&& callable,
                 TaskDispatchPolicy policy,
@@ -144,6 +151,7 @@ namespace ESPressio::Threading::Detail {
                 return _runtime.CurrentContextIndex();
             }
 
+            /// Indicates whether the addressed isolated Worker context carries cancellation or shutdown interruption.
             bool IsContextInterrupted(
                 typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type contextIndex
             ) noexcept {
@@ -153,15 +161,18 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Applies terminal shutdown cancellation semantics to the isolated Task facility.
             void BeginShutdownCancellation() noexcept {
                 _runtime.BeginShutdownCancellation();
             }
 
+            /// Indicates whether this Dedicated Worker resource has no executable Task work remaining.
             bool IsExecutionQuiescent() noexcept {
                 return _runtime.IsExecutionQuiescent();
             }
 
 
+            /// Exposes the owned concrete runtime to internal topology coordination.
             Runtime& RuntimeState() noexcept {
                 return _runtime;
             }
