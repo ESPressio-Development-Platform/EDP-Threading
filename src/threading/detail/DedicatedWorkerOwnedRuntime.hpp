@@ -109,8 +109,8 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Wakes the isolated Worker so rollback or shutdown termination can be observed.
-            void RequestInfrastructureTermination() noexcept {
-                _runtime.RequestInfrastructureTermination();
+            ESPressio::Platform::Synchronization::SignalNotifyResult RequestInfrastructureTermination() noexcept {
+                return _runtime.RequestInfrastructureTermination();
             }
 
             /// Joins the isolated Worker context using the supplied Platform wait budget.
