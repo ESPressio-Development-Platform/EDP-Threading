@@ -7,6 +7,8 @@
 
 namespace ESPressio::Threading {
 
+    /// Defines the compile-time contract for `TaskDispatchResult`.
+    /// @tparam TTask Concrete Task Type being inspected.
     template<class TTask>
     class TaskDispatchResult final {
 
@@ -64,6 +66,8 @@ namespace ESPressio::Threading {
     };
 
 
+    /// Defines the compile-time contract for `TaskTakeResult`.
+    /// @tparam TResult Result Type produced or carried by the Task.
     template<class TResult>
     class TaskTakeResult final {
 
