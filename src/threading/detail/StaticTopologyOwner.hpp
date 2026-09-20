@@ -525,7 +525,9 @@ namespace ESPressio::Threading::Detail {
                     return;
                 }
 
-                _resources.FinalizeShutdown();
+                if (!_resources.FinalizeShutdown()) {
+                    return;
+                }
 
                 _bootstrap.LifecycleState().PublishShutdownComplete();
                 _shutdownWait.WakeCompleted();
