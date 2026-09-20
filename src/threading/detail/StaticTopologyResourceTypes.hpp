@@ -9,6 +9,7 @@
 #include "DedicatedWorkerOwnedRuntime.hpp"
 #include "StaticTopologyPlan.hpp"
 #include "TaskFacilityOwnedRuntime.hpp"
+#include "TopologyResourceLookup.hpp"
 
 namespace ESPressio::Threading::Detail {
 
