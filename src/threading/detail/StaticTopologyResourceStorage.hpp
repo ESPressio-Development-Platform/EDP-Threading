@@ -176,6 +176,33 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            template<std::size_t TIndex = TResourceIndex>
+            void BeginShutdown() noexcept {
+                if constexpr (
+                    IsTaskExecutionResource<
+                        typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::Resource
+                    >::Value
+                ) {
+                    _resource.BeginShutdownCancellation();
+                } else if constexpr (
+                    IsDedicatedThread<
+                        typename StaticTopologyPlan<TTopology>::template Resource<TResourceIndex>::Resource
+                    >::Value
+                ) {
+                    static_cast<void>(
+                        _resource.RequestStop()
+                    );
+                }
+
+                _tail.BeginShutdown();
+            }
+
+            bool IsExecutionQuiescent() noexcept {
+                return _resource.IsExecutionQuiescent() &&
+                    _tail.IsExecutionQuiescent();
+            }
+
+
             template<std::size_t TIndex>
             const auto& Get() const noexcept {
                 static_assert(
@@ -215,6 +242,13 @@ namespace ESPressio::Threading::Detail {
                 TManagedContextRouter&,
                 InfrastructureLifecycle<TAtomicWord8Provider>&
             ) noexcept {}
+
+
+            void BeginShutdown() noexcept {}
+
+            bool IsExecutionQuiescent() noexcept {
+                return true;
+            }
 
     };
 
