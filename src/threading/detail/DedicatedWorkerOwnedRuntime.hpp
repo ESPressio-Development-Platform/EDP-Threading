@@ -8,10 +8,24 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `DedicatedWorkerOwnedRuntime`.
+    /// @tparam TDeclaration Static resource declaration Type being realized.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TContextIndex Dense topology execution-context index assigned to the resource.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TDeclaration, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     class DedicatedWorkerOwnedRuntime;
 
 
+    /// Defines the compile-time contract for `DedicatedWorkerOwnedRuntime`.
+    /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TContextIndex Dense topology execution-context index assigned to the resource.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<class TTaskIdentity, class... TProperties, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     class DedicatedWorkerOwnedRuntime<
         DedicatedWorkerLease<TTaskIdentity, TProperties...>,
@@ -49,9 +63,13 @@ namespace ESPressio::Threading::Detail {
             using TaskIdentity = TTaskIdentity;
             using RuntimeType = Runtime;
 
+            /// Defines the compile-time contract for `TaskForCallable`.
+            /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
             using TaskForCallable = typename Runtime::template TaskForCallable<TCallable>;
 
+            /// Defines the compile-time contract for `DispatchResultFor`.
+            /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
             using DispatchResultFor = typename Runtime::template DispatchResultFor<TCallable>;
 
@@ -96,6 +114,8 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Defines the compile-time contract for `Dispatch`.
+            /// @tparam TCallable Callable Type being invoked, stored, or adapted.
             template<class TCallable>
             auto Dispatch(
                 TCallable&& callable,
