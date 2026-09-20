@@ -1299,7 +1299,8 @@ int main() {
     );
 
     assert(
-        mixedOwner.ContextRouter().IsTopologyBound()
+        mixedOwner.LifecycleState() ==
+        ESPressio::Threading::Detail::InfrastructureState::Uninitialized
     );
 
     const auto gatedMixedDispatch = mixedOwner.template Dispatch<Test::OrdinaryPool>(
