@@ -14,6 +14,6 @@ It validates the complete consumer lifecycle: static topology construction, init
 
 ## Concrete providers
 
-The Arduino targets use the vanilla FreeRTOS execution, signal and mutex providers plus the portable lock-free AtomicWord8 provider. The ESP-IDF target uses the ESP-IDF execution provider (including its native affinity-capable implementation), the FreeRTOS signal/mutex providers and the portable AtomicWord8 provider.
+The Arduino targets use the vanilla FreeRTOS execution, signal and mutex providers plus the ESP-IDF-native lock-free AtomicWord32 provider for the topology-wide lifecycle. The ESP-IDF target uses the ESP-IDF execution provider (including its native affinity-capable implementation), the FreeRTOS signal/mutex providers and the same native AtomicWord32 provider. Per-Task and per-Dedicated-Thread intrinsic control remains exactly one byte and is serialized through the mutex already owned by the corresponding runtime rather than requiring an unsupported byte-wide lock-free CAS primitive.
 
 PlatformIO manifests declare every required EDP repository explicitly. The Arduino IDE variant requires those libraries to be installed in the Arduino library search path.
