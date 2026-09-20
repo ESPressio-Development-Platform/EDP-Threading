@@ -78,6 +78,13 @@ namespace ESPressio::Threading::Detail {
                 ESPressio::Platform::Execution::ProcessorAffinity affinity,
                 const char* name = nullptr
             ) noexcept {
+                if (
+                    _facility.ValidateSynchronization() !=
+                    TaskFacilitySynchronizationResult::Ready
+                ) {
+                    return WorkerExecutionInitializationResult::ProviderFailure;
+                }
+
                 return _worker.Initialize(
                     priority,
                     affinity,
