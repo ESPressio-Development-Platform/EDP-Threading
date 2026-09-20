@@ -24,13 +24,16 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Targeted-wake set Type used by this router.
             using WakeSet = ManagedContextWakeSet<
                 0U,
                 TSignalProvider
             >;
 
+            /// Compact Type used to identify one managed execution context.
             using ContextIndex = typename SmallestIndex<1U>::Type;
 
+            /// Number of managed execution contexts represented by this runtime.
             static constexpr std::size_t ContextCapacity = 0U;
 
 
@@ -78,14 +81,17 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            /// Targeted-wake set Type used by this router.
             using WakeSet = ManagedContextWakeSet<
                 TContextCapacity,
                 TSignalProvider
             >;
 
+            /// Compact Type used to identify one managed execution context.
             using ContextIndex =
                 typename ExecutionContextIndexTraits<TContextCapacity>::Type;
 
+            /// Number of managed execution contexts represented by this runtime.
             static constexpr std::size_t ContextCapacity = TContextCapacity;
 
         private:
