@@ -694,11 +694,9 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Wakes the persistent trampoline so rollback/shutdown termination is re-evaluated.
-            void RequestInfrastructureTermination() noexcept {
-                static_cast<void>(
-                    _router->Wake(
-                        _contextIndex
-                    )
+            ESPressio::Platform::Synchronization::SignalNotifyResult RequestInfrastructureTermination() noexcept {
+                return _router->Wake(
+                    _contextIndex
                 );
             }
 
