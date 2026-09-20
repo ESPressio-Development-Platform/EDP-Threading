@@ -639,32 +639,32 @@ namespace Measurement {
 
     extern "C" {
 
-        __attribute__((used))
         /// Retained BSS symbol sized to the calculated Threading-intrinsic byte count.
+        __attribute__((used))
         std::byte EDP_Threading_Measurement_Intrinsic[
             ThreadingIntrinsicBytes
         ];
 
-        __attribute__((used))
         /// Retained BSS symbol sized to the execution-provider object byte count.
+        __attribute__((used))
         std::byte EDP_Threading_Measurement_ProviderObjects[
             ExecutionProviderBytes
         ];
 
-        __attribute__((used))
         /// Retained BSS symbol sized to the native execution-control backing byte count.
+        __attribute__((used))
         std::byte EDP_Threading_Measurement_ControlBacking[
             ControlBackingBytes
         ];
 
-        __attribute__((used))
         /// Retained BSS symbol sized to the provider-rounded stack backing byte count.
+        __attribute__((used))
         std::byte EDP_Threading_Measurement_StackBacking[
             StackBackingBytes
         ];
 
-        __attribute__((used))
         /// Retained BSS symbol sized to the synchronization/wake provider byte count.
+        __attribute__((used))
         std::byte EDP_Threading_Measurement_SynchronizationWake[
             SynchronizationWakeBytes
         ];
@@ -731,13 +731,13 @@ namespace Measurement {
         Runtime&
     );
 
-    __attribute__((used))
     /// Retained constructor reference preventing link-time removal of runtime construction code.
+    __attribute__((used))
     volatile ConstructFunction KeepConstructor =
         &ConstructRuntime;
 
-    __attribute__((used))
     /// Retained API-surface reference preventing link-time removal of measured Threading code.
+    __attribute__((used))
     volatile LinkFunction KeepLinkedSurface =
         &LinkRuntimeSurface;
 
