@@ -606,41 +606,6 @@ namespace Measurement {
     }
 
 
-    void KeepMeasurementSymbols() noexcept {
-        EDP_Threading_Measurement_Keep ^=
-            reinterpret_cast<std::uintptr_t>(
-                EDP_Threading_Measurement_Intrinsic
-            );
-
-        EDP_Threading_Measurement_Keep ^=
-            reinterpret_cast<std::uintptr_t>(
-                EDP_Threading_Measurement_ProviderObjects
-            );
-
-        EDP_Threading_Measurement_Keep ^=
-            reinterpret_cast<std::uintptr_t>(
-                EDP_Threading_Measurement_ControlBacking
-            );
-
-        EDP_Threading_Measurement_Keep ^=
-            reinterpret_cast<std::uintptr_t>(
-                EDP_Threading_Measurement_StackBacking
-            );
-
-        EDP_Threading_Measurement_Keep ^=
-            reinterpret_cast<std::uintptr_t>(
-                EDP_Threading_Measurement_SynchronizationWake
-            );
-
-        if (
-            KeepConstructor == nullptr ||
-            KeepLinkedSurface == nullptr
-        ) {
-            EDP_Threading_Measurement_Keep ^= 1U;
-        }
-    }
-
-
     Runtime* ConstructRuntime(
         void* storage
     ) {
@@ -700,6 +665,41 @@ namespace Measurement {
     __attribute__((used))
     volatile LinkFunction KeepLinkedSurface =
         &LinkRuntimeSurface;
+
+
+    void KeepMeasurementSymbols() noexcept {
+        EDP_Threading_Measurement_Keep ^=
+            reinterpret_cast<std::uintptr_t>(
+                EDP_Threading_Measurement_Intrinsic
+            );
+
+        EDP_Threading_Measurement_Keep ^=
+            reinterpret_cast<std::uintptr_t>(
+                EDP_Threading_Measurement_ProviderObjects
+            );
+
+        EDP_Threading_Measurement_Keep ^=
+            reinterpret_cast<std::uintptr_t>(
+                EDP_Threading_Measurement_ControlBacking
+            );
+
+        EDP_Threading_Measurement_Keep ^=
+            reinterpret_cast<std::uintptr_t>(
+                EDP_Threading_Measurement_StackBacking
+            );
+
+        EDP_Threading_Measurement_Keep ^=
+            reinterpret_cast<std::uintptr_t>(
+                EDP_Threading_Measurement_SynchronizationWake
+            );
+
+        if (
+            KeepConstructor == nullptr ||
+            KeepLinkedSurface == nullptr
+        ) {
+            EDP_Threading_Measurement_Keep ^= 1U;
+        }
+    }
 
 #else
 
