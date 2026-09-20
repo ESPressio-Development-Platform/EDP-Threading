@@ -43,12 +43,16 @@ namespace ESPressio::Threading::Detail {
 
             TInfrastructureLifecycle* _lifecycle;
 
+            /// Indicates whether the authoritative Threading lifecycle reached terminal shutdown completion.
             bool IsComplete() const noexcept {
                 return _lifecycle->State() == InfrastructureState::ShutdownComplete;
             }
 
         public:
 
+            // Construction.
+
+            /// Binds terminal-shutdown waiting to the authoritative lifecycle and managed-context router.
             explicit ShutdownWaitRuntime(
                 TInfrastructureLifecycle& lifecycle,
                 TManagedContextRouter&
@@ -118,6 +122,8 @@ namespace ESPressio::Threading::Detail {
             TMutexProvider _mutex;
 
 
+            // Synchronization and completion helpers.
+
             /// Acquires the shutdown-wait registration mutex indefinitely.
             ESPressio::Platform::Synchronization::LockAcquireResult AcquireLock() noexcept {
                 return _mutex.Acquire(
@@ -134,6 +140,7 @@ namespace ESPressio::Threading::Detail {
                 return _lifecycle->State() == InfrastructureState::ShutdownComplete;
             }
 
+            /// Removes one previously published terminal-shutdown wait registration.
             void Unregister(
                 std::size_t registrationIndex
             ) noexcept {
@@ -153,6 +160,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Waits for terminal shutdown completion using one canonical monotonic wait budget.
             ShutdownWaitResult WaitWithBudget(
                 const MonotonicWaitBudget& budget
             ) {
@@ -307,12 +315,14 @@ namespace ESPressio::Threading::Detail {
 
             // Wait operations.
 
+            /// Waits indefinitely for terminal shutdown completion.
             ShutdownWaitResult Wait() {
                 return WaitWithBudget(
                     MonotonicWaitBudget::Forever()
                 );
             }
 
+            /// Waits for terminal shutdown completion for at most the supplied duration.
             ShutdownWaitResult WaitFor(
                 Duration duration
             ) {
@@ -323,6 +333,7 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Waits for terminal shutdown completion until the supplied monotonic deadline.
             ShutdownWaitResult WaitUntil(
                 MonotonicTimestamp deadline
             ) {
