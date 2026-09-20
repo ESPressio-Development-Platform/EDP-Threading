@@ -13,20 +13,25 @@ namespace Measurement {
     namespace Threading = ESPressio::Threading;
     namespace Detail = ESPressio::Threading::Detail;
 
+    /// Targeted-wake provider Type used by every measured runtime.
     using SignalProvider =
         ESPressio::Platform::FreeRTOS::Synchronization::SignalProvider;
 
 #ifdef ARDUINO
+    /// Concrete execution-context provider Type selected by the current framework surface.
     using ExecutionContextProvider =
         ESPressio::Platform::FreeRTOS::Execution::ExecutionContextProvider;
 #else
+    /// Concrete execution-context provider Type selected by the current framework surface.
     using ExecutionContextProvider =
         ESPressio::Platform::ESPIDF::Execution::ExecutionContextProvider;
 #endif
 
+    /// Topology lifecycle SpinLock provider Type used by every measured runtime.
     using SpinLockProvider =
         ESPressio::Platform::ESPIDF::Synchronization::SpinLockProvider;
 
+    /// Resource-local Mutex provider Type used by every measured runtime.
     using MutexProvider =
         ESPressio::Platform::FreeRTOS::Synchronization::MutexProvider;
 
@@ -39,6 +44,7 @@ namespace Measurement {
 
     struct LeaseTask final {
 
+        /// Returns one deterministic value from the Dedicated Worker measurement callable.
         int operator ()() const noexcept {
             return 7;
         }
@@ -50,6 +56,7 @@ namespace Measurement {
 
     struct ThreadBody final {
 
+        /// Runs the Dedicated Thread measurement callable without additional application work.
         void operator ()(
             Threading::ThreadContext&
         ) noexcept {}
@@ -57,6 +64,8 @@ namespace Measurement {
     };
 
 
+    /// Sums the provider-rounded physical stack backing required by a set of managed contexts.
+    /// @tparam TStackCapacities Semantic stack capacities requested by the measured contexts.
     template<std::size_t... TStackCapacities>
     constexpr std::size_t StackBackingTotal() noexcept {
         return (
@@ -74,6 +83,7 @@ namespace Measurement {
 
     struct Scenario final {
 
+        /// Compile-time Threading topology measured by this scenario.
         using Topology = Threading::ThreadingTopology<
             Threading::TaskExecutionFacility<
                 PrimaryPool,
@@ -90,19 +100,23 @@ namespace Measurement {
             >
         >;
 
+        /// Dedicated Thread binding tuple Type required by this scenario.
         using Bindings = std::tuple<>;
 
+        /// Creates the Dedicated Thread binding tuple required to construct this scenario.
         static Bindings MakeBindings() {
             return {};
         }
 
+        /// Number of Mutex-provider objects included in this scenario's synchronization accounting.
         static constexpr std::size_t MutexCount = 2U;
 
+        /// Returns the provider-rounded physical stack backing for every context in this scenario.
         static constexpr std::size_t StackBackingBytes() noexcept {
             return StackBackingTotal<4096U>();
         }
 
-        /// Defines the compile-time contract for `LinkSurface`.
+        /// References the representative Threading operations retained for this measurement scenario.
         /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
@@ -132,6 +146,7 @@ namespace Measurement {
 
     struct Scenario final {
 
+        /// Compile-time Threading topology measured by this scenario.
         using Topology = Threading::ThreadingTopology<
             Threading::TaskExecutionFacility<
                 PrimaryPool,
@@ -153,19 +168,23 @@ namespace Measurement {
             >
         >;
 
+        /// Dedicated Thread binding tuple Type required by this scenario.
         using Bindings = std::tuple<>;
 
+        /// Creates the Dedicated Thread binding tuple required to construct this scenario.
         static Bindings MakeBindings() {
             return {};
         }
 
+        /// Number of Mutex-provider objects included in this scenario's synchronization accounting.
         static constexpr std::size_t MutexCount = 2U;
 
+        /// Returns the provider-rounded physical stack backing for every context in this scenario.
         static constexpr std::size_t StackBackingBytes() noexcept {
             return StackBackingTotal<4096U, 4096U>();
         }
 
-        /// Defines the compile-time contract for `LinkSurface`.
+        /// References the representative Threading operations retained for this measurement scenario.
         /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
@@ -192,6 +211,7 @@ namespace Measurement {
 
     struct Scenario final {
 
+        /// Compile-time Threading topology measured by this scenario.
         using Topology = Threading::ThreadingTopology<
             Threading::TaskExecutionFacility<
                 ControlPool,
@@ -208,19 +228,23 @@ namespace Measurement {
             >
         >;
 
+        /// Dedicated Thread binding tuple Type required by this scenario.
         using Bindings = std::tuple<>;
 
+        /// Creates the Dedicated Thread binding tuple required to construct this scenario.
         static Bindings MakeBindings() {
             return {};
         }
 
+        /// Number of Mutex-provider objects included in this scenario's synchronization accounting.
         static constexpr std::size_t MutexCount = 2U;
 
+        /// Returns the provider-rounded physical stack backing for every context in this scenario.
         static constexpr std::size_t StackBackingBytes() noexcept {
             return StackBackingTotal<2048U>();
         }
 
-        /// Defines the compile-time contract for `LinkSurface`.
+        /// References the representative Threading operations retained for this measurement scenario.
         /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
@@ -254,6 +278,7 @@ namespace Measurement {
 
     struct Scenario final {
 
+        /// Compile-time Threading topology measured by this scenario.
         using Topology = Threading::ThreadingTopology<
             Threading::DedicatedWorkerLease<
                 LeaseTask,
@@ -266,19 +291,23 @@ namespace Measurement {
             >
         >;
 
+        /// Dedicated Thread binding tuple Type required by this scenario.
         using Bindings = std::tuple<>;
 
+        /// Creates the Dedicated Thread binding tuple required to construct this scenario.
         static Bindings MakeBindings() {
             return {};
         }
 
+        /// Number of Mutex-provider objects included in this scenario's synchronization accounting.
         static constexpr std::size_t MutexCount = 2U;
 
+        /// Returns the provider-rounded physical stack backing for every context in this scenario.
         static constexpr std::size_t StackBackingBytes() noexcept {
             return StackBackingTotal<2048U>();
         }
 
-        /// Defines the compile-time contract for `LinkSurface`.
+        /// References the representative Threading operations retained for this measurement scenario.
         /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
@@ -303,6 +332,7 @@ namespace Measurement {
 
     struct Scenario final {
 
+        /// Compile-time Threading topology measured by this scenario.
         using Topology = Threading::ThreadingTopology<
             Threading::DedicatedThread<
                 ThreadA,
@@ -312,14 +342,17 @@ namespace Measurement {
             >
         >;
 
+        /// Concrete Dedicated Thread binding Type used by this scenario.
         using Binding = decltype(
             Threading::BindDedicatedThread<ThreadA>(
                 ThreadBody{}
             )
         );
 
+        /// Dedicated Thread binding tuple Type required by this scenario.
         using Bindings = std::tuple<Binding>;
 
+        /// Creates the Dedicated Thread binding tuple required to construct this scenario.
         static Bindings MakeBindings() {
             return std::make_tuple(
                 Threading::BindDedicatedThread<ThreadA>(
@@ -328,13 +361,15 @@ namespace Measurement {
             );
         }
 
+        /// Number of Mutex-provider objects included in this scenario's synchronization accounting.
         static constexpr std::size_t MutexCount = 2U;
 
+        /// Returns the provider-rounded physical stack backing for every context in this scenario.
         static constexpr std::size_t StackBackingBytes() noexcept {
             return StackBackingTotal<4096U>();
         }
 
-        /// Defines the compile-time contract for `LinkSurface`.
+        /// References the representative Threading operations retained for this measurement scenario.
         /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
@@ -359,6 +394,7 @@ namespace Measurement {
 
     struct Scenario final {
 
+        /// Compile-time Threading topology measured by this scenario.
         using Topology = Threading::ThreadingTopology<
             Threading::TaskExecutionFacility<
                 PrimaryPool,
@@ -409,23 +445,27 @@ namespace Measurement {
             >
         >;
 
+        /// Concrete Dedicated Thread binding Type used by this scenario.
         using BindingA = decltype(
             Threading::BindDedicatedThread<ThreadA>(
                 ThreadBody{}
             )
         );
 
+        /// Concrete Dedicated Thread binding Type used by this scenario.
         using BindingB = decltype(
             Threading::BindDedicatedThread<ThreadB>(
                 ThreadBody{}
             )
         );
 
+        /// Dedicated Thread binding tuple Type required by this scenario.
         using Bindings = std::tuple<
             BindingA,
             BindingB
         >;
 
+        /// Creates the Dedicated Thread binding tuple required to construct this scenario.
         static Bindings MakeBindings() {
             return std::make_tuple(
                 Threading::BindDedicatedThread<ThreadA>(
@@ -437,8 +477,10 @@ namespace Measurement {
             );
         }
 
+        /// Number of Mutex-provider objects included in this scenario's synchronization accounting.
         static constexpr std::size_t MutexCount = 6U;
 
+        /// Returns the provider-rounded physical stack backing for every context in this scenario.
         static constexpr std::size_t StackBackingBytes() noexcept {
             return StackBackingTotal<
                 4096U,
@@ -449,7 +491,7 @@ namespace Measurement {
             >();
         }
 
-        /// Defines the compile-time contract for `LinkSurface`.
+        /// References the representative Threading operations retained for this measurement scenario.
         /// @tparam TRuntime Concrete static Threading runtime Type exercised by the measurement scenario.
         template<class TRuntime>
         static void LinkSurface(
@@ -516,6 +558,7 @@ namespace Measurement {
 #endif
 
 
+    /// Concrete static Threading runtime Type compiled for the selected measurement scenario.
     using Runtime = Threading::StaticThreadingRuntime<
         Scenario::Topology,
         Scenario::Bindings,
@@ -525,27 +568,33 @@ namespace Measurement {
         MutexProvider
     >;
 
+    /// Number of managed execution contexts owned by the selected scenario topology.
     static constexpr std::size_t ContextCount =
         Scenario::Topology::ManagedExecutionContextCount;
 
+    /// Execution-context backing helper used to query provider control-storage requirements.
     using RepresentativeBacking = Detail::ExecutionContextBacking<
         ExecutionContextProvider,
         1U
     >;
 
+    /// Total bytes occupied by concrete execution-context provider objects.
     static constexpr std::size_t ExecutionProviderBytes =
         ContextCount *
         sizeof(
             ExecutionContextProvider
         );
 
+    /// Total caller-owned native execution-control backing bytes.
     static constexpr std::size_t ControlBackingBytes =
         ContextCount *
         RepresentativeBacking::PhysicalControlCapacity();
 
+    /// Total provider-rounded physical stack backing bytes.
     static constexpr std::size_t StackBackingBytes =
         Scenario::StackBackingBytes();
 
+    /// Total targeted-wake, Mutex, and lifecycle SpinLock provider-object bytes.
     static constexpr std::size_t SynchronizationWakeBytes =
         ContextCount *
             sizeof(
@@ -559,6 +608,7 @@ namespace Measurement {
             SpinLockProvider
         );
 
+    /// Exact target-compiled size of the complete static Threading runtime.
     static constexpr std::size_t RuntimeBytes =
         sizeof(
             Runtime
@@ -573,6 +623,7 @@ namespace Measurement {
         "Resource measurement category accounting exceeds complete Runtime size"
     );
 
+    /// Runtime bytes remaining after subtracting the separately reported provider/backing categories.
     static constexpr std::size_t ThreadingIntrinsicBytes =
         RuntimeBytes -
         ExecutionProviderBytes -
@@ -589,35 +640,42 @@ namespace Measurement {
     extern "C" {
 
         __attribute__((used))
+        /// Retained BSS symbol sized to the calculated Threading-intrinsic byte count.
         std::byte EDP_Threading_Measurement_Intrinsic[
             ThreadingIntrinsicBytes
         ];
 
         __attribute__((used))
+        /// Retained BSS symbol sized to the execution-provider object byte count.
         std::byte EDP_Threading_Measurement_ProviderObjects[
             ExecutionProviderBytes
         ];
 
         __attribute__((used))
+        /// Retained BSS symbol sized to the native execution-control backing byte count.
         std::byte EDP_Threading_Measurement_ControlBacking[
             ControlBackingBytes
         ];
 
         __attribute__((used))
+        /// Retained BSS symbol sized to the provider-rounded stack backing byte count.
         std::byte EDP_Threading_Measurement_StackBacking[
             StackBackingBytes
         ];
 
         __attribute__((used))
+        /// Retained BSS symbol sized to the synchronization/wake provider byte count.
         std::byte EDP_Threading_Measurement_SynchronizationWake[
             SynchronizationWakeBytes
         ];
 
+        /// Accumulator used solely to create observable references to retained measurement symbols.
         volatile std::uintptr_t EDP_Threading_Measurement_Keep = 0U;
 
     }
 
 
+    /// Placement-constructs the selected runtime so its constructor remains linked into the measurement image.
     Runtime* ConstructRuntime(
         void* storage
     ) {
@@ -629,6 +687,7 @@ namespace Measurement {
     }
 
 
+    /// References representative lifecycle and execution APIs so scenario code-size remains linked for measurement.
     void LinkRuntimeSurface(
         Runtime& runtime
     ) {
@@ -662,23 +721,28 @@ namespace Measurement {
     }
 
 
+    /// Function-pointer Type retaining the scenario runtime constructor surface.
     using ConstructFunction = Runtime* (*)(
         void*
     );
 
+    /// Function-pointer Type retaining the representative scenario API surface.
     using LinkFunction = void (*)(
         Runtime&
     );
 
     __attribute__((used))
+    /// Retained constructor reference preventing link-time removal of runtime construction code.
     volatile ConstructFunction KeepConstructor =
         &ConstructRuntime;
 
     __attribute__((used))
+    /// Retained API-surface reference preventing link-time removal of measured Threading code.
     volatile LinkFunction KeepLinkedSurface =
         &LinkRuntimeSurface;
 
 
+    /// Creates observable references to measurement symbols so the linker retains their target-compiled sizes.
     void KeepMeasurementSymbols() noexcept {
         EDP_Threading_Measurement_Keep ^=
             reinterpret_cast<std::uintptr_t>(
@@ -724,16 +788,18 @@ namespace Measurement {
 
 #ifdef ARDUINO
 
-#include <Arduino.h>
 
+/// Retains measurement symbols from the Arduino framework entrypoint without executing Threading work.
 void setup() {
     Measurement::KeepMeasurementSymbols();
 }
 
+/// Leaves the build-only Arduino measurement application idle.
 void loop() {}
 
 #else
 
+/// Retains measurement symbols from the ESP-IDF application entrypoint without executing Threading work.
 extern "C" void app_main() {
     Measurement::KeepMeasurementSymbols();
 }
