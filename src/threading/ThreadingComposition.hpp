@@ -86,8 +86,93 @@ namespace ESPressio::Threading {
     };
 
 
+    namespace Detail {
+
+        template<class TProperty>
+        struct IsStackCapacityProperty {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<std::size_t TCapacity>
+        struct IsStackCapacityProperty<StackCapacity<TCapacity>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TProperty>
+        struct IsPriorityProperty {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<ThreadPriority TPriority>
+        struct IsPriorityProperty<Priority<TPriority>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TProperty>
+        struct IsAffinityProperty {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<std::uint32_t TProcessorIndex>
+        struct IsAffinityProperty<Affinity<TProcessorIndex>> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<>
+        struct IsAffinityProperty<AnyAffinity> {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class... TProperties>
+        struct ValidExecutionResourceProperties {
+
+            static constexpr std::size_t StackCapacityCount =
+                (static_cast<std::size_t>(IsStackCapacityProperty<TProperties>::Value) + ... + 0U);
+
+            static constexpr std::size_t PriorityCount =
+                (static_cast<std::size_t>(IsPriorityProperty<TProperties>::Value) + ... + 0U);
+
+            static constexpr std::size_t AffinityCount =
+                (static_cast<std::size_t>(IsAffinityProperty<TProperties>::Value) + ... + 0U);
+
+            static constexpr bool Value =
+                StackCapacityCount <= 1U &&
+                PriorityCount <= 1U &&
+                AffinityCount <= 1U;
+
+        };
+
+    } // ESPressio::Threading::Detail
+
+
     template<class... TProperties>
     struct ResourceProperties final {
+
+        static_assert(
+            Detail::ValidExecutionResourceProperties<TProperties...>::Value,
+            "Execution resource properties may contain at most one StackCapacity, Priority and affinity declaration"
+        );
 
         static constexpr std::size_t Count = sizeof...(TProperties);
 
