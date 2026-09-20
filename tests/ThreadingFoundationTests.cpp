@@ -523,6 +523,40 @@ namespace Test {
 
 
     static_assert(
+        ESPressio::Threading::Detail::ValidExecutionResourceProperties<
+            ESPressio::Threading::StackCapacity<4096U>,
+            ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::Normal>,
+            ESPressio::Threading::AnyAffinity
+        >::Value,
+        "One declaration per execution-resource property category must remain valid"
+    );
+
+    static_assert(
+        !ESPressio::Threading::Detail::ValidExecutionResourceProperties<
+            ESPressio::Threading::StackCapacity<2048U>,
+            ESPressio::Threading::StackCapacity<4096U>
+        >::Value,
+        "Duplicate StackCapacity declarations must be rejected"
+    );
+
+    static_assert(
+        !ESPressio::Threading::Detail::ValidExecutionResourceProperties<
+            ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::Low>,
+            ESPressio::Threading::Priority<ESPressio::Threading::ThreadPriority::High>
+        >::Value,
+        "Duplicate Priority declarations must be rejected"
+    );
+
+    static_assert(
+        !ESPressio::Threading::Detail::ValidExecutionResourceProperties<
+            ESPressio::Threading::AnyAffinity,
+            ESPressio::Threading::Affinity<0U>
+        >::Value,
+        "Conflicting affinity declarations must be rejected"
+    );
+
+
+    static_assert(
         Topology::HasTaskExecution,
         "Topology containing a Task facility must advertise Task execution"
     );
