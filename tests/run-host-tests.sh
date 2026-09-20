@@ -41,20 +41,48 @@ compile_tests() {
         -o "${OUTPUT}"
 }
 
-if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" ]]; then
-    echo "EDP-Threading host foundation tests: compiling (ASan+UBSan)"
-    compile_tests \
-        -g \
-        -fno-omit-frame-pointer \
-        -fsanitize=address,undefined
-else
-    echo "EDP-Threading host foundation tests: compiling"
-    compile_tests
+SANITIZER_MODE="${EDP_THREADING_SANITIZER_MODE:-}"
+
+if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" && -z "${SANITIZER_MODE}" ]]; then
+    SANITIZER_MODE="address,undefined"
 fi
+
+case "${SANITIZER_MODE}" in
+    "")
+        echo "EDP-Threading host foundation tests: compiling"
+        compile_tests
+        ;;
+    address)
+        echo "EDP-Threading host foundation tests: compiling (ASan)"
+        compile_tests \
+            -g \
+            -fno-omit-frame-pointer \
+            -fsanitize=address
+        ;;
+    undefined)
+        echo "EDP-Threading host foundation tests: compiling (UBSan)"
+        compile_tests \
+            -g \
+            -fno-omit-frame-pointer \
+            -fsanitize=undefined
+        ;;
+    address,undefined)
+        echo "EDP-Threading host foundation tests: compiling (ASan+UBSan)"
+        compile_tests \
+            -g \
+            -fno-omit-frame-pointer \
+            -fsanitize=address,undefined
+        ;;
+    *)
+        echo "Unsupported EDP_THREADING_SANITIZER_MODE: ${SANITIZER_MODE}" >&2
+        echo "Use: address, undefined, or address,undefined" >&2
+        exit 2
+        ;;
+esac
 
 echo "EDP-Threading host foundation tests: executing"
 
-if [[ "${EDP_THREADING_SANITIZERS:-0}" == "1" ]]; then
+if [[ -n "${SANITIZER_MODE}" ]]; then
     ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0:abort_on_error=1}" \
     UBSAN_OPTIONS="${UBSAN_OPTIONS:-halt_on_error=1:print_stacktrace=1}" \
         "${OUTPUT}"
