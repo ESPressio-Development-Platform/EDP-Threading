@@ -54,6 +54,24 @@ namespace ESPressio::Threading::Detail {
     struct DedicatedThreadBindingType;
 
 
+    template<class TThreadIdentity, class TBindings>
+    struct DedicatedThreadBindingTypeFromTuple;
+
+
+    template<class TThreadIdentity, class... TBindings>
+    struct DedicatedThreadBindingTypeFromTuple<
+        TThreadIdentity,
+        std::tuple<TBindings...>
+    > {
+
+        using Type = typename DedicatedThreadBindingType<
+            TThreadIdentity,
+            TBindings...
+        >::Type;
+
+    };
+
+
     template<class TThreadIdentity>
     struct DedicatedThreadBindingType<TThreadIdentity> {
 
