@@ -129,10 +129,6 @@ namespace ESPressio::Threading::Detail {
                     const auto result = _resources.template Get<TIndex>().Initialize();
 
                     if (result != WorkerExecutionInitializationResult::Succeeded) {
-                        static_cast<void>(
-                            _resources.template Get<TIndex>().DestroyInfrastructure()
-                        );
-
                         DestroyInitializedPrefix<TIndex>();
                         return ThreadingInitializationResult::ProviderFailure;
                     }
@@ -204,10 +200,6 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingInitializationResult::Succeeded;
                 } else {
                     if (!InitializeResourceAt<0U>(order[TOrderIndex])) {
-                        DestroyResourceAt<0U>(
-                            order[TOrderIndex]
-                        );
-
                         for (std::size_t rollback = TOrderIndex; rollback > 0U; --rollback) {
                             DestroyResourceAt<0U>(
                                 order[rollback - 1U]
