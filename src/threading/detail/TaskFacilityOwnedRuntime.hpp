@@ -62,16 +62,19 @@ namespace ESPressio::Threading::Detail {
             >;
 
             template<std::size_t... TIndices>
-            static auto MakeWorkers(
+            using WorkerTuple = std::tuple<
+                WorkerContext<TIndices>...
+            >;
+
+            template<std::size_t... TIndices>
+            static WorkerTuple<TIndices...> MakeWorkers(
                 Facility& facility,
                 TManagedContextRouter& router,
                 const void* shutdownContext,
                 bool (*isShutdownRequested)(const void*) noexcept,
                 std::index_sequence<TIndices...>
             ) noexcept {
-                return std::tuple<
-                    WorkerContext<TIndices>...
-                >(
+                return WorkerTuple<TIndices...>(
                     WorkerContext<TIndices>(
                         facility,
                         router,
@@ -84,13 +87,131 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            using WorkersTuple = decltype(
+                MakeWorkers(
+                    std::declval<Facility&>(),
+                    std::declval<TManagedContextRouter&>(),
+                    nullptr,
+                    nullptr,
+                    std::make_index_sequence<sizeof...(TWorkers)>{}
+                )
+            );
+
             Facility _facility;
 
-            std::tuple<
-                WorkerContext<
-                    0U
-                >
-            > _placeholder;
+            WorkersTuple _workers;
+
+
+            // Infrastructure lifecycle helpers.
+
+            template<std::size_t TIndex>
+            WorkerExecutionInitializationResult InitializeNext() noexcept {
+                if constexpr (
+                    TIndex == sizeof...(TWorkers)
+                ) {
+                    return WorkerExecutionInitializationResult::Succeeded;
+                } else {
+                    using Declaration = WorkerDeclaration<TIndex>;
+
+                    const auto result = std::get<TIndex>(
+                        _workers
+                    ).Initialize(
+                        Declaration::Properties::Priority,
+                        Declaration::Properties::Affinity
+                    );
+
+                    if (result != WorkerExecutionInitializationResult::Succeeded) {
+                        return result;
+                    }
+
+                    return InitializeNext<TIndex + 1U>();
+                }
+            }
+
+            template<std::size_t TIndex>
+            ESPressio::Platform::Execution::ExecutionStartResult StartNext() noexcept {
+                if constexpr (
+                    TIndex == sizeof...(TWorkers)
+                ) {
+                    return ESPressio::Platform::Execution::ExecutionStartResult::Succeeded;
+                } else {
+                    const auto result = std::get<TIndex>(
+                        _workers
+                    ).StartInfrastructure();
+
+                    if (
+                        result !=
+                        ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
+                    ) {
+                        return result;
+                    }
+
+                    return StartNext<TIndex + 1U>();
+                }
+            }
+
+            template<std::size_t TIndex>
+            void RequestTerminationNext() noexcept {
+                if constexpr (
+                    TIndex < sizeof...(TWorkers)
+                ) {
+                    std::get<TIndex>(
+                        _workers
+                    ).RequestInfrastructureTermination();
+
+                    RequestTerminationNext<TIndex + 1U>();
+                }
+            }
+
+            template<std::size_t TIndex>
+            void JoinNext(
+                ESPressio::Platform::Synchronization::WaitTimeout timeout
+            ) noexcept {
+                if constexpr (
+                    TIndex < sizeof...(TWorkers)
+                ) {
+                    static_cast<void>(
+                        std::get<TIndex>(
+                            _workers
+                        ).Join(
+                            timeout
+                        )
+                    );
+
+                    JoinNext<TIndex + 1U>(
+                        timeout
+                    );
+                }
+            }
+
+            template<std::size_t TIndex>
+            void DestroyNext() noexcept {
+                if constexpr (
+                    TIndex < sizeof...(TWorkers)
+                ) {
+                    static_cast<void>(
+                        std::get<TIndex>(
+                            _workers
+                        ).Destroy()
+                    );
+
+                    DestroyNext<TIndex + 1U>();
+                }
+            }
+
+            template<std::size_t TIndex>
+            bool IsCurrentContextNext() const noexcept {
+                if constexpr (
+                    TIndex == sizeof...(TWorkers)
+                ) {
+                    return false;
+                } else {
+                    return std::get<TIndex>(
+                        _workers
+                    ).IsCurrentContext() ||
+                        IsCurrentContextNext<TIndex + 1U>();
+                }
+            }
 
         public:
 
@@ -98,6 +219,89 @@ namespace ESPressio::Threading::Detail {
             using FacilityRuntime = Facility;
 
             static constexpr std::size_t WorkerCount = sizeof...(TWorkers);
+
+
+            // Construction.
+
+            TaskFacilityOwnedRuntime(
+                TManagedContextRouter& router,
+                const void* shutdownContext,
+                bool (*isShutdownRequested)(const void*) noexcept
+            ) noexcept :
+                _facility(router),
+                _workers(
+                    MakeWorkers(
+                        _facility,
+                        router,
+                        shutdownContext,
+                        isShutdownRequested,
+                        std::make_index_sequence<sizeof...(TWorkers)>{}
+                    )
+                ) {}
+
+
+            // Infrastructure lifecycle.
+
+            WorkerExecutionInitializationResult Initialize() noexcept {
+                return InitializeNext<0U>();
+            }
+
+            ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
+                return StartNext<0U>();
+            }
+
+            void RequestInfrastructureTermination() noexcept {
+                RequestTerminationNext<0U>();
+            }
+
+            ESPressio::Platform::Execution::ExecutionJoinResult JoinInfrastructure(
+                ESPressio::Platform::Synchronization::WaitTimeout timeout
+            ) noexcept {
+                JoinNext<0U>(
+                    timeout
+                );
+
+                return ESPressio::Platform::Execution::ExecutionJoinResult::Joined;
+            }
+
+            ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
+                DestroyNext<0U>();
+
+                return ESPressio::Platform::Execution::ExecutionDestroyResult::Destroyed;
+            }
+
+
+            // Facility access.
+
+            Facility& FacilityState() noexcept {
+                return _facility;
+            }
+
+            const Facility& FacilityState() const noexcept {
+                return _facility;
+            }
+
+
+            // Structural context resolution.
+
+            bool IsCurrentContext() const noexcept {
+                return IsCurrentContextNext<0U>();
+            }
+
+            bool IsInterrupted() noexcept {
+                return false;
+            }
+
+
+            // Shutdown cooperation.
+
+            void BeginShutdownCancellation() noexcept {
+                _facility.BeginShutdownCancellation();
+            }
+
+            bool IsExecutionQuiescent() noexcept {
+                return _facility.IsExecutionQuiescent();
+            }
 
     };
 
