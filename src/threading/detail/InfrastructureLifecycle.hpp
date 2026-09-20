@@ -19,24 +19,61 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TAtomicWord32Provider>
+    template<class TSpinLockProvider>
     class InfrastructureLifecycle final {
 
         static_assert(
             sizeof(
-                ESPressio::Platform::Concurrency::Detail::AtomicWord32ProviderTraits<
-                    TAtomicWord32Provider
+                ESPressio::Platform::Synchronization::Detail::SpinLockProviderTraits<
+                    TSpinLockProvider
                 >
             ) > 0U,
-            "Threading infrastructure lifecycle requires a conforming lock-free AtomicWord32 provider"
+            "Threading infrastructure lifecycle requires a conforming Platform SpinLock provider"
         );
 
         private:
 
             // Authoritative global lifecycle state.
 
-            /// One native lock-free word publishing the application Threading lifecycle.
-            typename TAtomicWord32Provider::Word _state;
+            /// One-byte application-wide Threading lifecycle state.
+            std::uint8_t _state =
+                static_cast<std::uint8_t>(
+                    InfrastructureState::Uninitialized
+                );
+
+            /// Short-duration topology-wide synchronization protecting lifecycle publication.
+            mutable TSpinLockProvider _stateLock;
+
+
+            // Lifecycle state synchronization.
+
+            InfrastructureState ReadState() const noexcept {
+                _stateLock.Acquire();
+
+                const auto state = static_cast<InfrastructureState>(
+                    _state
+                );
+
+                static_cast<void>(
+                    _stateLock.Release()
+                );
+
+                return state;
+            }
+
+            void PublishState(
+                InfrastructureState state
+            ) noexcept {
+                _stateLock.Acquire();
+
+                _state = static_cast<std::uint8_t>(
+                    state
+                );
+
+                static_cast<void>(
+                    _stateLock.Release()
+                );
+            }
 
 
             // Transactional Start helpers.
@@ -146,21 +183,13 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
-            InfrastructureLifecycle() noexcept {
-                _state.StoreRelaxed(
-                    static_cast<std::uint32_t>(
-                        InfrastructureState::Uninitialized
-                    )
-                );
-            }
+            InfrastructureLifecycle() noexcept = default;
 
 
             // State observation.
 
             InfrastructureState State() const noexcept {
-                return static_cast<InfrastructureState>(
-                    _state.LoadAcquire()
-                );
+                return ReadState();
             }
 
             bool CanActivate() const noexcept {
@@ -201,10 +230,8 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingInitializationResult::AlreadyInitialized;
                 }
 
-                _state.StoreRelease(
-                    static_cast<std::uint32_t>(
-                        InfrastructureState::Initialized
-                    )
+                PublishState(
+                    InfrastructureState::Initialized
                 );
 
                 return ThreadingInitializationResult::Succeeded;
@@ -237,10 +264,8 @@ namespace ESPressio::Threading::Detail {
                     resourceTuple,
                     startedCount
                 )) {
-                    _state.StoreRelease(
-                        static_cast<std::uint32_t>(
-                            InfrastructureState::StartRollback
-                        )
+                    PublishState(
+                        InfrastructureState::StartRollback
                     );
 
                     WakeStarted<0U>(
@@ -268,10 +293,8 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingStartResult::ProviderFailure;
                 }
 
-                _state.StoreRelease(
-                    static_cast<std::uint32_t>(
-                        InfrastructureState::Started
-                    )
+                PublishState(
+                    InfrastructureState::Started
                 );
 
                 return ThreadingStartResult::Succeeded;
@@ -295,20 +318,16 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingShutdownResult::NotStarted;
                 }
 
-                _state.StoreRelease(
-                    static_cast<std::uint32_t>(
-                        InfrastructureState::ShuttingDown
-                    )
+                PublishState(
+                    InfrastructureState::ShuttingDown
                 );
 
                 return ThreadingShutdownResult::Accepted;
             }
 
             void PublishShutdownComplete() noexcept {
-                _state.StoreRelease(
-                    static_cast<std::uint32_t>(
-                        InfrastructureState::ShutdownComplete
-                    )
+                PublishState(
+                    InfrastructureState::ShutdownComplete
                 );
             }
 
