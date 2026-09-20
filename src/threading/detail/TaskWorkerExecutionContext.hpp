@@ -13,6 +13,9 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `ExecutionContextBacking`.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TStackCapacity Semantic stack-capacity value requested by the topology.
     template<class TExecutionContextProvider, std::size_t TStackCapacity>
     class ExecutionContextBacking final {
 
@@ -117,6 +120,11 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskWorkerExecutionContext`.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TTaskFacility Task facility Type serviced by the Worker context.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TStackCapacity Semantic stack-capacity value requested by the topology.
     template<class TExecutionContextProvider, std::size_t TStackCapacity, class TTaskFacility, class TManagedContextRouter>
     class TaskWorkerExecutionContext final {
 
