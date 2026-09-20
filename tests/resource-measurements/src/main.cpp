@@ -38,10 +38,16 @@ namespace Measurement {
 
 #if EDP_THREADING_MEASUREMENT_SCENARIO != 0
 
+    /// Semantic identity of the primary ordinary Task facility used by measurement scenarios.
     struct PrimaryPool final {};
+
+    /// Semantic identity of the secondary ordinary Task facility used by the mixed scenario.
     struct SecondaryPool final {};
+
+    /// Semantic identity of the higher-priority control Task facility.
     struct ControlPool final {};
 
+    /// Callable identity and behavior used by the Dedicated Worker lease scenario.
     struct LeaseTask final {
 
         /// Returns one deterministic value from the Dedicated Worker measurement callable.
@@ -51,9 +57,13 @@ namespace Measurement {
 
     };
 
+    /// Semantic identity of the first Dedicated Thread used by measurement scenarios.
     struct ThreadA final {};
+
+    /// Semantic identity of the second Dedicated Thread used by the mixed scenario.
     struct ThreadB final {};
 
+    /// Minimal callable used to retain Dedicated Thread runtime surfaces in measurement images.
     struct ThreadBody final {
 
         /// Runs the Dedicated Thread measurement callable without additional application work.
@@ -81,6 +91,7 @@ namespace Measurement {
 
 #if EDP_THREADING_MEASUREMENT_SCENARIO == 1
 
+    /// Compile-time resource-measurement scenario selected by EDP_THREADING_MEASUREMENT_SCENARIO.
     struct Scenario final {
 
         /// Compile-time Threading topology measured by this scenario.
@@ -144,6 +155,7 @@ namespace Measurement {
 
 #elif EDP_THREADING_MEASUREMENT_SCENARIO == 2
 
+    /// Compile-time resource-measurement scenario selected by EDP_THREADING_MEASUREMENT_SCENARIO.
     struct Scenario final {
 
         /// Compile-time Threading topology measured by this scenario.
@@ -209,6 +221,7 @@ namespace Measurement {
 
 #elif EDP_THREADING_MEASUREMENT_SCENARIO == 3
 
+    /// Compile-time resource-measurement scenario selected by EDP_THREADING_MEASUREMENT_SCENARIO.
     struct Scenario final {
 
         /// Compile-time Threading topology measured by this scenario.
@@ -276,6 +289,7 @@ namespace Measurement {
 
 #elif EDP_THREADING_MEASUREMENT_SCENARIO == 4
 
+    /// Compile-time resource-measurement scenario selected by EDP_THREADING_MEASUREMENT_SCENARIO.
     struct Scenario final {
 
         /// Compile-time Threading topology measured by this scenario.
@@ -330,6 +344,7 @@ namespace Measurement {
 
 #elif EDP_THREADING_MEASUREMENT_SCENARIO == 5
 
+    /// Compile-time resource-measurement scenario selected by EDP_THREADING_MEASUREMENT_SCENARIO.
     struct Scenario final {
 
         /// Compile-time Threading topology measured by this scenario.
@@ -392,6 +407,7 @@ namespace Measurement {
 
 #elif EDP_THREADING_MEASUREMENT_SCENARIO == 6
 
+    /// Compile-time resource-measurement scenario selected by EDP_THREADING_MEASUREMENT_SCENARIO.
     struct Scenario final {
 
         /// Compile-time Threading topology measured by this scenario.
@@ -779,6 +795,7 @@ namespace Measurement {
 
 #else
 
+    /// Provides the baseline build with the same framework entrypoint shape but no Threading measurement symbols.
     void KeepMeasurementSymbols() noexcept {}
 
 #endif
