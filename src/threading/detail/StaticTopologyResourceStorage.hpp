@@ -217,9 +217,7 @@ namespace ESPressio::Threading::Detail {
                     _resource.DestroyInfrastructure()
                 );
 
-                _tail.FinalizeShutdown(
-                    shutdownWaitRuntime
-                );
+                _tail.FinalizeShutdown();
             }
 
 
@@ -270,12 +268,7 @@ namespace ESPressio::Threading::Detail {
                 return true;
             }
 
-            template<class TShutdownWaitRuntime>
-            void FinalizeShutdown(
-                TShutdownWaitRuntime& shutdownWaitRuntime
-            ) noexcept {
-                shutdownWaitRuntime.WakeCompleted();
-            }
+            void FinalizeShutdown() noexcept {}
 
     };
 
