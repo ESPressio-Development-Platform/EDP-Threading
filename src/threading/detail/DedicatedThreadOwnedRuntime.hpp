@@ -30,6 +30,7 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     /// @tparam TContextIndex Dense topology execution-context index assigned to the resource.
     /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
+    /// @tparam TProperties Compile-time execution-property Types declared for the Dedicated Thread.
     template<class TThreadIdentity, class... TProperties, class TCallable, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TContextIndex, std::size_t TExecutionContextCapacity>
     class DedicatedThreadOwnedRuntime<
         DedicatedThread<TThreadIdentity, TProperties...>,
