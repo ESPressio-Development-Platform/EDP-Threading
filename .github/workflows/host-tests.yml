@@ -1,0 +1,53 @@
+name: Host Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  threading-foundation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout EDP-Threading
+        uses: actions/checkout@v4
+        with:
+          path: EDP-Threading
+
+      - name: Checkout EDP-System
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-System
+          path: EDP-System
+
+      - name: Checkout EDP-Platform
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Platform
+          path: EDP-Platform
+
+      - name: Checkout EDP-Clock
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Clock
+          path: EDP-Clock
+
+      - name: Compile warnings-as-errors host tests
+        run: |
+          g++ \
+            -std=c++17 \
+            -Wall \
+            -Wextra \
+            -Wpedantic \
+            -Werror \
+            -IEDP-Threading/src \
+            -IEDP-System/src \
+            -IEDP-Platform/src \
+            -IEDP-Clock/src \
+            EDP-Threading/tests/ThreadingFoundationTests.cpp \
+            -o threading-foundation-tests
+
+      - name: Run host tests
+        run: ./threading-foundation-tests
