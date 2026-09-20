@@ -105,6 +105,22 @@ namespace ESPressio::Threading::Detail {
             // Infrastructure lifecycle helpers.
 
             template<std::size_t TIndex>
+            void DestroyInitializedPrefix() noexcept {
+                if constexpr (
+                    TIndex > 0U
+                ) {
+                    static_cast<void>(
+                        std::get<TIndex - 1U>(
+                            _workers
+                        ).Destroy()
+                    );
+
+                    DestroyInitializedPrefix<TIndex - 1U>();
+                }
+            }
+
+
+            template<std::size_t TIndex>
             WorkerExecutionInitializationResult InitializeNext() noexcept {
                 if constexpr (
                     TIndex == sizeof...(TWorkers)
@@ -121,6 +137,14 @@ namespace ESPressio::Threading::Detail {
                     );
 
                     if (result != WorkerExecutionInitializationResult::Succeeded) {
+                        static_cast<void>(
+                            std::get<TIndex>(
+                                _workers
+                            ).Destroy()
+                        );
+
+                        DestroyInitializedPrefix<TIndex>();
+
                         return result;
                     }
 
