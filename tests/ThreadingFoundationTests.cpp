@@ -1898,6 +1898,76 @@ int main() {
     );
 
 
+    bool dedicatedCanActivate = false;
+    bool dedicatedShouldTerminate = false;
+
+    const auto canActivatePredicate = [](
+        const void* context
+    ) noexcept {
+        return *static_cast<const bool*>(
+            context
+        );
+    };
+
+    const auto shouldTerminatePredicate = [](
+        const void* context
+    ) noexcept {
+        return *static_cast<const bool*>(
+            context
+        );
+    };
+
+    Test::TestDedicatedThreadRuntime dedicatedThreadRuntime(
+        Test::DedicatedCallable{},
+        runtimeRouter,
+        2U,
+        &dedicatedCanActivate,
+        canActivatePredicate,
+        shouldTerminatePredicate
+    );
+
+    // The test predicates share one context pointer in production. For this compile/lifecycle
+    // surface test both are false, so semantic activation remains unavailable and destruction safe.
+    static_cast<void>(
+        dedicatedShouldTerminate
+    );
+
+    assert(
+        dedicatedThreadRuntime.Initialize(
+            ESPressio::Platform::Execution::ExecutionPriority::High,
+            ESPressio::Platform::Execution::ProcessorAffinity::Any(),
+            "test-dedicated"
+        ) == ESPressio::Threading::Detail::WorkerExecutionInitializationResult::Succeeded
+    );
+
+    auto dedicatedThreadHandle = dedicatedThreadRuntime.Handle();
+
+    assert(
+        dedicatedThreadHandle.State() ==
+        ESPressio::Threading::ThreadState::NeverStarted
+    );
+
+    assert(
+        dedicatedThreadHandle.Start() ==
+        ESPressio::Threading::ThreadStartResult::ShuttingDown
+    );
+
+    assert(
+        dedicatedThreadHandle.RequestStop() ==
+        ESPressio::Threading::ThreadStopRequestResult::NotRunning
+    );
+
+    assert(
+        dedicatedThreadHandle.Join() ==
+        ESPressio::Threading::ThreadJoinResult::NeverStarted
+    );
+
+    assert(
+        dedicatedThreadRuntime.DestroyInfrastructure() ==
+        ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+    );
+
+
     bool shutdownRequested = false;
 
     const auto shutdownPredicate = [](
