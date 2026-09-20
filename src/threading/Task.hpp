@@ -215,6 +215,10 @@ namespace ESPressio::Threading {
             TaskWaitResult WaitFor(
                 Duration duration
             ) {
+                if (_operations == nullptr) {
+                    return TaskWaitResult::Interrupted;
+                }
+
                 return _operations->WaitFor(
                     _owner,
                     _recordIndex,
@@ -227,6 +231,10 @@ namespace ESPressio::Threading {
             TaskWaitResult WaitUntil(
                 MonotonicTimestamp deadline
             ) {
+                if (_operations == nullptr) {
+                    return TaskWaitResult::Interrupted;
+                }
+
                 return _operations->WaitUntil(
                     _owner,
                     _recordIndex,
@@ -241,7 +249,7 @@ namespace ESPressio::Threading {
             /// Requests cooperative cancellation of this Task.
             TaskCancelResult Cancel() noexcept {
                 if (_operations == nullptr) {
-                    return TaskCancelResult::AlreadyTerminal;
+                    return TaskCancelResult::AlreadyFinished;
                 }
 
                 return _operations->Cancel(
@@ -256,6 +264,12 @@ namespace ESPressio::Threading {
 
             /// Moves the completed result from the Task record and consumes this handle on success.
             TaskTakeResult<TResult> TakeResult() {
+                if (_operations == nullptr) {
+                    return TaskTakeResult<TResult>(
+                        TaskTakeStatus::NotCompleted
+                    );
+                }
+
                 alignas(TResult) std::byte resultStorage[sizeof(TResult)];
 
                 const auto status = _operations->TakeResult(
@@ -444,6 +458,10 @@ namespace ESPressio::Threading {
             TaskWaitResult WaitFor(
                 Duration duration
             ) {
+                if (_operations == nullptr) {
+                    return TaskWaitResult::Interrupted;
+                }
+
                 return _operations->WaitFor(
                     _owner,
                     _recordIndex,
@@ -456,6 +474,10 @@ namespace ESPressio::Threading {
             TaskWaitResult WaitUntil(
                 MonotonicTimestamp deadline
             ) {
+                if (_operations == nullptr) {
+                    return TaskWaitResult::Interrupted;
+                }
+
                 return _operations->WaitUntil(
                     _owner,
                     _recordIndex,
@@ -470,7 +492,7 @@ namespace ESPressio::Threading {
             /// Requests cooperative cancellation of this Task.
             TaskCancelResult Cancel() noexcept {
                 if (_operations == nullptr) {
-                    return TaskCancelResult::AlreadyTerminal;
+                    return TaskCancelResult::AlreadyFinished;
                 }
 
                 return _operations->Cancel(
