@@ -8,6 +8,9 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `TopologyContextOffset`.
+    /// @tparam TTopology Compile-time Threading topology being realized or inspected.
+    /// @tparam TResourceIndex Compile-time topology resource index.
     template<class TTopology, std::size_t TResourceIndex>
     struct TopologyContextOffset {
 
@@ -40,6 +43,9 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TopologyResourceDescriptor`.
+    /// @tparam TTopology Compile-time Threading topology being realized or inspected.
+    /// @tparam TResourceIndex Compile-time topology resource index.
     template<class TTopology, std::size_t TResourceIndex>
     struct TopologyResourceDescriptor final {
 
@@ -70,10 +76,15 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `WorkerDescriptor`.
+    /// @tparam TWorkers Declared Worker set Type.
+    /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
     template<class TWorkers, std::size_t TWorkerIndex>
     struct WorkerDescriptor;
 
 
+    /// Defines the compile-time contract for `WorkerDescriptor`.
+    /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
     template<class... TWorkers, std::size_t TWorkerIndex>
     struct WorkerDescriptor<
         Workers<TWorkers...>,
@@ -95,6 +106,10 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `FacilityWorkerDescriptor`.
+    /// @tparam TTopology Compile-time Threading topology being realized or inspected.
+    /// @tparam TResourceIndex Compile-time topology resource index.
+    /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
     template<class TTopology, std::size_t TResourceIndex, std::size_t TWorkerIndex>
     struct FacilityWorkerDescriptor final {
 
@@ -133,6 +148,8 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `StaticTopologyPlan`.
+    /// @tparam TTopology Compile-time Threading topology being realized or inspected.
     template<class TTopology>
     class StaticTopologyPlan final {
 
@@ -144,6 +161,8 @@ namespace ESPressio::Threading::Detail {
             static constexpr std::size_t ManagedExecutionContextCount =
                 TTopology::ManagedExecutionContextCount;
 
+            /// Defines the compile-time contract for `Resource`.
+            /// @tparam TResourceIndex Compile-time topology resource index.
             template<std::size_t TResourceIndex>
             using Resource = TopologyResourceDescriptor<
                 TTopology,
