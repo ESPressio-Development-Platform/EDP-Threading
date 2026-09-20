@@ -110,6 +110,10 @@ namespace ESPressio::Threading {
 
             /// Returns the current public Dedicated Thread lifecycle state.
             ThreadState State() const noexcept {
+                if (!IsValid()) {
+                    return ThreadState::NeverStarted;
+                }
+
                 return _operations->State(
                     _resource
                 );
@@ -120,6 +124,10 @@ namespace ESPressio::Threading {
 
             /// Starts a semantic activation when the Dedicated Thread is not already running.
             ThreadStartResult Start() noexcept {
+                if (!IsValid()) {
+                    return ThreadStartResult::ShuttingDown;
+                }
+
                 return _operations->Start(
                     _resource
                 );
