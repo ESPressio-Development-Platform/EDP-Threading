@@ -153,7 +153,51 @@ namespace ESPressio::Threading::Detail {
             }
 
             template<std::size_t TIndex>
-            ESPressio::Platform::Execution::ExecutionStartResult StartNext() noexcept {
+            void RequestTerminationPrefix(
+                std::size_t startedCount
+            ) noexcept {
+                if constexpr (
+                    TIndex < sizeof...(TWorkers)
+                ) {
+                    if (TIndex < startedCount) {
+                        std::get<TIndex>(
+                            _workers
+                        ).RequestInfrastructureTermination();
+                    }
+
+                    RequestTerminationPrefix<TIndex + 1U>(
+                        startedCount
+                    );
+                }
+            }
+
+            template<std::size_t TIndex>
+            void JoinPrefix(
+                std::size_t startedCount
+            ) noexcept {
+                if constexpr (
+                    TIndex < sizeof...(TWorkers)
+                ) {
+                    if (TIndex < startedCount) {
+                        static_cast<void>(
+                            std::get<TIndex>(
+                                _workers
+                            ).Join(
+                                ESPressio::Platform::Synchronization::WaitTimeout::Forever()
+                            )
+                        );
+                    }
+
+                    JoinPrefix<TIndex + 1U>(
+                        startedCount
+                    );
+                }
+            }
+
+            template<std::size_t TIndex>
+            ESPressio::Platform::Execution::ExecutionStartResult StartNext(
+                std::size_t& startedCount
+            ) noexcept {
                 if constexpr (
                     TIndex == sizeof...(TWorkers)
                 ) {
@@ -167,10 +211,22 @@ namespace ESPressio::Threading::Detail {
                         result !=
                         ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
                     ) {
+                        RequestTerminationPrefix<0U>(
+                            startedCount
+                        );
+
+                        JoinPrefix<0U>(
+                            startedCount
+                        );
+
                         return result;
                     }
 
-                    return StartNext<TIndex + 1U>();
+                    ++startedCount;
+
+                    return StartNext<TIndex + 1U>(
+                        startedCount
+                    );
                 }
             }
 
@@ -303,7 +359,11 @@ namespace ESPressio::Threading::Detail {
             }
 
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
-                return StartNext<0U>();
+                std::size_t startedCount = 0U;
+
+                return StartNext<0U>(
+                    startedCount
+                );
             }
 
             void RequestInfrastructureTermination() noexcept {
