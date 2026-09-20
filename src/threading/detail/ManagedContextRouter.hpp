@@ -42,6 +42,14 @@ namespace ESPressio::Threading::Detail {
 
         public:
 
+            explicit ManagedContextRouter(
+                WakeSet& wakeSet
+            ) noexcept :
+                _wakeSet(&wakeSet),
+                _topologyContext(nullptr),
+                _currentContextIndex(nullptr),
+                _isInterrupted(nullptr) {}
+
             ManagedContextRouter(
                 WakeSet& wakeSet,
                 const void* topologyContext,
@@ -54,9 +62,33 @@ namespace ESPressio::Threading::Detail {
                 _isInterrupted(isInterrupted) {}
 
 
+            // Structural topology binding.
+
+            void BindTopology(
+                const void* topologyContext,
+                std::optional<ContextIndex> (*currentContextIndex)(const void*) noexcept,
+                bool (*isInterrupted)(const void*, ContextIndex) noexcept
+            ) noexcept {
+                _topologyContext = topologyContext;
+                _currentContextIndex = currentContextIndex;
+                _isInterrupted = isInterrupted;
+            }
+
+            bool IsTopologyBound() const noexcept {
+                return
+                    _topologyContext != nullptr &&
+                    _currentContextIndex != nullptr &&
+                    _isInterrupted != nullptr;
+            }
+
+
             // Context resolution.
 
             std::optional<ContextIndex> CurrentContextIndex() const noexcept {
+                if (!IsTopologyBound()) {
+                    return std::nullopt;
+                }
+
                 return _currentContextIndex(
                     _topologyContext
                 );
@@ -65,6 +97,10 @@ namespace ESPressio::Threading::Detail {
             bool IsInterrupted(
                 ContextIndex contextIndex
             ) const noexcept {
+                if (!IsTopologyBound()) {
+                    return true;
+                }
+
                 return _isInterrupted(
                     _topologyContext,
                     contextIndex
