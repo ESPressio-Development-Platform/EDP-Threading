@@ -12,11 +12,11 @@
 
 namespace ESPressio::Threading::Detail {
 
-    template<class TFacility, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
+    template<class TFacility, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
     class TaskFacilityOwnedRuntime;
 
 
-    template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class... TWorkers, class TManagedContextRouter, class TExecutionContextProvider, class TAtomicWord8Provider, class TMutexProvider, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
+    template<class TPoolIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class... TWorkers, class TManagedContextRouter, class TExecutionContextProvider, class TMutexProvider, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
     class TaskFacilityOwnedRuntime<
         TaskExecutionFacility<
             TPoolIdentity,
@@ -27,7 +27,6 @@ namespace ESPressio::Threading::Detail {
         >,
         TManagedContextRouter,
         TExecutionContextProvider,
-        TAtomicWord8Provider,
         TMutexProvider,
         TFirstContextIndex,
         TExecutionContextCapacity
@@ -42,7 +41,6 @@ namespace ESPressio::Threading::Detail {
                 sizeof...(TWorkers),
                 TFirstContextIndex,
                 TExecutionContextCapacity,
-                TAtomicWord8Provider,
                 TMutexProvider,
                 TManagedContextRouter
             >;
