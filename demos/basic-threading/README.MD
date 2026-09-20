@@ -19,3 +19,5 @@ The Arduino targets use the vanilla FreeRTOS execution, signal and mutex provide
 PlatformIO manifests declare every required EDP repository explicitly. The Arduino IDE variant requires those libraries to be installed in the Arduino library search path.
 
 The PlatformIO ESP-IDF surface pins `pioarduino/platform-espressif32` to commit `d41d8383706dc146fd91a0e1d3c59a915a4d493e`. The pioarduino stable 55.3.311 package conflicts with PlatformIO Core 6.2.x because it declares SCons 4.8.1 while Core manages SCons 4.11.1; the pinned revision aligns the platform package with SCons 4.11.1 while retaining ESP-IDF 5.5.5.
+
+That pioarduino revision currently declares `tool-esptoolpy` 5.4.0, whose progress logger can fail during upload with `AttributeError: 'EsptoolLogger' object has no attribute '_get_progress_print_file'` after the board and flashing stub have already connected successfully. The demo therefore overrides only `tool-esptoolpy` to pioarduino's preceding 5.3.1 package. This keeps the compiler/framework baseline unchanged while avoiding the uploader regression.
