@@ -16,8 +16,9 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
-            template<std::size_t... TIndices>
             /// Computes the managed-context prefix sum preceding one topology resource.
+            /// @tparam TIndices Topology resource indices whose managed-context counts contribute to the prefix sum.
+            template<std::size_t... TIndices>
             static constexpr std::size_t Sum(
                 std::index_sequence<TIndices...>
             ) noexcept {
@@ -89,8 +90,9 @@ namespace ESPressio::Threading::Detail {
     struct WorkerDescriptor;
 
 
-    /// Defines the compile-time contract for `WorkerDescriptor`.
-    /// @tparam TWorkerIndex Compile-time index of a Worker within its facility.
+    /// Resolves one Worker declaration from a Worker-set pack by compile-time index.
+    /// @tparam TWorkers Worker declaration Types contained by the Worker set.
+    /// @tparam TWorkerIndex Compile-time index of the Worker being resolved.
     template<class... TWorkers, std::size_t TWorkerIndex>
     struct WorkerDescriptor<
         Workers<TWorkers...>,
