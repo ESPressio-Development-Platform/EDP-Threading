@@ -126,7 +126,7 @@ namespace ESPressio::Threading::Detail {
 
             bool IsContextInterrupted(
                 typename ExecutionContextIndexTraits<TExecutionContextCapacity>::Type contextIndex
-            ) const noexcept {
+            ) noexcept {
                 return _runtime.IsContextInterrupted(
                     contextIndex
                 );
