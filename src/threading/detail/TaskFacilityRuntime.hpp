@@ -1382,11 +1382,18 @@ namespace ESPressio::Threading::Detail {
             TaskState State(
                 Index recordIndex,
                 bool phase
-            ) const noexcept {
-                return _core.PublicState(
+            ) noexcept {
+                if (AcquireLock() != TaskFacilityLockResult::Acquired) {
+                    return TaskState::Cancelled;
+                }
+
+                const auto result = _core.PublicState(
                     recordIndex,
                     phase
                 );
+
+                ReleaseLock();
+                return result;
             }
 
 
