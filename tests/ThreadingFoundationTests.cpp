@@ -227,6 +227,19 @@ namespace Test {
     };
 
 
+    class MonotonicClock final {
+
+        public:
+
+            ESPressio::Clock::MonotonicTimestamp Now() const noexcept {
+                return ESPressio::Clock::MonotonicTimestamp::FromNanoseconds(
+                    0U
+                );
+            }
+
+    };
+
+
     class ManagedContextRouter final {
 
         public:
@@ -1248,6 +1261,18 @@ static void HostValidationStage(
 
 /// Exercises compact Threading foundation primitives.
 int main() {
+    Test::MonotonicClock monotonicClock;
+
+    assert(
+        ESPressio::Clock::BindMonotonicClock(
+            monotonicClock
+        )
+    );
+
+    assert(
+        ESPressio::Clock::IsMonotonicClockBound()
+    );
+
     HostValidationStage(
         "empty topology lifecycle"
     );
