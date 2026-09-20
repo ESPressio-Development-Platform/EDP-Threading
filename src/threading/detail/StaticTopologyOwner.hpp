@@ -215,6 +215,70 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Lifecycle-gated semantic execution surfaces.
+
+            template<class TPoolIdentity, class TCallable>
+            auto Dispatch(
+                TCallable&& callable,
+                TaskDispatchPolicy policy,
+                Duration timeout = Duration{}
+            ) {
+                return _bootstrap.Dispatch(
+                    TaskFacility<TPoolIdentity>().FacilityState(),
+                    std::forward<TCallable>(
+                        callable
+                    ),
+                    policy,
+                    timeout
+                );
+            }
+
+            template<class TTaskIdentity, class TCallable>
+            auto DispatchDedicated(
+                TCallable&& callable,
+                TaskDispatchPolicy policy,
+                Duration timeout = Duration{}
+            ) {
+                return _bootstrap.Dispatch(
+                    DedicatedWorker<TTaskIdentity>(),
+                    std::forward<TCallable>(
+                        callable
+                    ),
+                    policy,
+                    timeout
+                );
+            }
+
+            template<class TThreadIdentity>
+            Thread<TThreadIdentity> ThreadHandle() noexcept {
+                return DedicatedThreadResource<TThreadIdentity>().Handle();
+            }
+
+            template<class TThreadIdentity>
+            ThreadStartResult StartThread() noexcept {
+                return _bootstrap.StartThread(
+                    DedicatedThreadResource<TThreadIdentity>()
+                );
+            }
+
+
+            // Terminal semantic shutdown.
+
+            ThreadingShutdownResult BeginShutdown() noexcept {
+                const auto result = _bootstrap.LifecycleState().BeginShutdown();
+
+                if (result == ThreadingShutdownResult::Accepted) {
+                    _resources.BeginShutdown();
+                }
+
+                return result;
+            }
+
+            bool IsExecutionQuiescent() noexcept {
+                return _resources.IsExecutionQuiescent();
+            }
+
+
             template<class TPoolIdentity>
             auto& TaskFacility() noexcept {
                 constexpr auto index = TaskFacilityResourceIndex<
