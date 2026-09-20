@@ -1042,6 +1042,23 @@ namespace Test {
         DedicatedThreadBindingType
     >;
 
+    using PublicMixedRuntime =
+        ESPressio::Threading::StaticThreadingRuntime<
+            MixedOwnedTopology,
+            MixedOwnedBindings,
+            SignalProvider,
+            ExecutionContextProvider,
+            AtomicByteProvider,
+            MutexProvider
+        >;
+
+    static_assert(
+        !std::is_copy_constructible_v<PublicMixedRuntime> &&
+        !std::is_move_constructible_v<PublicMixedRuntime>,
+        "Static Threading runtime ownership must remain address-stable"
+    );
+
+
     using MixedOwnedResources =
         ESPressio::Threading::Detail::OwnedResourceTuple<
             MixedOwnedTopology,
