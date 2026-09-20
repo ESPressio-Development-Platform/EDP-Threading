@@ -15,6 +15,8 @@
 
 namespace ESPressio::Threading::Detail {
 
+    /// Defines the compile-time contract for `StructuralResolverForTuple`.
+    /// @tparam TTuple Tuple Type whose resources are transformed or traversed.
     template<class TTuple>
     struct StructuralResolverForTuple;
 
@@ -24,6 +26,8 @@ namespace ESPressio::Threading::Detail {
         std::tuple<TResources...>
     > {
 
+        /// Defines the compile-time contract for `Type`.
+        /// @tparam TContextCapacity Number of managed execution contexts represented by the topology.
         template<std::size_t TContextCapacity>
         using Type = StructuralContextResolver<
             TContextCapacity,
@@ -33,6 +37,13 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `StaticTopologyOwner`.
+    /// @tparam TTopology Compile-time Threading topology being realized or inspected.
+    /// @tparam TBindings Tuple Type containing application Dedicated Thread callable bindings.
+    /// @tparam TSignalProvider Concrete Platform Signal provider Type used for targeted wakes.
+    /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
+    /// @tparam TSpinLockProvider Concrete Platform SpinLock provider Type protecting topology lifecycle publication.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
     template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider>
     class StaticTopologyOwner final {
 
@@ -118,6 +129,8 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Defines the compile-time contract for `InitializeNext`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             ThreadingInitializationResult InitializeNext() noexcept {
                 if constexpr (
@@ -136,6 +149,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `DestroyInitializedPrefix`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             void DestroyInitializedPrefix() noexcept {
                 if constexpr (
@@ -149,6 +164,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `InitializeResourceAt`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             bool InitializeResourceAt(
                 std::size_t targetIndex
@@ -169,6 +186,8 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `DestroyResourceAt`.
+            /// @tparam TIndex Compile-time resource or tuple index used by recursive traversal.
             template<std::size_t TIndex>
             void DestroyResourceAt(
                 std::size_t targetIndex
@@ -189,6 +208,9 @@ namespace ESPressio::Threading::Detail {
                 }
             }
 
+            /// Defines the compile-time contract for `InitializeInRuntimeOrder`.
+            /// @tparam TOrderIndex Compile-time position in an application-specified resource order.
+            /// @tparam TOrderCount Number of resources in the application-specified order.
             template<std::size_t TOrderIndex, std::size_t TOrderCount>
             ThreadingInitializationResult InitializeInRuntimeOrder(
                 const std::array<std::size_t, TOrderCount>& order
@@ -215,6 +237,8 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Defines the compile-time contract for `TaskFacility`.
+            /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
             template<class TPoolIdentity>
             auto& TaskFacility() noexcept {
                 constexpr auto index = TaskFacilityResourceIndex<
@@ -230,6 +254,8 @@ namespace ESPressio::Threading::Detail {
                 return _resources.template Get<index>();
             }
 
+            /// Defines the compile-time contract for `DedicatedWorker`.
+            /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
             template<class TTaskIdentity>
             auto& DedicatedWorker() noexcept {
                 constexpr auto index = DedicatedWorkerResourceIndex<
@@ -245,6 +271,8 @@ namespace ESPressio::Threading::Detail {
                 return _resources.template Get<index>();
             }
 
+            /// Defines the compile-time contract for `DedicatedThreadResource`.
+            /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
             template<class TThreadIdentity>
             auto& DedicatedThreadResource() noexcept {
                 constexpr auto index = DedicatedThreadResourceIndex<
@@ -468,6 +496,9 @@ namespace ESPressio::Threading::Detail {
 
             // Lifecycle-gated semantic execution surfaces.
 
+            /// Defines the compile-time contract for `Dispatch`.
+            /// @tparam TPoolIdentity Semantic identity Type of the Task pool.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TPoolIdentity, class TCallable>
             auto Dispatch(
                 TCallable&& callable,
@@ -484,6 +515,9 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Defines the compile-time contract for `DispatchDedicated`.
+            /// @tparam TTaskIdentity Semantic identity Type of the dedicated Task.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TTaskIdentity, class TCallable>
             auto DispatchDedicated(
                 TCallable&& callable,
@@ -500,11 +534,15 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Defines the compile-time contract for `ThreadHandle`.
+            /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
             template<class TThreadIdentity>
             Thread<TThreadIdentity> ThreadHandle() noexcept {
                 return DedicatedThreadResource<TThreadIdentity>().Handle();
             }
 
+            /// Defines the compile-time contract for `StartThread`.
+            /// @tparam TThreadIdentity Semantic identity Type of the Dedicated Thread.
             template<class TThreadIdentity>
             ThreadStartResult StartThread() noexcept {
                 return _bootstrap.StartThread(
