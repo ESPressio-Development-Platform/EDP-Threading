@@ -17,20 +17,8 @@ namespace ESPressio::Threading::Detail {
     class DedicatedThreadRuntime final {
 
         static_assert(
-            (
-                std::is_invocable_v<TCallable&, ThreadContext&> &&
-                std::is_same_v<
-                    std::invoke_result_t<TCallable&, ThreadContext&>,
-                    void
-                >
-            ) ||
-            (
-                std::is_invocable_v<TCallable&> &&
-                std::is_same_v<
-                    std::invoke_result_t<TCallable&>,
-                    void
-                >
-            ),
+            std::is_invocable_r_v<void, TCallable&, ThreadContext&> ||
+            std::is_invocable_r_v<void, TCallable&>,
             "Dedicated Thread callable must return void and accept either ThreadContext& or no arguments"
         );
 
