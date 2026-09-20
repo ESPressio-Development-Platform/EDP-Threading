@@ -363,6 +363,115 @@ namespace ESPressio::Threading {
     };
 
 
+    namespace Detail {
+
+        template<class TIdentity, class TResource>
+        struct MatchesTaskPoolIdentity {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TIdentity, class TRecordCapacity, class TCallableCapacity, class TResultCapacity, class TWorkers>
+        struct MatchesTaskPoolIdentity<
+            TIdentity,
+            TaskExecutionFacility<TIdentity, TRecordCapacity, TCallableCapacity, TResultCapacity, TWorkers>
+        > {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TIdentity, class TResource>
+        struct MatchesDedicatedThreadIdentity {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TIdentity, class... TProperties>
+        struct MatchesDedicatedThreadIdentity<
+            TIdentity,
+            DedicatedThread<TIdentity, TProperties...>
+        > {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TIdentity, class TResource>
+        struct MatchesDedicatedWorkerIdentity {
+
+            static constexpr bool Value = false;
+
+        };
+
+
+        template<class TIdentity, class... TProperties>
+        struct MatchesDedicatedWorkerIdentity<
+            TIdentity,
+            DedicatedWorkerLease<TIdentity, TProperties...>
+        > {
+
+            static constexpr bool Value = true;
+
+        };
+
+
+        template<class TTopology, class TRequirement>
+        struct RequirementSatisfied;
+
+
+        template<class... TResources, class TPoolIdentity, class... TConstraints>
+        struct RequirementSatisfied<
+            ThreadingTopology<TResources...>,
+            TaskPoolRequirement<TPoolIdentity, TConstraints...>
+        > {
+
+            static constexpr bool Value =
+                (MatchesTaskPoolIdentity<TPoolIdentity, TResources>::Value || ... || false);
+
+        };
+
+
+        template<class... TResources, class TThreadIdentity, class... TConstraints>
+        struct RequirementSatisfied<
+            ThreadingTopology<TResources...>,
+            DedicatedThreadRequirement<TThreadIdentity, TConstraints...>
+        > {
+
+            static constexpr bool Value =
+                (MatchesDedicatedThreadIdentity<TThreadIdentity, TResources>::Value || ... || false);
+
+        };
+
+
+        template<class... TResources, class TTaskIdentity, class... TConstraints>
+        struct RequirementSatisfied<
+            ThreadingTopology<TResources...>,
+            DedicatedWorkerRequirement<TTaskIdentity, TConstraints...>
+        > {
+
+            static constexpr bool Value =
+                (MatchesDedicatedWorkerIdentity<TTaskIdentity, TResources>::Value || ... || false);
+
+        };
+
+    } // ESPressio::Threading::Detail
+
+
+    template<class TTopology, class TRequirement>
+    inline constexpr bool SatisfiesThreadingRequirement =
+        Detail::RequirementSatisfied<
+            TTopology,
+            TRequirement
+        >::Value;
+
+
     template<std::size_t TBytes>
     struct MinimumStackCapacity final {
 
