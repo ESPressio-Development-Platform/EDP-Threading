@@ -29,6 +29,7 @@ namespace ESPressio::Threading::Detail {
         /// Defines the compile-time contract for `Type`.
         /// @tparam TContextCapacity Number of managed execution contexts represented by the topology.
         template<std::size_t TContextCapacity>
+        /// Resolved Type produced by this compile-time helper.
         using Type = StructuralContextResolver<
             TContextCapacity,
             TResources...
@@ -57,23 +58,28 @@ namespace ESPressio::Threading::Detail {
 
         private:
 
+            /// Number of managed execution contexts represented by this topology/runtime.
             static constexpr std::size_t ContextCapacity =
                 TTopology::ManagedExecutionContextCount;
 
+            /// Targeted-wake set Type owned by the runtime.
             using WakeSet = ManagedContextWakeSet<
                 ContextCapacity,
                 TSignalProvider
             >;
 
+            /// Managed-context router Type owned by the runtime.
             using Router = ManagedContextRouter<
                 ContextCapacity,
                 TSignalProvider
             >;
 
+            /// Bootstrap coordinator Type owning infrastructure lifecycle state.
             using Bootstrap = ThreadingBootstrap<
                 TSpinLockProvider
             >;
 
+            /// Bounded shutdown-completion wait runtime Type.
             using ShutdownWait = ShutdownWaitRuntime<
                 typename Bootstrap::Lifecycle,
                 ContextCapacity,
@@ -81,6 +87,7 @@ namespace ESPressio::Threading::Detail {
                 Router
             >;
 
+            /// Recursive in-place storage Type owning all declared topology resources.
             using Resources = StaticTopologyResourceStorage<
                 TTopology,
                 TBindings,
@@ -91,6 +98,7 @@ namespace ESPressio::Threading::Detail {
                 0U
             >;
 
+            /// Tuple Type describing the concrete resource runtime Types.
             using ResourceTypes = OwnedResourceTuple<
                 TTopology,
                 TBindings,
@@ -99,6 +107,7 @@ namespace ESPressio::Threading::Detail {
                 TMutexProvider
             >;
 
+            /// Structural context-resolver Type spanning all concrete resources.
             using Resolver = typename StructuralResolverForTuple<
                 ResourceTypes
             >::template Type<ContextCapacity>;
