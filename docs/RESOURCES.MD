@@ -6,7 +6,7 @@ Memory optimization is architectural. Threading uses statically bounded records,
 
 ## Task records
 
-A Task record reuses one aligned payload region for callable storage and, after callable lifetime ends, result storage. Intrinsic lifecycle/owner/Phase control targets one byte. Free-record availability is facility-level, and queued linkage uses the smallest capacity-derived record index.
+A Task record reuses one aligned payload region for callable storage and, after callable lifetime ends, result storage. Intrinsic lifecycle/owner/Phase control remains exactly one byte. Its mutation and observation are serialized through the facility mutex; cooperative cancellation observed from the running callable re-enters that same bounded synchronization boundary through its invocation-local `TaskContext`. This preserves the one-byte per-record target without requiring byte-wide lock-free compare/exchange on platforms whose native atomic width is larger. Free-record availability is facility-level, and queued linkage uses the smallest capacity-derived record index.
 
 Task record capacity and Worker concurrency are independent. Terminal records retained only by ownership/waiters are not execution work. Callable and result storage are separately bounded; public Task ownership is binary and move-only rather than reference counted.
 
