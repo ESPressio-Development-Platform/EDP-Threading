@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <tuple>
 
 #include <ESPressio_System.hpp>
 
@@ -476,6 +477,8 @@ namespace ESPressio::Threading {
 
         static constexpr std::size_t ManagedExecutionContextCount =
             (Detail::ManagedContextCount<TResources>::Value + ... + 0U);
+
+        using Resources = std::tuple<TResources...>;
 
     };
 
