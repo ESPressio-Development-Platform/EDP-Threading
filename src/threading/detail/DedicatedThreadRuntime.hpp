@@ -67,7 +67,7 @@ namespace ESPressio::Threading::Detail {
     };
 
 
-    template<class TThreadIdentity, class TCallable, std::size_t TStackCapacity, std::size_t TExecutionContextCapacity, class TAtomicWord8Provider, class TMutexProvider, class TExecutionContextProvider, class TManagedContextRouter>
+    template<class TThreadIdentity, class TCallable, std::size_t TStackCapacity, std::size_t TExecutionContextCapacity, class TMutexProvider, class TExecutionContextProvider, class TManagedContextRouter>
     class DedicatedThreadRuntime final {
 
         static_assert(
@@ -81,7 +81,7 @@ namespace ESPressio::Threading::Detail {
             // Compact semantic state.
 
             /// One-byte authoritative Dedicated Thread lifecycle and activation Phase.
-            DedicatedThreadControl<TAtomicWord8Provider> _control;
+            DedicatedThreadControl _control;
 
             /// Target-owned Join registrations, bounded by managed execution-context count.
             RegistrationSet<
@@ -199,8 +199,10 @@ namespace ESPressio::Threading::Detail {
             static bool IsStopRequestedThunk(
                 const void* resource
             ) noexcept {
-                return static_cast<const DedicatedThreadRuntime*>(
-                    resource
+                return const_cast<DedicatedThreadRuntime*>(
+                    static_cast<const DedicatedThreadRuntime*>(
+                        resource
+                    )
                 )->IsStopRequested();
             }
 
@@ -697,8 +699,15 @@ namespace ESPressio::Threading::Detail {
                 return ThreadStopRequestResult::Accepted;
             }
 
-            bool IsStopRequested() const noexcept {
-                return _control.IsStopRequested();
+            bool IsStopRequested() noexcept {
+                if (!AcquireLock()) {
+                    return true;
+                }
+
+                const auto result = _control.IsStopRequested();
+
+                ReleaseLock();
+                return result;
             }
 
             ThreadJoinResult Join() {
@@ -763,7 +772,7 @@ namespace ESPressio::Threading::Detail {
             /// Indicates whether the addressed Dedicated Thread context currently has a cooperative interruption request.
             bool IsContextInterrupted(
                 ContextIndex contextIndex
-            ) const noexcept {
+            ) noexcept {
                 return
                     contextIndex == _contextIndex &&
                     (
