@@ -44,9 +44,9 @@ Threading consumes EDP-System, EDP-Platform and EDP-Clock. There are no optional
 
 The v1 source implementation includes compile-time topology/requirements, bounded Task facilities, FIFO Worker-Lease scheduling, isolated single-Worker `DedicatedWorkerLease` resources, persistent restart-safe Dedicated Threads, dense targeted wake routing, canonical monotonic waits/sleep, transactional infrastructure Start/rollback, terminal cooperative shutdown and static runtime ownership.
 
-Validation completed on 20 September 2026 includes the warnings-as-errors host suite, the UBSan host suite, PlatformIO Arduino compile/link plus physical ESP32 runtime, and PlatformIO ESP-IDF compile/link plus physical ESP32 runtime. ASan on the validating macOS host currently hangs before `main()`; that is recorded as a host sanitizer/runtime limitation rather than a Threading PASS or failure.
+Earlier validation on 20 September 2026 established PASS evidence for the warnings-as-errors host suite, the UBSan host suite, PlatformIO Arduino compile/link plus physical ESP32 runtime, and PlatformIO ESP-IDF compile/link plus physical ESP32 runtime. Those results pre-date the final V2 compliance cleanup that subsequently changed Threading and execution-provider production surfaces, so they remain historical evidence rather than current-tip validation. The present tips still require fresh host/provider validation and fresh Arduino/ESP-IDF target builds plus physical runtime confirmation before completion is claimed. ASan on the validating macOS host hangs before `main()`; that is recorded as a host sanitizer/runtime limitation rather than a Threading PASS or failure.
 
-Representative deterministic RAM/code-size measurement is the remaining completion activity. No version mutation is performed during this development.
+Representative deterministic RAM/code-size measurement and current-tip revalidation remain completion activities. No version mutation is performed during this development.
 
 ## Local validation
 
