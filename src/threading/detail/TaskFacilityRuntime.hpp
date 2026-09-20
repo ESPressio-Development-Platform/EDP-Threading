@@ -27,6 +27,15 @@ namespace ESPressio::Threading::Detail {
     };
 
 
+    /// Defines the compile-time contract for `TaskFacilityRuntime`.
+    /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
+    /// @tparam TManagedContextRouter Managed-context router Type used for identity, interruption, and targeted wakes.
+    /// @tparam TRecordCapacity Task-record capacity declaration Type or bounded capacity.
+    /// @tparam TCallableCapacity Callable-storage capacity declaration Type or byte capacity.
+    /// @tparam TResultCapacity Result-storage capacity declaration Type or byte capacity.
+    /// @tparam TWorkerCount Compile-time template parameter `TWorkerCount` used by this declaration.
+    /// @tparam TFirstWorkerContextIndex Compile-time template parameter `TFirstWorkerContextIndex` used by this declaration.
+    /// @tparam TExecutionContextCapacity Total managed execution-context capacity of the topology.
     template<std::size_t TRecordCapacity, std::size_t TCallableCapacity, std::size_t TResultCapacity, std::size_t TWorkerCount, std::size_t TFirstWorkerContextIndex, std::size_t TExecutionContextCapacity, class TMutexProvider, class TManagedContextRouter>
     class TaskFacilityRuntime final {
 
@@ -842,12 +851,14 @@ namespace ESPressio::Threading::Detail {
             using WorkerClaimResult = typename Core::WorkerClaimResult;
 
             /// Public Task handle Type produced by one callable Type.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             using TaskForCallable = Task<
                 CallableResultT<std::decay_t<TCallable>>
             >;
 
             /// Structured public dispatch result produced for one callable Type.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             using DispatchResultFor = TaskDispatchResult<
                 TaskForCallable<TCallable>
@@ -885,6 +896,8 @@ namespace ESPressio::Threading::Detail {
 
             // Dispatch.
 
+            /// Defines the compile-time contract for `Dispatch`.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             DispatchResultFor<TCallable> Dispatch(
                 TCallable&& callable,
@@ -992,6 +1005,7 @@ namespace ESPressio::Threading::Detail {
             // Admission.
 
             /// Admits one callable into deterministic facility storage when record capacity is available.
+            /// @tparam TCallable Callable Type being dispatched or adapted.
             template<class TCallable>
             AdmissionResult Admit(
                 TCallable&& callable
