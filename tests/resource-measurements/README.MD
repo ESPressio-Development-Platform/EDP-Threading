@@ -56,3 +56,7 @@ EDP_THREADING_MEASUREMENT
 ```
 
 This is validation instrumentation only. It does not alter EDP-Threading production semantics or versioning.
+
+## C++ Language Baseline
+
+All resource-measurement environments compile as C++20 and retain the repository's validated PIOArduino ESP-IDF platform pin so measurement comparisons remain on the same toolchain family.
