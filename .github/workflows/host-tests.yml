@@ -37,7 +37,7 @@ jobs:
       - name: Compile warnings-as-errors host tests
         run: |
           g++ \
-            -std=c++17 \
+            -std=c++20 \
             -Wall \
             -Wextra \
             -Wpedantic \
