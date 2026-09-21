@@ -81,3 +81,7 @@ See the [dependency graph](./DEPENDENCY_GRAPH.MD) for the authoritative dependen
 - [Lifecycle, ownership and cancellation](./docs/LIFECYCLE.MD)
 - [Deterministic resources](./docs/RESOURCES.MD)
 - [Dependency graph](./DEPENDENCY_GRAPH.MD)
+
+## C++ Language Baseline
+
+ESPressio requires C++20. Threading host tests, CI workflows, resource-measurement builds, and ESP32 integration demos all compile against that baseline. PlatformIO-compatible ESP32 development should use PIOArduino; repository-specific validated pins are retained where required for known toolchain compatibility.
