@@ -27,7 +27,7 @@ trap cleanup EXIT
 
 compile_tests() {
     c++ \
-        -std=c++17 \
+        -std=c++20 \
         -Wall \
         -Wextra \
         -Wpedantic \
