@@ -17,7 +17,7 @@ Then, from `EDP-Threading`:
 bash tests/run-host-tests.sh
 ```
 
-The runner compiles `ThreadingFoundationTests.cpp` as C++17 with `-Wall -Wextra -Wpedantic -Werror`, executes it, and removes the temporary binary. Runtime progress markers are always emitted.
+The runner compiles `ThreadingFoundationTests.cpp` as C++20 with `-Wall -Wextra -Wpedantic -Werror`, executes it, and removes the temporary binary. Runtime progress markers are always emitted.
 
 Run the current supported sanitizer validation with:
 
