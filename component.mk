@@ -1,1 +1,3 @@
 COMPONENT_ADD_INCLUDEDIRS := src
+
+CXXFLAGS += -std=gnu++20
