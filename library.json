@@ -9,8 +9,14 @@
     "url": "https://espressio.org"
   },
   "build": {
-    "flags": ["-std=gnu++17"],
-    "unflags": ["-std=gnu++11"]
+    "flags": [
+      "-std=gnu++20"
+    ],
+    "unflags": [
+      "-std=gnu++11",
+      "-std=gnu++14",
+      "-std=gnu++17"
+    ]
   },
   "repository": {
     "type": "git",
