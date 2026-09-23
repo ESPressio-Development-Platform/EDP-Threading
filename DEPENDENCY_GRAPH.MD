@@ -1,6 +1,6 @@
 # EDP-Threading Dependency Graph
 
-> Revalidated: 2026-09-23 — Composition Framework enhancement migration changes compile-time provider/requirement metadata and validation only; no ESPressio-library dependency edge changed.
+> Revalidated: 2026-09-23 — Composition Framework migration and coherent local-checkout resource-validation support change compile/test metadata only; no ESPressio-library dependency edge changed.
 
 > Revalidated: 2026-09-20 — V2 compliance audit and Threading validation/resource-measurement work introduced no new ESPressio-library dependency.
 
