@@ -1032,7 +1032,7 @@ namespace ESPressio::Threading {
         template<>
         struct TopologyProviderBase<true, false> : Framework::Provider<
             Domain,
-            Framework::Provides<
+            Framework::Offers<
                 Framework::Offer<TaskExecution>
             >
         > {};
@@ -1042,7 +1042,7 @@ namespace ESPressio::Threading {
         template<>
         struct TopologyProviderBase<false, true> : Framework::Provider<
             Domain,
-            Framework::Provides<
+            Framework::Offers<
                 Framework::Offer<DedicatedThreadExecution>
             >
         > {};
@@ -1052,7 +1052,7 @@ namespace ESPressio::Threading {
         template<>
         struct TopologyProviderBase<true, true> : Framework::Provider<
             Domain,
-            Framework::Provides<
+            Framework::Offers<
                 Framework::Offer<TaskExecution>,
                 Framework::Offer<DedicatedThreadExecution>
             >

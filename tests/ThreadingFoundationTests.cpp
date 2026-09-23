@@ -41,7 +41,7 @@ namespace Test {
     /// Deterministic test SpinLock provider used to validate lifecycle synchronization boundaries.
     class SpinLockProvider final : public Framework::Provider<
         ESPressio::Platform::Domain,
-        Framework::Provides<
+        Framework::Offers<
             Framework::Offer<
                 ESPressio::Platform::Synchronization::SpinLock,
                 Framework::PropertyValue<
@@ -130,7 +130,7 @@ namespace Test {
     /// Caller-storage-backed execution provider used by host-only Threading ownership tests.
     class ExecutionContextProvider final : public Framework::Provider<
         ESPressio::Platform::Domain,
-        Framework::Provides<
+        Framework::Offers<
             Framework::Offer<
                 ESPressio::Platform::Execution::ExecutionContext,
                 Framework::PropertyValue<ESPressio::Platform::Execution::CallerSuppliedStorage, true>,
