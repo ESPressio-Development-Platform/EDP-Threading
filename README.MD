@@ -54,6 +54,15 @@ Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when E
 
 Target resource measurements are built without flashing hardware from `tests/resource-measurements` using `bash ./run-resource-measurements.sh`.
 
+For cross-repository feature validation, set `EDP_THREADING_RESOURCE_LOCAL_ROOT` to the directory containing the sibling EDP repositories. The runner then binds EDP-System, EDP-Platform, EDP-Memory, EDP-Security, EDP-Clock, EDP-Platform-FreeRTOS, EDP-Platform-ESP-IDF and EDP-Threading from those local checkouts in dependency-first order, preventing transitive package manifests from mixing `main` with the branch under validation:
+
+```bash
+EDP_THREADING_RESOURCE_LOCAL_ROOT=~/DevProjects/ESPressio_Repositories \
+    bash tests/resource-measurements/run-resource-measurements.sh
+```
+
+Without that variable, the committed `platformio.ini` retains the normal remote `main` dependency baseline.
+
 A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, Dedicated Thread activation/cooperative stop and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
 
 ## Dependencies
