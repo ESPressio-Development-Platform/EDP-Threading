@@ -46,7 +46,7 @@ The v1 source implementation includes compile-time topology/requirements, bounde
 
 Earlier validation on 20 September 2026 established PASS evidence for the warnings-as-errors host suite, the UBSan host suite, PlatformIO Arduino compile/link plus physical ESP32 runtime, and PlatformIO ESP-IDF compile/link plus physical ESP32 runtime. Those results pre-date the final V2 compliance cleanup that subsequently changed Threading and execution-provider production surfaces, so they remain historical evidence rather than current-tip validation. The present tips still require fresh host/provider validation and fresh Arduino/ESP-IDF target builds plus physical runtime confirmation before completion is claimed. ASan on the validating macOS host hangs before `main()`; that is recorded as a host sanitizer/runtime limitation rather than a Threading PASS or failure.
 
-Representative deterministic RAM/code-size measurement and current-tip revalidation remain completion activities. No version mutation is performed during this development.
+Representative deterministic RAM/code-size measurement is now recorded for all fourteen Arduino/ESP-IDF measurement environments in [Deterministic resources](./docs/RESOURCES.MD). Current-tip host validation and the coherent target resource matrix are green. No version mutation is performed during this development.
 
 ## Local validation
 
