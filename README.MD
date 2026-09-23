@@ -9,7 +9,7 @@ The v1 architecture is static and Composition-driven. Platform owns native execu
 Include:
 
 ```cpp
-#include <EDP_Threading.hpp>
+#include <ESPressio_Threading.hpp>
 ```
 
 The public vocabulary includes:
