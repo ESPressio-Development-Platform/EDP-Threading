@@ -35,8 +35,8 @@ if [[ -n "${EDP_THREADING_RESOURCE_LOCAL_ROOT:-}" ]]; then
     )
 
     for repository in "${required_repositories[@]}"; do
-        if [[ ! -f "${LOCAL_ROOT}/${repository}/library.json" ]]; then
-            echo "ERROR: missing local resource-measurement dependency: ${LOCAL_ROOT}/${repository}/library.json" >&2
+        if [[ ! -d "${LOCAL_ROOT}/${repository}/src" ]]; then
+            echo "ERROR: missing local resource-measurement source tree: ${LOCAL_ROOT}/${repository}/src" >&2
             exit 1
         fi
     done
@@ -67,17 +67,29 @@ repositories = [
     "EDP-Threading",
 ]
 
-local_deps = "lib_deps =\n" + "".join(
-    f"    {repository}=symlink://{local_root / repository}\n"
-    for repository in repositories
-)
+# The participating production libraries are header-only. For local
+# cross-repository validation, bypass PlatformIO Library Manager entirely:
+# otherwise each library manifest may resolve transitive dependencies from
+# its normal remote main baseline and create a mixed-branch build.
+text = text[:start] + text[end + 2:]
 
-target.write_text(text[:start] + local_deps + text[end:])
+include_flags = [
+    f"    -I{local_root / repository / 'src'}"
+    for repository in repositories
+]
+
+lines = []
+for line in text.splitlines():
+    lines.append(line)
+    if line == "build_flags =":
+        lines.extend(include_flags)
+
+target.write_text("\n".join(lines) + "\n")
 PY
 
     ACTIVE_CONFIG="${TEMP_CONFIG}"
 
-    echo "EDP-Threading resource measurements: local dependency mode"
+    echo "EDP-Threading resource measurements: coherent local source mode"
     echo "Local ESPressio root: ${LOCAL_ROOT}"
 fi
 
