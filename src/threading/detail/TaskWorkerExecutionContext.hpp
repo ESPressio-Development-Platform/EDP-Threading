@@ -29,7 +29,7 @@ namespace ESPressio::Threading::Detail {
             // Provider-declared backing requirements.
 
             /// Composition capability set exposed by the execution-context provider.
-            using Capabilities = typename TExecutionContextProvider::CompositionCapabilities;
+            using Capabilities = typename TExecutionContextProvider::CompositionOffers;
             /// Resolved capability-property set for the execution-context provider.
             using Properties = typename Capabilities::template PropertiesFor<
                 ESPressio::Platform::Execution::ExecutionContext
