@@ -54,7 +54,7 @@ Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when E
 
 Target resource measurements are built without flashing hardware from `tests/resource-measurements` using `bash ./run-resource-measurements.sh`.
 
-For cross-repository feature validation, set `EDP_THREADING_RESOURCE_LOCAL_ROOT` to the directory containing the sibling EDP repositories. The runner then binds EDP-System, EDP-Platform, EDP-Memory, EDP-Security, EDP-Clock, EDP-Platform-FreeRTOS, EDP-Platform-ESP-IDF and EDP-Threading from those local checkouts in dependency-first order, preventing transitive package manifests from mixing `main` with the branch under validation:
+For cross-repository feature validation, set `EDP_THREADING_RESOURCE_LOCAL_ROOT` to the directory containing the sibling EDP repositories. All participating production libraries are header-only, so this mode bypasses PlatformIO Library Manager and injects the sibling `src` directories directly into every measurement environment. That prevents transitive package manifests from mixing `main` with the branch under validation and also supports repositories such as EDP-Security whose current build surface is not expressed through PlatformIO package metadata:
 
 ```bash
 EDP_THREADING_RESOURCE_LOCAL_ROOT=~/DevProjects/ESPressio_Repositories \
