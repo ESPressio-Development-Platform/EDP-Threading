@@ -37,6 +37,13 @@ jobs:
           ref: main
           path: EDP-Clock
 
+      - name: Checkout EDP-BoundedTopology
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-BoundedTopology
+          ref: main
+          path: EDP-BoundedTopology
+
       - name: Compile foundation tests
         run: |
           g++ \
