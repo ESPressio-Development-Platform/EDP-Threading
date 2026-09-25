@@ -6,9 +6,22 @@ Memory optimization is architectural. Threading uses statically bounded records,
 
 ## Task records
 
-A Task record reuses one aligned payload region for callable storage and, after callable lifetime ends, result storage. Intrinsic lifecycle/owner/Phase control remains exactly one byte. Its mutation and observation are serialized through the facility mutex; cooperative cancellation observed from the running callable re-enters that same bounded synchronization boundary through its invocation-local `TaskContext`. This preserves the one-byte per-record target without requiring byte-wide lock-free compare/exchange on platforms whose native atomic width is larger. Free-record availability is facility-level, and queued linkage uses the smallest capacity-derived record index.
+A Task record reuses one aligned payload region for callable storage and, after callable lifetime ends, result storage. Intrinsic lifecycle/owner/Phase control remains exactly one byte. Its mutation and observation are serialized through the facility mutex; cooperative cancellation observed from the running callable re-enters that same bounded synchronization boundary through its invocation-local `TaskContext`. This preserves the one-byte per-record target without requiring byte-wide lock-free compare/exchange on platforms whose native atomic width is larger. Free-record availability is facility-level and uses the shared one-bit `EDP-BoundedTopology::BoundedIndexSet`; queued linkage uses the shared capacity-derived bounded index representation and `IntrusiveQueue` endpoints.
 
 Task record capacity and Worker concurrency are independent. Terminal records retained only by ownership/waiters are not execution work. Callable and result storage are separately bounded; public Task ownership is binary and move-only rather than reference counted.
+
+## Bounded topology storage
+
+EDP-BoundedTopology supplies the low-level storage mechanics without adding provider or synchronization state:
+
+- Task-record availability: exactly one bit per record;
+- Worker availability: exactly one bit per Worker;
+- queued Task FIFO: exactly two capacity-derived bounded indices for head/tail;
+- compact raw index widths: selected from the same bounded-index representation used by the shared topology primitives.
+
+The migration preserves the existing `TaskRecord::QueueOrExecutionContext` optimization. This member remains **one raw compact scalar**, not two stored strong indices. Queued and Running lifecycle phases interpret the scalar differently because those identities are mutually exclusive. Strong `BoundedIndex` values are created only when entering the shared set/queue API.
+
+No cached availability count or queue-size field is introduced. Counts continue to be bounded scans where required.
 
 ## Execution contexts
 
