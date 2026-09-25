@@ -41,6 +41,11 @@
       "name": "EDP-Clock",
       "version": "https://github.com/ESPressio-Development-Platform/EDP-Clock.git#main",
       "platforms": "*"
+    },
+    {
+      "name": "EDP-BoundedTopology",
+      "version": "https://github.com/ESPressio-Development-Platform/EDP-BoundedTopology.git#main",
+      "platforms": "*"
     }
   ]
 }
