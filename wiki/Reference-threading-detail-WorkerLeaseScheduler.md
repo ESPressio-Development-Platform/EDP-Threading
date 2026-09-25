@@ -2,9 +2,9 @@
 
 **Primary classification:** PRIVATE IMPLEMENTATION
 
-**Source baseline:** `ea0bf415eacd70064c3c7216a6c1e6a48cd85038`
+**Source baseline:** `bce38a54cca268f3a25a435c2a378d4e8a25c622`
 
-[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/ea0bf415eacd70064c3c7216a6c1e6a48cd85038/src/threading/detail/WorkerLeaseScheduler.hpp)
+[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/bce38a54cca268f3a25a435c2a378d4e8a25c622/src/threading/detail/WorkerLeaseScheduler.hpp)
 
 ## Direct includes
 
@@ -16,157 +16,104 @@
 
 ## Documented declarations
 
-### `WorkerLeaseScheduler`
+### `WorkerAvailabilityResult`
 
 **Classification:** PRIVATE IMPLEMENTATION
 
-Defines the compile-time contract for `WorkerLeaseScheduler`.
-- **Template parameter `TWorkerCount`:** Number of Workers represented by the lease scheduler.
-- **Template parameter `TFirstContextIndex`:** First dense topology context index assigned to the Worker set.
-- **Template parameter `TExecutionContextCapacity`:** Total managed execution-context capacity of the topology.
+Operation result for publishing Worker availability.
 
-```cpp
-template<std::size_t TWorkerCount, std::size_t TFirstContextIndex, std::size_t TExecutionContextCapacity>
-    class WorkerLeaseScheduler final
-```
+- `Available = 0` — the addressed Worker belongs to this scheduler and has been published available.
+- `OutsideFacilityRange = 1` — the supplied topology context index does not belong to this facility's Worker range.
+- `ProviderFailure = 2` — retained Threading result vocabulary for provider-mediated availability paths; the current bounded-set mutation itself cannot produce this outcome.
 
-### `AvailabilityBitmap<TWorkerCount> _availableWorkers{false};`
+### `WorkerLeaseScheduler<TWorkerCount,TFirstContextIndex,TExecutionContextCapacity>`
+
+**Classification:** PRIVATE IMPLEMENTATION
+
+Owns facility-local Worker availability semantics over a shared `WorkerAvailabilitySet` while translating between topology-wide context indices and zero-based local Worker ordinals.
+
+- **`TWorkerCount`** — number of Workers represented by the scheduler.
+- **`TFirstContextIndex`** — first dense topology context index assigned to this Worker range.
+- **`TExecutionContextCapacity`** — total managed execution-context capacity of the complete topology.
+
+### `_availableWorkers`
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `private`
 
-One bit per Worker; one means available for a new Task grant.
+One shared bounded-set bit per facility Worker. A set bit means that Worker can accept a new Task grant. The set default-constructs empty, preserving the pre-migration rule that Workers are unavailable until they explicitly publish availability.
 
 ```cpp
-AvailabilityBitmap<TWorkerCount> _availableWorkers{false};
+WorkerAvailabilitySet<TWorkerCount> _availableWorkers;
 ```
 
 ### `WorkerOrdinal`
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `private`
 
-Returns the zero-based facility Worker ordinal for one topology context index.
+Converts one topology-wide managed execution-context index to this scheduler's zero-based Worker ordinal. The context scalar width is delegated to the shared bounded-index representation.
 
 ```cpp
 std::size_t WorkerOrdinal(
-                typename SmallestIndex<TExecutionContextCapacity>::Type contextIndex
-            ) const noexcept
+    typename TopologyIndexTraits<
+        ManagedContextIndexSpace,
+        TExecutionContextCapacity
+    >::Storage contextIndex
+) const noexcept
 ```
 
 ### `ContextIndex`
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `public`
 
-Dense topology-wide managed execution-context index Type.
+Dense topology-wide managed execution-context scalar Type, with width selected by `EDP-BoundedTopology::BoundedIndex` through `TopologyIndexTraits`.
 
 ```cpp
-using ContextIndex = typename SmallestIndex<TExecutionContextCapacity>::Type;
+using ContextIndex = typename TopologyIndexTraits<
+    ManagedContextIndexSpace,
+    TExecutionContextCapacity
+>::Storage;
 ```
 
 ### `WorkerCount`
 
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
-
-Number of Workers represented by this scheduler.
-
-```cpp
-static constexpr std::size_t WorkerCount = TWorkerCount;
-```
+Number of Workers represented by the scheduler.
 
 ### `FirstContextIndex`
 
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
+First dense managed execution-context index owned by the facility.
 
-First dense managed execution-context index owned by this facility.
+### `IsWorkerContext(ContextIndex)`
 
-```cpp
-static constexpr std::size_t FirstContextIndex = TFirstContextIndex;
-```
+Predicate testing whether one topology-wide context index belongs to this scheduler's Worker range.
 
-### `IsWorkerContext`
+### `ContextIndexForWorker(std::size_t)`
 
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
+Converts a zero-based facility Worker ordinal back to its topology-wide context index.
 
-Indicates whether one managed execution-context index belongs to this facility's Workers.
+### `MarkAvailable(ContextIndex)`
 
-```cpp
-bool IsWorkerContext(
-                ContextIndex contextIndex
-            ) const noexcept
-```
+Validates facility membership, constructs the corresponding strong `WorkerAvailabilitySet::Index`, and sets its bit. No counter or additional state is updated.
 
-### `ContextIndexForWorker`
+### `TryClaimSpecific(ContextIndex)`
 
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
+Returns no value if the context lies outside the facility or its Worker bit is clear. Otherwise clears the corresponding set bit and returns the same context index.
 
-Converts one zero-based Worker ordinal to its topology-wide dense context index.
+### `TryClaimAvailable()`
 
-```cpp
-ContextIndex ContextIndexForWorker(
-                std::size_t workerOrdinal
-            ) const noexcept
-```
+Finds the lowest set Worker bit, clears it, and returns the corresponding topology context index. If no bit is set, returns `std::nullopt`. Lowest-index selection is a bounded scan; no cached first-free index exists.
 
-### `MarkAvailable`
+### `IsAnyAvailable()`
 
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
+Delegates to `BoundedIndexSet::IsAnySet()` without retaining another Boolean.
 
-Publishes one facility Worker as available for a new Task grant.
+### `AvailableCount()`
 
-```cpp
-WorkerAvailabilityResult MarkAvailable(
-                ContextIndex contextIndex
-            ) noexcept
-```
+Delegates to the set's bounded `Count()` scan; no cached availability count is retained.
 
-### `TryClaimSpecific`
+### `InUseCount()`
 
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
+Computes `TWorkerCount - AvailableCount()`; no in-use counter is retained.
 
-Attempts to reserve one specific Worker when it belongs to this facility and is available.
+## Resource and concurrency contract
 
-```cpp
-std::optional<ContextIndex> TryClaimSpecific(
-                ContextIndex contextIndex
-            ) noexcept
-```
-
-### `TryClaimAvailable`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
-
-Attempts to reserve the lowest-index currently available Worker.
-
-```cpp
-std::optional<ContextIndex> TryClaimAvailable() noexcept
-```
-
-### `IsAnyAvailable`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
-
-Indicates whether at least one facility Worker can accept a Task grant now.
-
-```cpp
-bool IsAnyAvailable() const noexcept
-```
-
-### `AvailableCount`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
-
-Returns the number of currently available Workers.
-
-```cpp
-std::size_t AvailableCount() const noexcept
-```
-
-### `InUseCount`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
-
-Returns the number of Workers currently granted to Tasks.
-
-```cpp
-std::size_t InUseCount() const noexcept
-```
-
+The only availability state is the shared one-bit-per-Worker set. Threading's existing facility synchronization remains responsible for serializing mutation. EDP-BoundedTopology adds no lock, allocation, provider object, or runtime capacity state.
