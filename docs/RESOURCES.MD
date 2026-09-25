@@ -95,7 +95,7 @@ All fourteen measurement environments built successfully.
 These results are build-time measurements only; no hardware flashing is required by the resource runner. The baseline rows intentionally contain no retained Threading runtime storage and provide the framework image reference for code/data/BSS comparison.
 ## Bounded-topology migration validation — 2026-09-25
 
-The `bounded_topology_migration` branch was remeasured after replacing Threading-local compact-index, availability-bitmap and intrusive-FIFO mechanics with EDP-BoundedTopology.
+The bounded-topology migration was remeasured before reintegration into `main`, after replacing Threading-local compact-index, availability-bitmap and intrusive-FIFO mechanics with EDP-BoundedTopology.
 
 The migration gate required both `total` retained Threading runtime bytes and `intrinsic` Threading bytes to be **less than or equal to** the validated 23 September baseline for every non-baseline scenario. All twelve comparisons passed with **exactly identical retained RAM**.
 
