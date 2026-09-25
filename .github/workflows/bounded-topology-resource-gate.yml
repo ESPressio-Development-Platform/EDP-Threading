@@ -70,6 +70,8 @@ jobs:
         env:
           EDP_THREADING_RESOURCE_LOCAL_ROOT: ${{ github.workspace }}
         run: |
+          rm -rf "$HOME/.platformio/.cache/uv"
+          set -o pipefail
           bash EDP-Threading/tests/resource-measurements/run-resource-measurements.sh | tee resource-summary.log
 
       - name: Compare RAM against validated baseline
@@ -133,6 +135,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bounded-topology-migration-resource-measurements
+          include-hidden-files: true
           path: |
             resource-summary.log
             EDP-Threading/tests/resource-measurements/.measurement-logs
