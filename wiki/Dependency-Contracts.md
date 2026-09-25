@@ -1,10 +1,10 @@
 # Dependency Contracts
 
-EDP-Threading depends on **EDP-System**, **EDP-Platform** and **EDP-Clock**.
+EDP-Threading depends on **EDP-System**, **EDP-Platform**, **EDP-Clock** and **EDP-BoundedTopology**.
 
 ## EDP-System
 
-Threading uses EDP-System compile-time machinery for its domain/provider representation, but it also has a Threading-specific topology/requirement vocabulary (`TaskPoolRequirement`, `DedicatedThreadRequirement`, `DedicatedWorkerRequirement`) evaluated against `ThreadingTopology`.
+Threading uses EDP-System compile-time machinery for its domain/provider representation, while retaining a Threading-specific topology/requirement vocabulary evaluated against `ThreadingTopology`.
 
 ## EDP-Platform direct provider contracts
 
@@ -23,8 +23,18 @@ ExecutionContext backing is derived from provider properties: control bytes/alig
 
 Timed waits use the canonical EDP-Clock monotonic timeline. `MonotonicWaitBudget` calls `Clock::MonotonicNow()`, so application Bootstrap must have successfully and permanently bound a lifetime-stable monotonic clock via `BindMonotonicClock()` before Threading timed operations execute.
 
+## EDP-BoundedTopology
+
+Threading consumes three domain-neutral mechanics:
+
+- `BoundedIndex` storage selection for compact Task-record, managed-context and scratch scalar representations;
+- `BoundedIndexSet` for Task-record and Worker availability membership;
+- `IntrusiveQueue` for queued Task FIFO ordering.
+
+Threading does not delegate Task admission, Worker grants, cancellation, reclamation, scheduling, synchronization, wait semantics, or payload ownership to BoundedTopology. The shared queue stores only head/tail; each `TaskRecord` still owns the lifecycle-reused next-link representation.
+
+No provider object or runtime lifetime is supplied by EDP-BoundedTopology; the dependency is header-only and allocation/synchronization-free.
+
 ## Ownership boundary
 
-Threading owns semantic Task/Thread lifecycle and all bounded runtime structures. Platform owns native execution/synchronization semantics. Clock owns time. No dependency is allowed to invert those ownership boundaries.
-
-> Dependency contract audit baseline: `7eeceff86d7e43dbc71b6e15cf08f565466424cf` (`main`).
+Threading owns semantic Task/Thread lifecycle and Threading-specific bounded runtime state meaning. Platform owns native execution/synchronization semantics. Clock owns time. BoundedTopology owns only the reusable finite-index topology mechanics. No dependency is allowed to invert those ownership boundaries.
