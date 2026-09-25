@@ -48,4 +48,4 @@ This macro is supplied by the Arduino build environment; EDP-Threading does not 
 
 No repository-defined production compiler definition is required to configure the EDP-Threading public/runtime API. Threading topology, capacities, priorities and affinity are expressed through C++ types/templates rather than preprocessor configuration.
 
-> Audited on `bounded_topology_migration` after introduction of the coherent-local resource include switch.
+> Audited on `main` after reintegration of the bounded-topology migration and introduction of the coherent-local resource include switch.
