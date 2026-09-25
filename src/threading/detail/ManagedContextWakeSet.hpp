@@ -5,7 +5,7 @@
 
 #include <ESPressio_Platform.hpp>
 
-#include "TaskRecord.hpp"
+#include "TopologyIndex.hpp"
 
 namespace ESPressio::Threading::Detail {
 
@@ -32,7 +32,7 @@ namespace ESPressio::Threading::Detail {
         public:
 
             /// Compact Type used to identify one managed execution context.
-            using ContextIndex = typename SmallestIndex<1U>::Type;
+            using ContextIndex = typename TopologyIndexTraits<ManagedContextIndexSpace, 1U>::Storage;
 
             /// Number of managed execution contexts represented by this runtime.
             static constexpr std::size_t ContextCapacity = 0U;
@@ -80,7 +80,7 @@ namespace ESPressio::Threading::Detail {
             // Context index vocabulary.
 
             /// Smallest dense index Type able to address every managed execution context.
-            using ContextIndex = typename SmallestIndex<TContextCapacity>::Type;
+            using ContextIndex = typename TopologyIndexTraits<ManagedContextIndexSpace, TContextCapacity>::Storage;
 
             /// Number of managed execution contexts represented by this wake set.
             static constexpr std::size_t ContextCapacity = TContextCapacity;
