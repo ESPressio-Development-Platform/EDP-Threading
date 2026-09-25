@@ -46,7 +46,7 @@ The v1 source implementation includes compile-time topology/requirements, bounde
 
 Earlier validation on 20 September 2026 established PASS evidence for the warnings-as-errors host suite, the UBSan host suite, PlatformIO Arduino compile/link plus physical ESP32 runtime, and PlatformIO ESP-IDF compile/link plus physical ESP32 runtime. Those results pre-date the final V2 compliance cleanup that subsequently changed Threading and execution-provider production surfaces, so they remain historical evidence rather than current-tip validation. The present tips still require fresh host/provider validation and fresh Arduino/ESP-IDF target builds plus physical runtime confirmation before completion is claimed. ASan on the validating macOS host hangs before `main()`; that is recorded as a host sanitizer/runtime limitation rather than a Threading PASS or failure.
 
-Representative deterministic RAM/code-size measurement from the pre-migration 23 September baseline remains recorded in [Deterministic resources](./docs/RESOURCES.MD). On `bounded_topology_migration`, warnings-as-errors host execution and UBSan are current and green. Fresh coherent Arduino/ESP-IDF resource measurements are an explicit completion gate for this migration and are not treated as passed until the branch-specific matrix completes. No version mutation is performed during this development.
+Fresh `bounded_topology_migration` validation is complete: warnings-as-errors host execution, the separate Host foundation workflow, UBSan, and all fourteen coherent Arduino/ESP-IDF resource-measurement environments are green. Every validated `total` and `intrinsic` retained-RAM figure is byte-for-byte identical to the 23 September baseline; see [Deterministic resources](./docs/RESOURCES.MD). No version mutation is performed during this development.
 
 ## Local validation
 
@@ -54,7 +54,7 @@ Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when E
 
 Target resource measurements are built without flashing hardware from `tests/resource-measurements` using `bash ./run-resource-measurements.sh`.
 
-For cross-repository feature validation, set `EDP_THREADING_RESOURCE_LOCAL_ROOT` to the directory containing the sibling EDP repositories. All participating production libraries are header-only, so this mode bypasses PlatformIO Library Manager and injects the sibling `src` directories directly into every measurement environment. That prevents transitive package manifests from mixing `main` with the branch under validation and also supports repositories such as EDP-Security whose current build surface is not expressed through PlatformIO package metadata:
+For cross-repository feature validation, set `EDP_THREADING_RESOURCE_LOCAL_ROOT` to the directory containing the sibling EDP repositories. All participating production libraries are header-only, so this mode bypasses PlatformIO Library Manager and injects the required sibling `src` directories directly into every measurement environment. That prevents transitive package manifests from mixing `main` with the branch under validation. In coherent-local mode the harness includes only the exact ESP-IDF ExecutionContext and SpinLock provider headers it consumes, avoiding unrelated provider-domain dependencies:
 
 ```bash
 EDP_THREADING_RESOURCE_LOCAL_ROOT=~/DevProjects/ESPressio_Repositories \
