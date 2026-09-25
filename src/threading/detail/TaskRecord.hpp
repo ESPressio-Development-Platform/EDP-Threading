@@ -2,10 +2,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <limits>
-#include <type_traits>
-
 #include "../ThreadingTypes.hpp"
+#include "TopologyIndex.hpp"
 
 namespace ESPressio::Threading::Detail {
 
@@ -28,38 +26,6 @@ namespace ESPressio::Threading::Detail {
     enum class TaskControlTransitionResult : std::uint8_t {
         Applied = 0,
         StateMismatch = 1
-    };
-
-
-    /// Defines the compile-time contract for `SmallestIndex`.
-    /// @tparam TCapacity Compile-time bounded capacity represented by this Type.
-    template<std::size_t TCapacity>
-    struct SmallestIndex {
-
-        static_assert(
-            TCapacity > 0U,
-            "A bounded index requires a positive capacity"
-        );
-
-        static_assert(
-            TCapacity <= static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()),
-            "A bounded index capacity must fit within the largest supported 32-bit index plus its sentinel"
-        );
-
-        /// Smallest unsigned index type able to represent every record plus an invalid sentinel.
-        using Type = std::conditional_t<
-            (TCapacity <= static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())),
-            std::uint8_t,
-            std::conditional_t<
-                (TCapacity <= static_cast<std::size_t>(std::numeric_limits<std::uint16_t>::max())),
-                std::uint16_t,
-                std::uint32_t
-            >
-        >;
-
-        /// Sentinel value which cannot identify a valid record for the configured capacity.
-        static constexpr Type Invalid = std::numeric_limits<Type>::max();
-
     };
 
 
@@ -228,18 +194,36 @@ namespace ESPressio::Threading::Detail {
                 ? TCallableCapacity
                 : TResultCapacity;
 
-        /// Smallest record-index type satisfying the configured record capacity.
-        using Index = typename SmallestIndex<TRecordCapacity>::Type;
+        /// Strong bounded Task-record identity used by the shared intrusive queue topology.
+        using QueueIndex = typename TopologyIndexTraits<
+            TaskRecordIndexSpace,
+            TRecordCapacity
+        >::Strong;
+
+        /// Smallest raw Task-record index Type retained by existing Threading lifecycle APIs.
+        using Index = typename TopologyIndexTraits<
+            TaskRecordIndexSpace,
+            TRecordCapacity
+        >::Storage;
 
         /// Smallest managed execution-context index Type satisfying the complete topology capacity.
-        using ExecutionContextIndex = typename SmallestIndex<TExecutionContextCapacity>::Type;
+        using ExecutionContextIndex = typename TopologyIndexTraits<
+            ManagedContextIndexSpace,
+            TExecutionContextCapacity
+        >::Storage;
 
         /// Sentinel which cannot identify a valid managed execution context.
         static constexpr ExecutionContextIndex InvalidExecutionContextIndex =
-            SmallestIndex<TExecutionContextCapacity>::Invalid;
+            TopologyIndexTraits<
+                ManagedContextIndexSpace,
+                TExecutionContextCapacity
+            >::Invalid;
 
-        /// Smallest scratch Type able to hold either a queue link or an execution-context index.
-        using ScratchIndex = typename SmallestIndex<ScratchCapacity>::Type;
+        /// Smallest raw scratch Type able to hold either a queue link or an execution-context index.
+        using ScratchIndex = typename TopologyIndexTraits<
+            TaskScratchIndexSpace,
+            ScratchCapacity
+        >::Storage;
 
         // Reusable callable/result payload.
 
@@ -252,7 +236,7 @@ namespace ESPressio::Threading::Detail {
         /// Queued: next record index. Running: managed execution-context index owning execution.
         ScratchIndex QueueOrExecutionContext =
             static_cast<ScratchIndex>(
-                SmallestIndex<TRecordCapacity>::Invalid
+                QueueIndex::InvalidValue
             );
 
 
@@ -272,17 +256,28 @@ namespace ESPressio::Threading::Detail {
 
         /// Stores the next queued record index in the mutually exclusive scratch field.
         void SetQueueNext(
-            Index recordIndex
+            QueueIndex recordIndex
         ) noexcept {
             QueueOrExecutionContext = static_cast<ScratchIndex>(
-                recordIndex
+                recordIndex.Value()
             );
         }
 
-        /// Returns the next queued record index from the mutually exclusive scratch field.
-        Index QueueNext() const noexcept {
-            return static_cast<Index>(
-                QueueOrExecutionContext
+        /// Returns the next queued strong record identity from the mutually exclusive scratch field.
+        QueueIndex QueueNext() const noexcept {
+            if (
+                QueueOrExecutionContext ==
+                static_cast<ScratchIndex>(
+                    QueueIndex::InvalidValue
+                )
+            ) {
+                return QueueIndex::Invalid();
+            }
+
+            return QueueIndex::FromUnchecked(
+                static_cast<std::size_t>(
+                    QueueOrExecutionContext
+                )
             );
         }
 
