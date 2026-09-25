@@ -32,20 +32,6 @@ jobs:
           ref: main
           path: EDP-Platform
 
-      - name: Checkout EDP-Memory
-        uses: actions/checkout@v4
-        with:
-          repository: ESPressio-Development-Platform/EDP-Memory
-          ref: main
-          path: EDP-Memory
-
-      - name: Checkout EDP-Security
-        uses: actions/checkout@v4
-        with:
-          repository: ESPressio-Development-Platform/EDP-Security
-          ref: main
-          path: EDP-Security
-
       - name: Checkout EDP-Clock
         uses: actions/checkout@v4
         with:
