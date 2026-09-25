@@ -3,6 +3,10 @@ name: BoundedTopology migration resource gate
 on:
   pull_request:
 
+concurrency:
+  group: bounded-topology-resource-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   measurements:
     if: github.head_ref == 'bounded_topology_migration'
