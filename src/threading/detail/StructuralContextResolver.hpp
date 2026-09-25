@@ -5,6 +5,7 @@
 #include <tuple>
 #include <utility>
 
+#include "TopologyIndex.hpp"
 #include "WaitRegistration.hpp"
 
 namespace ESPressio::Threading::Detail {
@@ -23,7 +24,7 @@ namespace ESPressio::Threading::Detail {
         public:
 
             /// Compact Type used to identify one managed execution context.
-            using ContextIndex = typename SmallestIndex<1U>::Type;
+            using ContextIndex = typename TopologyIndexTraits<ManagedContextIndexSpace, 1U>::Storage;
 
 
             /// Reports that an empty topology has no currently executing managed context.
