@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "TaskRecord.hpp"
+#include "TopologyIndex.hpp"
 
 namespace ESPressio::Threading::Detail {
 
@@ -25,10 +26,16 @@ namespace ESPressio::Threading::Detail {
         );
 
         /// Smallest index Type able to address every managed execution context plus an invalid sentinel.
-        using Type = typename SmallestIndex<TContextCapacity>::Type;
+        using Type = typename TopologyIndexTraits<
+            ManagedContextIndexSpace,
+            TContextCapacity
+        >::Storage;
 
         /// Sentinel which cannot identify a valid managed execution context.
-        static constexpr Type Invalid = SmallestIndex<TContextCapacity>::Invalid;
+        static constexpr Type Invalid = TopologyIndexTraits<
+            ManagedContextIndexSpace,
+            TContextCapacity
+        >::Invalid;
 
     };
 
