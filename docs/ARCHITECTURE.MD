@@ -6,7 +6,7 @@ EDP-Threading owns two execution models: finite `Task<TResult>` work executed by
 
 Tasks do not intrinsically own native execution contexts. Workers are internal reusable contexts. Dedicated Threads own independent persistent Platform execution contexts and never consume Task Worker capacity. A `DedicatedWorkerLease` is a separate critical-Task facility with exactly one isolated Worker; it does not borrow from an ordinary pool.
 
-EDP-Platform owns native execution and synchronization mechanisms. EDP-Clock owns canonical monotonic time. Static Composition declares entitlement; Bootstrap realizes it. Threading does not expose FreeRTOS, ESP-IDF, Arduino or operating-system vocabulary through its public execution semantics.
+EDP-Platform owns native execution and synchronization mechanisms. EDP-Clock owns canonical monotonic time. EDP-BoundedTopology owns the dependency-minimal compact bounded-index, membership-set and intrusive-FIFO mechanics reused by Threading. Static Composition declares entitlement; Bootstrap realizes it. Threading does not expose FreeRTOS, ESP-IDF, Arduino or operating-system vocabulary through its public execution semantics.
 
 ## Composition and topology
 
@@ -34,7 +34,7 @@ Resources are stored recursively in place, avoiding a requirement that already-c
 
 ### TaskExecutionFacility
 
-Owns finite Task records, bounded callable/result payload storage, availability bitmap, intrusive FIFO admission state, bounded target-owned wait registrations and one persistent Platform execution context per declared Worker.
+Owns finite Task records, bounded callable/result payload storage, Threading-semantic availability state composed from `EDP-BoundedTopology::BoundedIndexSet`, intrusive FIFO admission ordering composed from `EDP-BoundedTopology::IntrusiveQueue`, bounded target-owned wait registrations and one persistent Platform execution context per declared Worker.
 
 A Task is published as Running for a sleeping Worker only after that Worker's targeted wake has succeeded while the facility mutex is held. The currently executing Worker may accept queued work directly without a wake. This ordering prevents a failed wake from stranding a Task in Running state on a Worker that never became runnable.
 
@@ -45,6 +45,17 @@ Owns exactly one isolated Worker and one bounded Task facility. Ordinary Task fa
 ### DedicatedThread
 
 Owns one persistent Platform execution context and one stateful application callable. Infrastructure Start enters the persistent trampoline; semantic activation is controlled separately after global operational commit.
+
+## Bounded topology foundation
+
+Threading does not maintain a second implementation of generic compact index width selection, availability bitmaps or intrusive FIFO endpoints. Those mechanics come from EDP-BoundedTopology.
+
+Threading deliberately keeps the semantic layer above those primitives:
+
+- a set bit means a Task record or Worker is currently available because Threading defines that meaning;
+- queue membership means a Task is in the Queued lifecycle state;
+- Task admission, Worker grants, cancellation, reclamation and synchronization remain Threading-owned;
+- `TaskRecord::QueueOrExecutionContext` remains one lifecycle-reused raw compact scalar. When Queued it stores the raw next-record representation; after Worker grant it stores the managed execution-context representation. Strong bounded indices are reconstructed only at topology boundaries, so the migration does not duplicate those mutually exclusive identities in RAM.
 
 ## Platform and time boundaries
 
