@@ -42,15 +42,18 @@ namespace ESPressio::Threading::Detail {
 
             // Worker availability.
 
-            /// One bit per Worker; one means available for a new Task grant.
-            AvailabilityBitmap<TWorkerCount> _availableWorkers{false};
+            /// One shared bounded-set bit per Worker; one means available for a new Task grant.
+            WorkerAvailabilitySet<TWorkerCount> _availableWorkers;
 
 
             // Worker-index conversion.
 
             /// Returns the zero-based facility Worker ordinal for one topology context index.
             std::size_t WorkerOrdinal(
-                typename SmallestIndex<TExecutionContextCapacity>::Type contextIndex
+                typename TopologyIndexTraits<
+                    ManagedContextIndexSpace,
+                    TExecutionContextCapacity
+                >::Storage contextIndex
             ) const noexcept {
                 return static_cast<std::size_t>(
                     contextIndex
@@ -62,7 +65,10 @@ namespace ESPressio::Threading::Detail {
             // Context-index vocabulary.
 
             /// Dense topology-wide managed execution-context index Type.
-            using ContextIndex = typename SmallestIndex<TExecutionContextCapacity>::Type;
+            using ContextIndex = typename TopologyIndexTraits<
+                ManagedContextIndexSpace,
+                TExecutionContextCapacity
+            >::Storage;
 
             /// Number of Workers represented by this scheduler.
             static constexpr std::size_t WorkerCount = TWorkerCount;
@@ -107,9 +113,16 @@ namespace ESPressio::Threading::Detail {
                     return WorkerAvailabilityResult::OutsideFacilityRange;
                 }
 
-                _availableWorkers.Release(
-                    WorkerOrdinal(
-                        contextIndex
+                const auto workerIndex =
+                    WorkerAvailabilitySet<TWorkerCount>::Index::FromUnchecked(
+                        WorkerOrdinal(
+                            contextIndex
+                        )
+                    );
+
+                static_cast<void>(
+                    _availableWorkers.Set(
+                        workerIndex
                     )
                 );
 
@@ -126,33 +139,46 @@ namespace ESPressio::Threading::Detail {
                     return std::nullopt;
                 }
 
-                if (
-                    _availableWorkers.TryClaimSpecific(
+                const auto workerIndex =
+                    WorkerAvailabilitySet<TWorkerCount>::Index::FromUnchecked(
                         WorkerOrdinal(
                             contextIndex
                         )
-                    ) != AvailabilityClaimResult::Claimed
-                ) {
+                    );
+
+                if (!_availableWorkers.IsSet(
+                    workerIndex
+                )) {
                     return std::nullopt;
                 }
+
+                static_cast<void>(
+                    _availableWorkers.Clear(
+                        workerIndex
+                    )
+                );
 
                 return contextIndex;
             }
 
             /// Attempts to reserve the lowest-index currently available Worker.
             std::optional<ContextIndex> TryClaimAvailable() noexcept {
-                std::size_t workerOrdinal = 0U;
+                const auto workerIndex = _availableWorkers.FindFirstSet();
 
-                if (
-                    _availableWorkers.TryClaim(
-                        workerOrdinal
-                    ) != AvailabilityClaimResult::Claimed
-                ) {
+                if (!workerIndex.IsValid()) {
                     return std::nullopt;
                 }
 
+                static_cast<void>(
+                    _availableWorkers.Clear(
+                        workerIndex
+                    )
+                );
+
                 return ContextIndexForWorker(
-                    workerOrdinal
+                    static_cast<std::size_t>(
+                        workerIndex.Value()
+                    )
                 );
             }
 
@@ -161,12 +187,12 @@ namespace ESPressio::Threading::Detail {
 
             /// Indicates whether at least one facility Worker can accept a Task grant now.
             bool IsAnyAvailable() const noexcept {
-                return _availableWorkers.IsAnyAvailable();
+                return _availableWorkers.IsAnySet();
             }
 
             /// Returns the number of currently available Workers.
             std::size_t AvailableCount() const noexcept {
-                return _availableWorkers.AvailableCount();
+                return _availableWorkers.Count();
             }
 
             /// Returns the number of Workers currently granted to Tasks.

@@ -2,7 +2,7 @@
 
 `EDP-Threading` provides the ESPressio Development Platform's deterministic execution-domain semantics for finite Tasks and persistent Dedicated Threads.
 
-The v1 architecture is static and Composition-driven. Platform owns native execution/synchronization mechanisms; Threading owns Task/Thread lifecycle, bounded topology, cooperative cancellation/stop, waiting, scheduling policy and shutdown. There is no runtime dependency injection, service locator, hidden heap fallback or unbounded EDP-controlled runtime growth.
+The v1 architecture is static and Composition-driven. Platform owns native execution/synchronization mechanisms; Threading owns Task/Thread lifecycle, cooperative cancellation/stop, waiting, scheduling policy and shutdown; EDP-BoundedTopology supplies the dependency-minimal compact index, membership-set and intrusive-FIFO mechanics used by those Threading semantics. There is no runtime dependency injection, service locator, hidden heap fallback or unbounded EDP-controlled runtime growth.
 
 ## Public surface
 
@@ -36,9 +36,9 @@ The empty `ThreadingTopology<>` is valid. It owns no managed execution contexts,
 
 ## Determinism
 
-Capacities and topology are compile-time properties. Task records use compact capacity-derived indices, intrusive FIFO linkage and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context.
+Capacities and topology are compile-time properties. Task records use EDP-BoundedTopology capacity-derived index storage, one-bit structural availability sets, shared intrusive FIFO topology and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context.
 
-Threading consumes EDP-System, EDP-Platform and EDP-Clock. There are no optional ESPressio-library dependencies.
+Threading consumes EDP-System, EDP-Platform, EDP-Clock and EDP-BoundedTopology. There are no optional ESPressio-library dependencies.
 
 ## Current implementation status
 
@@ -46,15 +46,15 @@ The v1 source implementation includes compile-time topology/requirements, bounde
 
 Earlier validation on 20 September 2026 established PASS evidence for the warnings-as-errors host suite, the UBSan host suite, PlatformIO Arduino compile/link plus physical ESP32 runtime, and PlatformIO ESP-IDF compile/link plus physical ESP32 runtime. Those results pre-date the final V2 compliance cleanup that subsequently changed Threading and execution-provider production surfaces, so they remain historical evidence rather than current-tip validation. The present tips still require fresh host/provider validation and fresh Arduino/ESP-IDF target builds plus physical runtime confirmation before completion is claimed. ASan on the validating macOS host hangs before `main()`; that is recorded as a host sanitizer/runtime limitation rather than a Threading PASS or failure.
 
-Representative deterministic RAM/code-size measurement is now recorded for all fourteen Arduino/ESP-IDF measurement environments in [Deterministic resources](./docs/RESOURCES.MD). Current-tip host validation and the coherent target resource matrix are green. No version mutation is performed during this development.
+Fresh `bounded_topology_migration` validation is complete: warnings-as-errors host execution, the separate Host foundation workflow, UBSan, and all fourteen coherent Arduino/ESP-IDF resource-measurement environments are green. Every validated `total` and `intrinsic` retained-RAM figure is byte-for-byte identical to the 23 September baseline; see [Deterministic resources](./docs/RESOURCES.MD). No version mutation is performed during this development.
 
 ## Local validation
 
-Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when EDP-System, EDP-Platform and EDP-Clock are cloned beside this repository. Run UBSan with `EDP_THREADING_SANITIZER_MODE=undefined bash tests/run-host-tests.sh`.
+Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when EDP-System, EDP-Platform, EDP-Clock and EDP-BoundedTopology are cloned beside this repository. Run UBSan with `EDP_THREADING_SANITIZER_MODE=undefined bash tests/run-host-tests.sh`.
 
 Target resource measurements are built without flashing hardware from `tests/resource-measurements` using `bash ./run-resource-measurements.sh`.
 
-For cross-repository feature validation, set `EDP_THREADING_RESOURCE_LOCAL_ROOT` to the directory containing the sibling EDP repositories. All participating production libraries are header-only, so this mode bypasses PlatformIO Library Manager and injects the sibling `src` directories directly into every measurement environment. That prevents transitive package manifests from mixing `main` with the branch under validation and also supports repositories such as EDP-Security whose current build surface is not expressed through PlatformIO package metadata:
+For cross-repository feature validation, set `EDP_THREADING_RESOURCE_LOCAL_ROOT` to the directory containing the sibling EDP repositories. All participating production libraries are header-only, so this mode bypasses PlatformIO Library Manager and injects the required sibling `src` directories directly into every measurement environment. That prevents transitive package manifests from mixing `main` with the branch under validation. In coherent-local mode the harness includes only the exact ESP-IDF ExecutionContext and SpinLock provider headers it consumes, avoiding unrelated provider-domain dependencies:
 
 ```bash
 EDP_THREADING_RESOURCE_LOCAL_ROOT=~/DevProjects/ESPressio_Repositories \
@@ -72,14 +72,17 @@ EDP-Threading
 ├── EDP-System [mandatory]
 ├── EDP-Platform [mandatory]
 │   └── EDP-System [transitive]
-└── EDP-Clock [mandatory]
-    ├── EDP-System [transitive]
-    └── EDP-Platform [transitive]
+├── EDP-Clock [mandatory]
+│   ├── EDP-System [transitive]
+│   └── EDP-Platform [transitive]
+└── EDP-BoundedTopology [mandatory]
+    └── no ESPressio-library dependencies
 ```
 
 - `EDP-System` — supplies the compile-time Composition Framework.
 - `EDP-Platform` — supplies substitutable execution-context and synchronization abstractions.
 - `EDP-Clock` — supplies the canonical monotonic timeline used for deadlines, waits and sleeping.
+- `EDP-BoundedTopology` — supplies compact capacity-derived bounded identity, one-bit membership sets and non-owning intrusive FIFO topology without owning Threading semantics or payload lifetime.
 - Optional ESPressio dependencies: none.
 
 See the [dependency graph](./DEPENDENCY_GRAPH.MD) for the authoritative dependency-direction description.

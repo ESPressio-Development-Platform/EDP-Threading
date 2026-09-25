@@ -11,7 +11,7 @@
 - `cstddef`
 - `cstdint`
 - `ESPressio_Platform.hpp`
-- `TaskRecord.hpp`
+- `TopologyIndex.hpp`
 
 ## Documented declarations
 
@@ -49,7 +49,7 @@ template<class TSignalProvider>
 Compact Type used to identify one managed execution context.
 
 ```cpp
-using ContextIndex = typename SmallestIndex<1U>::Type;
+using ContextIndex = typename TopologyIndexTraits<ManagedContextIndexSpace, 1U>::Storage;
 ```
 
 ### `ContextCapacity`
@@ -127,7 +127,7 @@ TSignalProvider _signals[TContextCapacity];
 Smallest dense index Type able to address every managed execution context.
 
 ```cpp
-using ContextIndex = typename SmallestIndex<TContextCapacity>::Type;
+using ContextIndex = typename TopologyIndexTraits<ManagedContextIndexSpace, TContextCapacity>::Storage;
 ```
 
 ### `ContextCapacity`

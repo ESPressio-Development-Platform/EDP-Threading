@@ -5,7 +5,16 @@
 #include <utility>
 
 #include <ESPressio_Platform_FreeRTOS.hpp>
+
+#if defined(EDP_THREADING_RESOURCE_COHERENT_LOCAL)
+#include "../../../../EDP-Platform-ESP-IDF/src/synchronization/SpinLockProvider.hpp"
+#ifndef ARDUINO
+#include "../../../../EDP-Platform-ESP-IDF/src/execution/ExecutionContextProvider.hpp"
+#endif
+#else
 #include <ESPressio_Platform_ESP_IDF.hpp>
+#endif
+
 #include <ESPressio_Threading.hpp>
 
 namespace Measurement {

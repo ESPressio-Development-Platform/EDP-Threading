@@ -34,6 +34,13 @@ jobs:
           repository: ESPressio-Development-Platform/EDP-Clock
           path: EDP-Clock
 
+      - name: Checkout EDP-BoundedTopology
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-BoundedTopology
+          ref: main
+          path: EDP-BoundedTopology
+
       - name: Compile warnings-as-errors host tests
         run: |
           g++ \
@@ -46,8 +53,14 @@ jobs:
             -IEDP-System/src \
             -IEDP-Platform/src \
             -IEDP-Clock/src \
+            -IEDP-BoundedTopology/src \
             EDP-Threading/tests/ThreadingFoundationTests.cpp \
             -o threading-foundation-tests
 
       - name: Run host tests
         run: ./threading-foundation-tests
+
+      - name: Run UBSan host tests
+        env:
+          EDP_THREADING_SANITIZER_MODE: undefined
+        run: bash EDP-Threading/tests/run-host-tests.sh

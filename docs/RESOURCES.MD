@@ -6,9 +6,22 @@ Memory optimization is architectural. Threading uses statically bounded records,
 
 ## Task records
 
-A Task record reuses one aligned payload region for callable storage and, after callable lifetime ends, result storage. Intrinsic lifecycle/owner/Phase control remains exactly one byte. Its mutation and observation are serialized through the facility mutex; cooperative cancellation observed from the running callable re-enters that same bounded synchronization boundary through its invocation-local `TaskContext`. This preserves the one-byte per-record target without requiring byte-wide lock-free compare/exchange on platforms whose native atomic width is larger. Free-record availability is facility-level, and queued linkage uses the smallest capacity-derived record index.
+A Task record reuses one aligned payload region for callable storage and, after callable lifetime ends, result storage. Intrinsic lifecycle/owner/Phase control remains exactly one byte. Its mutation and observation are serialized through the facility mutex; cooperative cancellation observed from the running callable re-enters that same bounded synchronization boundary through its invocation-local `TaskContext`. This preserves the one-byte per-record target without requiring byte-wide lock-free compare/exchange on platforms whose native atomic width is larger. Free-record availability is facility-level and uses the shared one-bit `EDP-BoundedTopology::BoundedIndexSet`; queued linkage uses the shared capacity-derived bounded index representation and `IntrusiveQueue` endpoints.
 
 Task record capacity and Worker concurrency are independent. Terminal records retained only by ownership/waiters are not execution work. Callable and result storage are separately bounded; public Task ownership is binary and move-only rather than reference counted.
+
+## Bounded topology storage
+
+EDP-BoundedTopology supplies the low-level storage mechanics without adding provider or synchronization state:
+
+- Task-record availability: exactly one bit per record;
+- Worker availability: exactly one bit per Worker;
+- queued Task FIFO: exactly two capacity-derived bounded indices for head/tail;
+- compact raw index widths: selected from the same bounded-index representation used by the shared topology primitives.
+
+The migration preserves the existing `TaskRecord::QueueOrExecutionContext` optimization. This member remains **one raw compact scalar**, not two stored strong indices. Queued and Running lifecycle phases interpret the scalar differently because those identities are mutually exclusive. Strong `BoundedIndex` values are created only when entering the shared set/queue API.
+
+No cached availability count or queue-size field is introduced. Counts continue to be bounded scans where required.
 
 ## Execution contexts
 
@@ -80,4 +93,38 @@ The `total` column is the complete statically retained Threading runtime storage
 All fourteen measurement environments built successfully.
 
 These results are build-time measurements only; no hardware flashing is required by the resource runner. The baseline rows intentionally contain no retained Threading runtime storage and provide the framework image reference for code/data/BSS comparison.
+## Bounded-topology migration validation — 2026-09-25
 
+The `bounded_topology_migration` branch was remeasured after replacing Threading-local compact-index, availability-bitmap and intrusive-FIFO mechanics with EDP-BoundedTopology.
+
+The migration gate required both `total` retained Threading runtime bytes and `intrinsic` Threading bytes to be **less than or equal to** the validated 23 September baseline for every non-baseline scenario. All twelve comparisons passed with **exactly identical retained RAM**.
+
+### ESP-IDF migration measurements
+
+| Scenario | Total | Intrinsic | Provider objects | Control backing | Stack backing | Sync/wake | Text | Data | BSS |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline | — | — | — | — | — | — | 115041 | 47208 | 2281 |
+| small 8×1 | 5568 | 668 | 192 | 340 | 4096 | 272 | 128717 | 47336 | 7857 |
+| representative 16×2 | 10880 | 1264 | 384 | 680 | 8192 | 360 | 129405 | 47352 | 13169 |
+| control high | 3104 | 252 | 192 | 340 | 2048 | 272 | 128637 | 47336 | 5393 |
+| dedicated worker | 3064 | 212 | 192 | 340 | 2048 | 272 | 128577 | 47336 | 5353 |
+| dedicated thread | 4972 | 72 | 192 | 340 | 4096 | 272 | 121913 | 47320 | 7265 |
+| mixed | 19152 | 1180 | 960 | 1700 | 14336 | 976 | 151453 | 47544 | 21441 |
+
+### Arduino migration measurements
+
+| Scenario | Total | Intrinsic | Provider objects | Control backing | Stack backing | Sync/wake | Text | Data | BSS |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline | — | — | — | — | — | — | 191399 | 70593 | 5420 |
+| small 8×1 | 5624 | 672 | 208 | 352 | 4096 | 296 | 198863 | 70761 | 11052 |
+| representative 16×2 | 10968 | 1264 | 416 | 704 | 8192 | 392 | 200207 | 70789 | 16396 |
+| control high | 3160 | 256 | 208 | 352 | 2048 | 296 | 199767 | 70781 | 8588 |
+| dedicated worker | 3120 | 216 | 208 | 352 | 2048 | 296 | 199011 | 70757 | 8548 |
+| dedicated thread | 5024 | 72 | 208 | 352 | 4096 | 296 | 195955 | 70709 | 10452 |
+| mixed | 19392 | 1192 | 1040 | 1760 | 14336 | 1064 | 212135 | 70893 | 24820 |
+
+All fourteen migration measurement environments built successfully. The strict RAM comparison reported PASS for all six ESP-IDF and all six Arduino non-baseline scenarios.
+
+The migration therefore introduces **zero retained RAM regression** in the validated matrix. In particular, the one-byte Task control, one-bit-per-resource availability representation, two-index FIFO state and lifecycle-reused Task scratch scalar remain preserved in target-compiled layouts.
+
+The whole-image text/data/BSS columns are retained as build evidence, but the migration's locked memory gate concerns the deterministic Threading runtime categories above. Coherent-local measurement mode also narrows ESP-IDF inclusion to the exact ExecutionContext and SpinLock provider headers consumed by this harness, so whole-image sections are not used as a substitute for the explicit retained-resource categories.

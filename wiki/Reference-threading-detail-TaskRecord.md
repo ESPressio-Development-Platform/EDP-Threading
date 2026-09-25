@@ -10,9 +10,8 @@
 
 - `cstddef`
 - `cstdint`
-- `limits`
-- `type_traits`
 - `../ThreadingTypes.hpp`
+- `TopologyIndex.hpp`
 
 ## Documented declarations
 
@@ -24,39 +23,6 @@ Outcome of an internal Task control-state transition.
 
 ```cpp
 enum class TaskControlTransitionResult : std::uint8_t
-```
-
-### `SmallestIndex`
-
-**Classification:** PRIVATE IMPLEMENTATION
-
-Defines the compile-time contract for `SmallestIndex`.
-- **Template parameter `TCapacity`:** Compile-time bounded capacity represented by this Type.
-
-```cpp
-template<std::size_t TCapacity>
-    struct SmallestIndex
-```
-
-### `Type`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
-
-Smallest unsigned index type able to represent every record plus an invalid sentinel.
-
-```cpp
-using Type = std::conditional_t<
-            (TCapacity <= static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max())),
-```
-
-### `max`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
-
-Sentinel value which cannot identify a valid record for the configured capacity.
-
-```cpp
-static constexpr Type Invalid = std::numeric_limits<Type>::max();
 ```
 
 ### `_value`
@@ -284,14 +250,30 @@ static constexpr std::size_t PayloadCapacity =
                 : TResultCapacity;
 ```
 
+### `QueueIndex`
+
+**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
+
+Strong bounded Task-record identity used only at the shared availability/queue topology boundary. It does not replace the lifecycle-reused raw scratch scalar.
+
+```cpp
+using QueueIndex = typename TopologyIndexTraits<
+            TaskRecordIndexSpace,
+            TRecordCapacity
+        >::Strong;
+```
+
 ### `Index`
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `public`
 
-Smallest record-index type satisfying the configured record capacity.
+Smallest raw Task-record index Type selected by the shared bounded-index representation for existing Threading lifecycle APIs.
 
 ```cpp
-using Index = typename SmallestIndex<TRecordCapacity>::Type;
+using Index = typename TopologyIndexTraits<
+            TaskRecordIndexSpace,
+            TRecordCapacity
+        >::Storage;
 ```
 
 ### `ExecutionContextIndex`
@@ -301,7 +283,10 @@ using Index = typename SmallestIndex<TRecordCapacity>::Type;
 Smallest managed execution-context index Type satisfying the complete topology capacity.
 
 ```cpp
-using ExecutionContextIndex = typename SmallestIndex<TExecutionContextCapacity>::Type;
+using ExecutionContextIndex = typename TopologyIndexTraits<
+            ManagedContextIndexSpace,
+            TExecutionContextCapacity
+        >::Storage;
 ```
 
 ### `InvalidExecutionContextIndex`
@@ -312,7 +297,10 @@ Sentinel which cannot identify a valid managed execution context.
 
 ```cpp
 static constexpr ExecutionContextIndex InvalidExecutionContextIndex =
-            SmallestIndex<TExecutionContextCapacity>::Invalid;
+            TopologyIndexTraits<
+                ManagedContextIndexSpace,
+                TExecutionContextCapacity
+            >::Invalid;
 ```
 
 ### `ScratchIndex`
@@ -322,7 +310,10 @@ static constexpr ExecutionContextIndex InvalidExecutionContextIndex =
 Smallest scratch Type able to hold either a queue link or an execution-context index.
 
 ```cpp
-using ScratchIndex = typename SmallestIndex<ScratchCapacity>::Type;
+using ScratchIndex = typename TopologyIndexTraits<
+            TaskScratchIndexSpace,
+            ScratchCapacity
+        >::Storage;
 ```
 
 ### `alignas`
@@ -344,7 +335,7 @@ Queued: next record index. Running: managed execution-context index owning execu
 ```cpp
 ScratchIndex QueueOrExecutionContext =
             static_cast<ScratchIndex>(
-                SmallestIndex<TRecordCapacity>::Invalid
+                QueueIndex::InvalidValue
             );
 ```
 
@@ -376,7 +367,7 @@ Stores the next queued record index in the mutually exclusive scratch field.
 
 ```cpp
 void SetQueueNext(
-            Index recordIndex
+            QueueIndex recordIndex
         ) noexcept
 ```
 
@@ -384,10 +375,10 @@ void SetQueueNext(
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `public`
 
-Returns the next queued record index from the mutually exclusive scratch field.
+Returns the next queued strong record identity reconstructed from the mutually exclusive raw scratch field. Invalid raw queue state maps to `QueueIndex::Invalid()`.
 
 ```cpp
-Index QueueNext() const noexcept
+QueueIndex QueueNext() const noexcept
 ```
 
 ### `SetExecutionContextIndex`

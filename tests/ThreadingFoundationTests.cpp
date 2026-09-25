@@ -694,27 +694,33 @@ namespace Test {
     struct TelemetryThread final {};
 
 
+    /// Shared intrusive queue Type used by queue-behavior tests.
+    using QueueTopology = ESPressio::Threading::Detail::TaskRecordQueue<3U>;
+
+    /// Strong queue-link identity used by the shared intrusive queue.
+    using QueueTopologyIndex = typename QueueTopology::Index;
+
+
     /// Minimal record providing intrusive queue linkage for queue-behavior tests.
     struct QueueRecord final {
 
         // Queue linkage.
 
         /// Compact intrusive queue-link storage.
-        ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueLink =
-            ESPressio::Threading::Detail::SmallestIndex<3U>::Invalid;
+        QueueTopologyIndex QueueLink = QueueTopologyIndex::Invalid();
 
 
         // Queue-link operations.
 
         /// Stores the next queued record index.
         void SetQueueNext(
-            ESPressio::Threading::Detail::SmallestIndex<3U>::Type recordIndex
+            QueueTopologyIndex recordIndex
         ) noexcept {
             QueueLink = recordIndex;
         }
 
         /// Returns the next queued record index.
-        ESPressio::Threading::Detail::SmallestIndex<3U>::Type QueueNext() const noexcept {
+        QueueTopologyIndex QueueNext() const noexcept {
             return QueueLink;
         }
 
@@ -1076,12 +1082,12 @@ namespace Test {
     );
 
     static_assert(
-        sizeof(ESPressio::Threading::Detail::AvailabilityBitmap<10U>) == 2U,
+        sizeof(ESPressio::Threading::Detail::TaskRecordAvailabilitySet<10U>) == 2U,
         "Ten Task availability bits must occupy exactly two bytes"
     );
 
     static_assert(
-        sizeof(ESPressio::Threading::Detail::IntrusiveTaskQueue<3U>) == 2U,
+        sizeof(ESPressio::Threading::Detail::TaskRecordQueue<3U>) == 2U,
         "Three-record Task queue endpoints must occupy two one-byte indices"
     );
 
@@ -1093,7 +1099,10 @@ namespace Test {
     using ContextIndex = ESPressio::Threading::Detail::ExecutionContextIndexTraits<4U>::Type;
 
     using TaskRegistration = ESPressio::Threading::Detail::TaskWaitRegistration<
-        ESPressio::Threading::Detail::SmallestIndex<8U>::Type,
+        ESPressio::Threading::Detail::TopologyIndexTraits<
+            ESPressio::Threading::Detail::TaskRecordIndexSpace,
+            8U
+        >::Storage,
         ContextIndex
     >;
 
@@ -1773,120 +1782,163 @@ int main() {
     );
 
 
-    ESPressio::Threading::Detail::AvailabilityBitmap<10U> availability;
-    std::size_t claimedIndex = 0U;
+    using AvailabilitySet = ESPressio::Threading::Detail::TaskRecordAvailabilitySet<10U>;
+    using AvailabilityIndex = typename AvailabilitySet::Index;
+
+    AvailabilitySet availability;
+    availability.SetAll();
 
     for (std::size_t expectedIndex = 0U; expectedIndex < 10U; ++expectedIndex) {
+        const auto claimedIndex = availability.FindFirstSet();
+
         assert(
-            availability.TryClaim(
-                claimedIndex
-            ) ==
-            ESPressio::Threading::Detail::AvailabilityClaimResult::Claimed
+            claimedIndex.IsValid()
         );
 
         assert(
-            claimedIndex == expectedIndex
+            static_cast<std::size_t>(
+                claimedIndex.Value()
+            ) == expectedIndex
+        );
+
+        assert(
+            availability.Clear(
+                claimedIndex
+            ) == ESPressio::BoundedTopology::BoundedIndexSetMutationResult::Succeeded
         );
     }
 
     assert(
-        availability.TryClaim(
-            claimedIndex
-        ) ==
-        ESPressio::Threading::Detail::AvailabilityClaimResult::Unavailable
+        !availability.FindFirstSet().IsValid()
     );
 
-    availability.Release(
+    const auto fourthIndex = AvailabilityIndex::FromUnchecked(
         4U
     );
 
     assert(
-        availability.IsAvailable(
-            4U
+        availability.Set(
+            fourthIndex
+        ) == ESPressio::BoundedTopology::BoundedIndexSetMutationResult::Succeeded
+    );
+
+    assert(
+        availability.IsSet(
+            fourthIndex
         )
     );
 
     assert(
-        availability.TryClaim(
-            claimedIndex
-        ) ==
-        ESPressio::Threading::Detail::AvailabilityClaimResult::Claimed
+        availability.FindFirstSet() == fourthIndex
     );
 
     assert(
-        claimedIndex == 4U
+        availability.Clear(
+            fourthIndex
+        ) == ESPressio::BoundedTopology::BoundedIndexSetMutationResult::Succeeded
     );
 
-    availability.Release(
+    const auto seventhIndex = AvailabilityIndex::FromUnchecked(
         7U
     );
 
     assert(
-        availability.TryClaimSpecific(
-            7U
-        ) == ESPressio::Threading::Detail::AvailabilityClaimResult::Claimed
+        availability.Set(
+            seventhIndex
+        ) == ESPressio::BoundedTopology::BoundedIndexSetMutationResult::Succeeded
     );
 
     assert(
-        availability.TryClaimSpecific(
-            7U
-        ) == ESPressio::Threading::Detail::AvailabilityClaimResult::Unavailable
+        availability.IsSet(
+            seventhIndex
+        )
     );
 
     assert(
-        availability.TryClaimSpecific(
-            10U
-        ) == ESPressio::Threading::Detail::AvailabilityClaimResult::Unavailable
+        availability.Clear(
+            seventhIndex
+        ) == ESPressio::BoundedTopology::BoundedIndexSetMutationResult::Succeeded
+    );
+
+    assert(
+        !availability.IsSet(
+            seventhIndex
+        )
     );
 
 
     Test::QueueRecord records[3U];
-    ESPressio::Threading::Detail::IntrusiveTaskQueue<3U> queue;
+    Test::QueueTopology queue;
 
-    queue.Push(
-        records,
-        0U
-    );
-
-    queue.Push(
-        records,
-        1U
-    );
-
-    queue.Push(
-        records,
-        2U
+    assert(
+        queue.Push(
+            records,
+            Test::QueueTopologyIndex::FromUnchecked(
+                0U
+            )
+        ) == ESPressio::BoundedTopology::IntrusiveQueuePushResult::Succeeded
     );
 
     assert(
-        queue.Head() == 0U
+        queue.Push(
+            records,
+            Test::QueueTopologyIndex::FromUnchecked(
+                1U
+            )
+        ) == ESPressio::BoundedTopology::IntrusiveQueuePushResult::Succeeded
+    );
+
+    assert(
+        queue.Push(
+            records,
+            Test::QueueTopologyIndex::FromUnchecked(
+                2U
+            )
+        ) == ESPressio::BoundedTopology::IntrusiveQueuePushResult::Succeeded
+    );
+
+    assert(
+        queue.Head().Value() == 0U
     );
 
     assert(
         queue.Remove(
             records,
-            1U
-        ) ==
-        ESPressio::Threading::Detail::TaskQueueRemovalResult::Removed
+            Test::QueueTopologyIndex::FromUnchecked(
+                1U
+            )
+        ) == ESPressio::BoundedTopology::IntrusiveQueueRemoveResult::Removed
+    );
+
+    Test::QueueTopologyIndex poppedIndex;
+
+    assert(
+        queue.Pop(
+            records,
+            poppedIndex
+        ) == ESPressio::BoundedTopology::IntrusiveQueuePopResult::Succeeded
+    );
+
+    assert(
+        poppedIndex.Value() == 0U
     );
 
     assert(
         queue.Pop(
-            records
-        ) == 0U
+            records,
+            poppedIndex
+        ) == ESPressio::BoundedTopology::IntrusiveQueuePopResult::Succeeded
+    );
+
+    assert(
+        poppedIndex.Value() == 2U
     );
 
     assert(
         queue.Pop(
-            records
-        ) == 2U
-    );
-
-    assert(
-        queue.Pop(
-            records
-        ) ==
-        ESPressio::Threading::Detail::IntrusiveTaskQueue<3U>::InvalidIndex
+            records,
+            poppedIndex
+        ) == ESPressio::BoundedTopology::IntrusiveQueuePopResult::Empty
     );
 
 

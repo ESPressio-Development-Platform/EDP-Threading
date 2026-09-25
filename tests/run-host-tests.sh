@@ -8,12 +8,13 @@ required=(
     "EDP-System"
     "EDP-Platform"
     "EDP-Clock"
+    "EDP-BoundedTopology"
 )
 
 for dependency in "${required[@]}"; do
     if [[ ! -d "${WORKSPACE}/${dependency}/src" ]]; then
         echo "Missing sibling repository: ${WORKSPACE}/${dependency}" >&2
-        echo "Clone EDP-System, EDP-Platform and EDP-Clock beside EDP-Threading." >&2
+        echo "Clone EDP-System, EDP-Platform, EDP-Clock and EDP-BoundedTopology beside EDP-Threading." >&2
         exit 2
     fi
 done
@@ -37,6 +38,7 @@ compile_tests() {
         -I"${WORKSPACE}/EDP-System/src" \
         -I"${WORKSPACE}/EDP-Platform/src" \
         -I"${WORKSPACE}/EDP-Clock/src" \
+        -I"${WORKSPACE}/EDP-BoundedTopology/src" \
         "${ROOT}/tests/ThreadingFoundationTests.cpp" \
         -o "${OUTPUT}"
 }

@@ -352,6 +352,36 @@ Smallest managed execution-context index Type satisfying the topology capacity.
 using ExecutionContextIndexType = typename RecordType::ExecutionContextIndex;
 ```
 
+### `AvailabilityType`
+
+**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
+
+Shared bounded one-bit availability-set Type for this facility's Task records.
+
+```cpp
+using AvailabilityType = TaskRecordAvailabilitySet<TRecordCapacity>;
+```
+
+### `QueueType`
+
+**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
+
+Shared non-owning intrusive FIFO Type for this facility's queued Task records.
+
+```cpp
+using QueueType = TaskRecordQueue<TRecordCapacity>;
+```
+
+### `TopologyIndexType`
+
+**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
+
+Strong Task-record identity shared by the availability set and intrusive queue. It is materialized at topology boundaries and is not an additional retained field.
+
+```cpp
+using TopologyIndexType = typename QueueType::Index;
+```
+
 ### `RecordType _records[TRecordCapacity];`
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `private`
@@ -366,20 +396,32 @@ RecordType _records[TRecordCapacity];
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `private`
 
-Structural free-record publication bitmap.
+Structural free-record publication set. It contains exactly one shared bounded membership bit per Task record and no cached count.
 
 ```cpp
-AvailabilityBitmap<TRecordCapacity> _availability;
+AvailabilityType _availability;
 ```
 
 ### `_queue`
 
 **Classification:** PRIVATE IMPLEMENTATION · source access: `private`
 
-Intrusive FIFO over Queued record indices.
+Shared intrusive FIFO over Queued Task-record identities. Persistent queue state remains exactly head and tail bounded indices; next linkage remains in each TaskRecord scratch field.
 
 ```cpp
-IntrusiveTaskQueue<TRecordCapacity> _queue;
+QueueType _queue;
+```
+
+### `ToTopologyIndex`
+
+**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
+
+Converts one already range-valid raw Threading record index into the strong bounded identity required by the shared set/queue. The conversion retains no state.
+
+```cpp
+static TopologyIndexType ToTopologyIndex(
+                IndexType recordIndex
+            ) noexcept
 ```
 
 ### `IsCurrentIncarnation`
@@ -445,6 +487,16 @@ Dense managed execution-context index Type used for targeted wake routing.
 
 ```cpp
 using ExecutionContextIndex = ExecutionContextIndexType;
+```
+
+### `TaskFacilityCore` constructor
+
+**Classification:** PRIVATE IMPLEMENTATION · source access: `public`
+
+Creates an empty facility and explicitly publishes every statically provisioned Task record as available by calling `_availability.SetAll()`. This preserves the pre-migration default-full Task availability semantics even though the shared `BoundedIndexSet` itself default-constructs empty.
+
+```cpp
+TaskFacilityCore() noexcept
 ```
 
 ### `HasRecordCapacity`

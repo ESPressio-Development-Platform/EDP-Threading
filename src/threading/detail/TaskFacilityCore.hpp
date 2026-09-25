@@ -281,17 +281,40 @@ namespace ESPressio::Threading::Detail {
             /// Smallest managed execution-context index Type satisfying the topology capacity.
             using ExecutionContextIndexType = typename RecordType::ExecutionContextIndex;
 
+            /// Shared bounded availability-set Type for this facility's Task records.
+            using AvailabilityType = TaskRecordAvailabilitySet<TRecordCapacity>;
+
+            /// Shared intrusive FIFO Type for this facility's queued Task records.
+            using QueueType = TaskRecordQueue<TRecordCapacity>;
+
+            /// Strong Task-record identity used by the shared availability and queue topology.
+            using TopologyIndexType = typename QueueType::Index;
+
 
             // Bounded facility storage.
 
             /// Statically provisioned Task records.
             RecordType _records[TRecordCapacity];
 
-            /// Structural free-record publication bitmap.
-            AvailabilityBitmap<TRecordCapacity> _availability;
+            /// Structural free-record publication set; one bit per Task record.
+            AvailabilityType _availability;
 
-            /// Intrusive FIFO over Queued record indices.
-            IntrusiveTaskQueue<TRecordCapacity> _queue;
+            /// Intrusive FIFO over Queued record identities.
+            QueueType _queue;
+
+
+            // Index adaptation.
+
+            /// Converts one already range-valid raw Threading record index into its strong topology identity.
+            static TopologyIndexType ToTopologyIndex(
+                IndexType recordIndex
+            ) noexcept {
+                return TopologyIndexType::FromUnchecked(
+                    static_cast<std::size_t>(
+                        recordIndex
+                    )
+                );
+            }
 
 
             // Internal validation.
@@ -327,13 +350,21 @@ namespace ESPressio::Threading::Detail {
             using ExecutionContextIndex = ExecutionContextIndexType;
 
 
+            // Construction.
+
+            /// Creates an empty Task facility with every statically provisioned Task record available.
+            TaskFacilityCore() noexcept {
+                _availability.SetAll();
+            }
+
+
             // Admission.
 
             /// Indicates whether structural Task-record capacity is currently available.
             ///
             /// The owning facility runtime must serialize this query with admission/reclamation.
             bool HasRecordCapacity() const noexcept {
-                return _availability.IsAnyAvailable();
+                return _availability.IsAnySet();
             }
 
             /// Moves one callable into a newly admitted bounded Task record and appends it to FIFO order.
@@ -407,18 +438,22 @@ namespace ESPressio::Threading::Detail {
                     );
                 }
 
-                std::size_t claimedIndex = 0U;
+                const auto topologyIndex = _availability.FindFirstSet();
+
+                if (!topologyIndex.IsValid()) {
+                    return AdmissionResult::CapacityUnavailable();
+                }
 
                 if (
-                    _availability.TryClaim(
-                        claimedIndex
-                    ) != AvailabilityClaimResult::Claimed
+                    _availability.Clear(
+                        topologyIndex
+                    ) != ESPressio::BoundedTopology::BoundedIndexSetMutationResult::Succeeded
                 ) {
                     return AdmissionResult::CapacityUnavailable();
                 }
 
                 const auto recordIndex = static_cast<Index>(
-                    claimedIndex
+                    topologyIndex.Value()
                 );
                 auto& record = _records[recordIndex];
 
@@ -438,13 +473,12 @@ namespace ESPressio::Threading::Detail {
                 >;
 
                 record.PayloadOperations = &Adapter::Operations;
-                record.SetQueueNext(
-                    IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex
-                );
 
-                _queue.Push(
-                    _records,
-                    recordIndex
+                static_cast<void>(
+                    _queue.Push(
+                        _records,
+                        topologyIndex
+                    )
                 );
 
                 return AdmissionResult::Admitted(
@@ -462,14 +496,20 @@ namespace ESPressio::Threading::Detail {
             WorkerClaimResult ClaimNextForWorker(
                 ExecutionContextIndex contextIndex
             ) noexcept {
-                const auto recordIndex = _queue.Pop(
-                    _records
-                );
+                TopologyIndexType topologyIndex;
 
-                if (recordIndex == IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex) {
+                if (
+                    _queue.Pop(
+                        _records,
+                        topologyIndex
+                    ) != ESPressio::BoundedTopology::IntrusiveQueuePopResult::Succeeded
+                ) {
                     return WorkerClaimResult::QueueEmpty();
                 }
 
+                const auto recordIndex = static_cast<Index>(
+                    topologyIndex.Value()
+                );
                 auto& record = _records[recordIndex];
 
                 record.SetExecutionContextIndex(
@@ -667,7 +707,9 @@ namespace ESPressio::Threading::Detail {
                         static_cast<void>(
                             _queue.Remove(
                                 _records,
-                                recordIndex
+                                ToTopologyIndex(
+                                    recordIndex
+                                )
                             )
                         );
 
@@ -746,7 +788,9 @@ namespace ESPressio::Threading::Detail {
                         static_cast<void>(
                             _queue.Remove(
                                 _records,
-                                recordIndex
+                                ToTopologyIndex(
+                                    recordIndex
+                                )
                             )
                         );
 
@@ -864,7 +908,11 @@ namespace ESPressio::Threading::Detail {
                         recordIndex,
                         phase
                     ) ||
-                    _availability.IsAvailable(recordIndex)
+                    _availability.IsSet(
+                        ToTopologyIndex(
+                            recordIndex
+                        )
+                    )
                 ) {
                     return TaskReclaimResult::NotEligible;
                 }
@@ -872,11 +920,15 @@ namespace ESPressio::Threading::Detail {
                 auto& record = _records[recordIndex];
                 record.PayloadOperations = nullptr;
                 record.SetQueueNext(
-                    IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex
+                    TopologyIndexType::Invalid()
                 );
 
-                _availability.Release(
-                    recordIndex
+                static_cast<void>(
+                    _availability.Set(
+                        ToTopologyIndex(
+                            recordIndex
+                        )
+                    )
                 );
 
                 return TaskReclaimResult::Reclaimed;
@@ -896,8 +948,10 @@ namespace ESPressio::Threading::Detail {
                         index
                     );
 
-                    if (_availability.IsAvailable(
-                        recordIndex
+                    if (_availability.IsSet(
+                        ToTopologyIndex(
+                            recordIndex
+                        )
                     )) {
                         continue;
                     }
@@ -926,7 +980,13 @@ namespace ESPressio::Threading::Detail {
                 std::size_t inUse = 0U;
 
                 for (std::size_t index = 0U; index < TRecordCapacity; ++index) {
-                    if (!_availability.IsAvailable(index)) {
+                    if (
+                        !_availability.IsSet(
+                            TopologyIndexType::FromUnchecked(
+                                index
+                            )
+                        )
+                    ) {
                         ++inUse;
                     }
                 }
@@ -944,8 +1004,10 @@ namespace ESPressio::Threading::Detail {
                         index
                     );
 
-                    if (_availability.IsAvailable(
-                        recordIndex
+                    if (_availability.IsSet(
+                        ToTopologyIndex(
+                            recordIndex
+                        )
                     )) {
                         continue;
                     }
@@ -972,9 +1034,13 @@ namespace ESPressio::Threading::Detail {
                 std::size_t queued = 0U;
                 auto current = _queue.Head();
 
-                while (current != IntrusiveTaskQueue<TRecordCapacity>::InvalidIndex) {
+                while (current.IsValid()) {
                     ++queued;
-                    current = _records[current].QueueNext();
+                    current = _records[
+                        static_cast<std::size_t>(
+                            current.Value()
+                        )
+                    ].QueueNext();
                 }
 
                 return queued;

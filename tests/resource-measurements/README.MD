@@ -57,6 +57,12 @@ EDP_THREADING_MEASUREMENT
 
 This is validation instrumentation only. It does not alter EDP-Threading production semantics or versioning.
 
+## Coherent local source mode
+
+When `EDP_THREADING_RESOURCE_LOCAL_ROOT` is supplied, the runner injects sibling production `src` paths directly and defines `EDP_THREADING_RESOURCE_COHERENT_LOCAL=1`. In that mode the measurement source includes only the ESP-IDF `ExecutionContextProvider` and `SpinLockProvider` headers it actually consumes rather than the broad ESP-IDF aggregation header.
+
+This keeps the measurement dependency graph limited to Threading's real validation requirements and avoids pulling unrelated Memory/Security provider surfaces into a Threading resource measurement. The concrete measured provider Types are unchanged.
+
 ## C++ Language Baseline
 
 All resource-measurement environments compile as C++20 and retain the repository's validated PIOArduino ESP-IDF platform pin so measurement comparisons remain on the same toolchain family.

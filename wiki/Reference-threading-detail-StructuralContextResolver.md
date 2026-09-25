@@ -12,6 +12,7 @@
 - `optional`
 - `tuple`
 - `utility`
+- `TopologyIndex.hpp`
 - `WaitRegistration.hpp`
 
 ## Documented declarations
@@ -47,7 +48,7 @@ template<>
 Compact Type used to identify one managed execution context.
 
 ```cpp
-using ContextIndex = typename SmallestIndex<1U>::Type;
+using ContextIndex = typename TopologyIndexTraits<ManagedContextIndexSpace, 1U>::Storage;
 ```
 
 ### `ResolveCurrentThunk`

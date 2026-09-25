@@ -2,9 +2,9 @@
 
 **Primary classification:** PRIVATE IMPLEMENTATION
 
-**Source baseline:** `ea0bf415eacd70064c3c7216a6c1e6a48cd85038`
+**Source baseline:** `4fdcc786a031ebdc847067011f27fddc8932a247`
 
-[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/ea0bf415eacd70064c3c7216a6c1e6a48cd85038/src/threading/detail/WaitRegistration.hpp)
+[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/4fdcc786a031ebdc847067011f27fddc8932a247/src/threading/detail/WaitRegistration.hpp)
 
 ## Direct includes
 
@@ -12,6 +12,7 @@
 - `cstdint`
 - `limits`
 - `TaskRecord.hpp`
+- `TopologyIndex.hpp`
 
 ## Documented declarations
 
@@ -34,7 +35,10 @@ template<std::size_t TContextCapacity>
 Smallest index Type able to address every managed execution context plus an invalid sentinel.
 
 ```cpp
-using Type = typename SmallestIndex<TContextCapacity>::Type;
+using Type = typename TopologyIndexTraits<
+            ManagedContextIndexSpace,
+            TContextCapacity
+        >::Storage;
 ```
 
 ### `Invalid`
@@ -44,7 +48,10 @@ using Type = typename SmallestIndex<TContextCapacity>::Type;
 Sentinel which cannot identify a valid managed execution context.
 
 ```cpp
-static constexpr Type Invalid = SmallestIndex<TContextCapacity>::Invalid;
+static constexpr Type Invalid = TopologyIndexTraits<
+            ManagedContextIndexSpace,
+            TContextCapacity
+        >::Invalid;
 ```
 
 ### `TRecordIndex`
