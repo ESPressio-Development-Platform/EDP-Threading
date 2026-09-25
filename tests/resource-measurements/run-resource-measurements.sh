@@ -29,6 +29,7 @@ if [[ -n "${EDP_THREADING_RESOURCE_LOCAL_ROOT:-}" ]]; then
         EDP-Memory
         EDP-Security
         EDP-Clock
+        EDP-BoundedTopology
         EDP-Platform-FreeRTOS
         EDP-Platform-ESP-IDF
         EDP-Threading
@@ -62,6 +63,7 @@ repositories = [
     "EDP-Memory",
     "EDP-Security",
     "EDP-Clock",
+    "EDP-BoundedTopology",
     "EDP-Platform-FreeRTOS",
     "EDP-Platform-ESP-IDF",
     "EDP-Threading",
