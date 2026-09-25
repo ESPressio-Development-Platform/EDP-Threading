@@ -10,7 +10,7 @@ Lifecycle is construction -> Initialize -> Start -> operational -> BeginShutdown
 
 ## Bounded-topology migration validation
 
-On `bounded_topology_migration`, target-compiled retained RAM was remeasured across all fourteen existing ESP-IDF/Arduino resource environments after adopting EDP-BoundedTopology.
+Before reintegration into `main`, target-compiled retained RAM was remeasured across all fourteen existing ESP-IDF/Arduino resource environments after adopting EDP-BoundedTopology.
 
 Every non-baseline scenario retained exactly the same `total` and `intrinsic` byte count as the validated 23 September baseline. The migration therefore adds no retained Threading RAM in the measured matrix.
 
