@@ -26,8 +26,6 @@ if [[ -n "${EDP_THREADING_RESOURCE_LOCAL_ROOT:-}" ]]; then
     required_repositories=(
         EDP-System
         EDP-Platform
-        EDP-Memory
-        EDP-Security
         EDP-Clock
         EDP-BoundedTopology
         EDP-Platform-FreeRTOS
@@ -60,8 +58,6 @@ end = text.index("\n\n[env:idf_baseline]", start)
 repositories = [
     "EDP-System",
     "EDP-Platform",
-    "EDP-Memory",
-    "EDP-Security",
     "EDP-Clock",
     "EDP-BoundedTopology",
     "EDP-Platform-FreeRTOS",
@@ -85,6 +81,7 @@ for line in text.splitlines():
     lines.append(line)
     if line == "build_flags =":
         lines.extend(include_flags)
+        lines.append("    -DEDP_THREADING_RESOURCE_COHERENT_LOCAL=1")
 
 target.write_text("\n".join(lines) + "\n")
 PY
