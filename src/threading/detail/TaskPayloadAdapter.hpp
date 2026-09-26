@@ -1,8 +1,9 @@
 #pragma once
 
-#include <new>
+#include <cstddef>
 #include <type_traits>
-#include <utility>
+
+#include <ESPressio_Memory.hpp>
 
 #include "../TaskCompletion.hpp"
 #include "../ThreadingTypes.hpp"
@@ -10,206 +11,100 @@
 
 namespace ESPressio::Threading::Detail {
 
-    /// Defines the compile-time contract for `TaskPayloadAdapter`.
-    /// @tparam TRecord Task-record Type whose callable/result payload is adapted.
-    /// @tparam TCallable Callable Type being dispatched or adapted.
-    /// @tparam TResult Result Type stored in the Task record.
     template<class TRecord, class TCallable, class TResult>
     struct TaskPayloadAdapter final {
 
-        static_assert(
-            sizeof(TCallable) <= TRecord::PayloadCapacity,
-            "Task callable exceeds the configured facility callable/result payload"
-        );
-
-        static_assert(
-            sizeof(TResult) <= TRecord::PayloadCapacity,
-            "Task result exceeds the configured facility callable/result payload"
-        );
-
-        static_assert(
-            alignof(TCallable) <= alignof(std::max_align_t) &&
+        static_assert(sizeof(TCallable) <= TRecord::PayloadCapacity,
+            "Task callable exceeds the configured facility callable/result payload");
+        static_assert(sizeof(TResult) <= TRecord::PayloadCapacity,
+            "Task result exceeds the configured facility callable/result payload");
+        static_assert(alignof(TCallable) <= alignof(std::max_align_t) &&
             alignof(TResult) <= alignof(std::max_align_t),
-            "Over-aligned Task callable/result Types are not supported by the v1 bounded payload"
-        );
+            "Over-aligned Task callable/result Types are not supported by the v1 bounded payload");
+        static_assert(std::is_nothrow_move_constructible_v<TResult>,
+            "Task result ownership transfer must be nothrow move constructible");
+        static_assert(std::is_nothrow_destructible_v<TCallable> && std::is_nothrow_destructible_v<TResult>,
+            "Task payload destruction must be noexcept");
 
-        // Payload execution.
+        static TaskInvocationOutcome Invoke(TRecord& record, TaskContext& context) {
+            auto* callable = reinterpret_cast<TCallable*>(record.Payload);
 
-        /// Invokes the stored callable and establishes any result payload without publishing terminal lifecycle state.
-        static TaskInvocationOutcome Invoke(
-            TRecord& record,
-            TaskContext& context
-        ) {
-            auto* callable = reinterpret_cast<TCallable*>(
-                record.Payload
-            );
-
-            if constexpr (
-                std::is_invocable_r_v<
-                    TaskCompletion<TResult>,
-                    TCallable&,
-                    TaskContext&
-                >
-            ) {
-                auto completion = (*callable)(
-                    context
-                );
-
-                callable->~TCallable();
-
+            if constexpr (std::is_invocable_r_v<TaskCompletion<TResult>, TCallable&, TaskContext&>) {
+                auto completion = (*callable)(context);
+                ESPressio::Memory::ObjectLifetime::Destroy(*callable);
                 if (completion.IsCancelled()) {
                     return TaskInvocationOutcome::Cancelled;
                 }
-
-                new (record.Payload) TResult(
-                    completion.TakeResult()
-                );
-
+                auto result = completion.TakeResult();
+                static_cast<void>(ESPressio::Memory::ObjectLifetime::MoveConstruct<TResult>(record.Payload, result));
                 return TaskInvocationOutcome::Completed;
             } else {
                 static_cast<void>(context);
-
-                static_assert(
-                    std::is_invocable_r_v<TResult, TCallable&>,
-                    "Task callable must return TResult or TaskCompletion<TResult>"
-                );
-
+                static_assert(std::is_invocable_r_v<TResult, TCallable&>,
+                    "Task callable must return TResult or TaskCompletion<TResult>");
                 TResult result = (*callable)();
-                callable->~TCallable();
-
-                new (record.Payload) TResult(
-                    std::move(result)
-                );
-
+                ESPressio::Memory::ObjectLifetime::Destroy(*callable);
+                static_cast<void>(ESPressio::Memory::ObjectLifetime::MoveConstruct<TResult>(record.Payload, result));
                 return TaskInvocationOutcome::Completed;
             }
         }
 
-        /// Destroys a callable payload which has not been consumed by execution.
-        static void DestroyCallable(
-            TRecord& record
-        ) noexcept {
-            reinterpret_cast<TCallable*>(record.Payload)->~TCallable();
+        static void DestroyCallable(TRecord& record) noexcept {
+            ESPressio::Memory::ObjectLifetime::Destroy(
+                *reinterpret_cast<TCallable*>(record.Payload));
         }
 
-        /// Destroys a completed result payload which will not be consumed by an owner.
-        static void DestroyResult(
-            TRecord& record
-        ) noexcept {
-            reinterpret_cast<TResult*>(record.Payload)->~TResult();
+        static void DestroyResult(TRecord& record) noexcept {
+            ESPressio::Memory::ObjectLifetime::Destroy(
+                *reinterpret_cast<TResult*>(record.Payload));
         }
 
-        /// Moves the completed result into caller-provided typed storage and destroys the in-record result.
-        static void MoveResult(
-            TRecord& record,
-            void* destination
-        ) {
+        static void MoveResult(TRecord& record, void* destination) {
             auto* result = reinterpret_cast<TResult*>(record.Payload);
-
-            new (destination) TResult(
-                std::move(*result)
-            );
-
-            result->~TResult();
+            static_cast<void>(ESPressio::Memory::ObjectLifetime::MoveConstruct<TResult>(destination, *result));
+            ESPressio::Memory::ObjectLifetime::Destroy(*result);
         }
 
-        /// Shared immutable operation table for this callable/result pairing.
         inline static const TaskPayloadOperations<TRecord> Operations {
-            &Invoke,
-            &DestroyCallable,
-            &DestroyResult,
-            &MoveResult
+            &Invoke, &DestroyCallable, &DestroyResult, &MoveResult
         };
-
     };
 
-
-    /// Defines the compile-time contract for `TaskPayloadAdapter`.
-    /// @tparam TRecord Task-record Type whose callable/result payload is adapted.
-    /// @tparam TCallable Callable Type being dispatched or adapted.
     template<class TRecord, class TCallable>
     struct TaskPayloadAdapter<TRecord, TCallable, void> final {
+        static_assert(sizeof(TCallable) <= TRecord::PayloadCapacity,
+            "Task callable exceeds the configured facility callable payload");
+        static_assert(alignof(TCallable) <= alignof(std::max_align_t),
+            "Over-aligned Task callable Types are not supported by the v1 bounded payload");
+        static_assert(std::is_nothrow_destructible_v<TCallable>,
+            "Task callable destruction must be noexcept");
 
-        static_assert(
-            sizeof(TCallable) <= TRecord::PayloadCapacity,
-            "Task callable exceeds the configured facility callable payload"
-        );
-
-        static_assert(
-            alignof(TCallable) <= alignof(std::max_align_t),
-            "Over-aligned Task callable Types are not supported by the v1 bounded payload"
-        );
-
-        // Payload execution.
-
-        /// Invokes the stored void callable without publishing terminal lifecycle state.
-        static TaskInvocationOutcome Invoke(
-            TRecord& record,
-            TaskContext& context
-        ) {
-            auto* callable = reinterpret_cast<TCallable*>(
-                record.Payload
-            );
-
-            if constexpr (
-                std::is_invocable_r_v<
-                    TaskCompletion<void>,
-                    TCallable&,
-                    TaskContext&
-                >
-            ) {
-                const auto completion = (*callable)(
-                    context
-                );
-
-                callable->~TCallable();
-
-                return completion.IsCancelled()
-                    ? TaskInvocationOutcome::Cancelled
-                    : TaskInvocationOutcome::Completed;
+        static TaskInvocationOutcome Invoke(TRecord& record, TaskContext& context) {
+            auto* callable = reinterpret_cast<TCallable*>(record.Payload);
+            if constexpr (std::is_invocable_r_v<TaskCompletion<void>, TCallable&, TaskContext&>) {
+                const auto completion = (*callable)(context);
+                ESPressio::Memory::ObjectLifetime::Destroy(*callable);
+                return completion.IsCancelled() ? TaskInvocationOutcome::Cancelled : TaskInvocationOutcome::Completed;
             } else {
-                static_cast<void>(
-                    context
-                );
-
-                static_assert(
-                    std::is_invocable_r_v<void, TCallable&>,
-                    "Void Task callable must return void or TaskCompletion<void>"
-                );
-
+                static_cast<void>(context);
+                static_assert(std::is_invocable_r_v<void, TCallable&>,
+                    "Void Task callable must return void or TaskCompletion<void>");
                 (*callable)();
-                callable->~TCallable();
-
+                ESPressio::Memory::ObjectLifetime::Destroy(*callable);
                 return TaskInvocationOutcome::Completed;
             }
         }
 
-        /// Destroys a callable payload which has not been consumed by execution.
-        static void DestroyCallable(
-            TRecord& record
-        ) noexcept {
-            reinterpret_cast<TCallable*>(record.Payload)->~TCallable();
+        static void DestroyCallable(TRecord& record) noexcept {
+            ESPressio::Memory::ObjectLifetime::Destroy(
+                *reinterpret_cast<TCallable*>(record.Payload));
         }
+        static void DestroyResult(TRecord&) noexcept {}
+        static void MoveResult(TRecord&, void*) {}
 
-        /// Void Tasks have no result payload to destroy.
-        static void DestroyResult(
-            TRecord&
-        ) noexcept {}
-
-        /// Void Tasks have no result payload to move.
-        static void MoveResult(
-            TRecord&,
-            void*
-        ) {}
-
-        /// Shared immutable operation table for this callable/void pairing.
         inline static const TaskPayloadOperations<TRecord> Operations {
-            &Invoke,
-            &DestroyCallable,
-            &DestroyResult,
-            &MoveResult
+            &Invoke, &DestroyCallable, &DestroyResult, &MoveResult
         };
-
     };
 
 } // ESPressio::Threading::Detail
