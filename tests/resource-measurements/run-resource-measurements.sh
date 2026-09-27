@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPOSITORY_ROOT="$(cd "${ROOT}/../.." && pwd)"
+DEFAULT_LOCAL_ROOT="$(cd "${REPOSITORY_ROOT}/.." && pwd)"
 LOG_DIRECTORY="${ROOT}/.measurement-logs"
 PROJECT_CONFIG="${ROOT}/platformio.ini"
 ACTIVE_CONFIG="${PROJECT_CONFIG}"
@@ -17,32 +19,36 @@ trap cleanup EXIT INT TERM
 
 rm -rf "${ROOT}/.pio"
 rm -rf "${LOG_DIRECTORY}"
-
 mkdir -p "${LOG_DIRECTORY}"
 
-if [[ -n "${EDP_THREADING_RESOURCE_LOCAL_ROOT:-}" ]]; then
-    LOCAL_ROOT="$(cd "${EDP_THREADING_RESOURCE_LOCAL_ROOT}" && pwd)"
+# Resource measurements validate the branch currently under test. Default to
+# the sibling-checkout workspace so PlatformIO cannot silently install main
+# and produce measurements for a mixed or entirely different source baseline.
+LOCAL_ROOT="${EDP_THREADING_RESOURCE_LOCAL_ROOT:-${DEFAULT_LOCAL_ROOT}}"
+LOCAL_ROOT="$(cd "${LOCAL_ROOT}" && pwd)"
 
-    required_repositories=(
-        EDP-System
-        EDP-Platform
-        EDP-Clock
-        EDP-BoundedTopology
-        EDP-Platform-FreeRTOS
-        EDP-Platform-ESP-IDF
-        EDP-Threading
-    )
+required_repositories=(
+    EDP-System
+    EDP-Platform
+    EDP-Clock
+    EDP-BoundedTopology
+    EDP-Memory
+    EDP-Platform-FreeRTOS
+    EDP-Platform-ESP-IDF
+    EDP-Threading
+)
 
-    for repository in "${required_repositories[@]}"; do
-        if [[ ! -d "${LOCAL_ROOT}/${repository}/src" ]]; then
-            echo "ERROR: missing local resource-measurement source tree: ${LOCAL_ROOT}/${repository}/src" >&2
-            exit 1
-        fi
-    done
+for repository in "${required_repositories[@]}"; do
+    if [[ ! -d "${LOCAL_ROOT}/${repository}/src" ]]; then
+        echo "ERROR: missing local resource-measurement source tree: ${LOCAL_ROOT}/${repository}/src" >&2
+        echo "Set EDP_THREADING_RESOURCE_LOCAL_ROOT if the EDP repositories are not sibling checkouts." >&2
+        exit 1
+    fi
+done
 
-    TEMP_CONFIG="$(mktemp "${ROOT}/platformio.local.XXXXXX.ini")"
+TEMP_CONFIG="$(mktemp "${ROOT}/platformio.local.XXXXXX.ini")"
 
-    python3 - "${PROJECT_CONFIG}" "${TEMP_CONFIG}" "${LOCAL_ROOT}" <<'PY'
+python3 - "${PROJECT_CONFIG}" "${TEMP_CONFIG}" "${LOCAL_ROOT}" <<'PY'
 from pathlib import Path
 import sys
 
@@ -51,7 +57,6 @@ target = Path(sys.argv[2])
 local_root = Path(sys.argv[3])
 
 text = source.read_text()
-
 start = text.index("lib_deps =\n")
 end = text.index("\n\n[env:idf_baseline]", start)
 
@@ -60,15 +65,16 @@ repositories = [
     "EDP-Platform",
     "EDP-Clock",
     "EDP-BoundedTopology",
+    "EDP-Memory",
     "EDP-Platform-FreeRTOS",
     "EDP-Platform-ESP-IDF",
     "EDP-Threading",
 ]
 
-# The participating production libraries are header-only. For local
-# cross-repository validation, bypass PlatformIO Library Manager entirely:
-# otherwise each library manifest may resolve transitive dependencies from
-# its normal remote main baseline and create a mixed-branch build.
+# Participating production libraries are header-only. Bypass PlatformIO's
+# Library Manager for the EDP dependency graph: resolving manifests from main
+# would invalidate measurements of the command_architecture_implementation
+# branch and repeatedly clone the dependency graph for every environment.
 text = text[:start] + text[end + 2:]
 
 include_flags = [
@@ -86,11 +92,9 @@ for line in text.splitlines():
 target.write_text("\n".join(lines) + "\n")
 PY
 
-    ACTIVE_CONFIG="${TEMP_CONFIG}"
-
-    echo "EDP-Threading resource measurements: coherent local source mode"
-    echo "Local ESPressio root: ${LOCAL_ROOT}"
-fi
+ACTIVE_CONFIG="${TEMP_CONFIG}"
+echo "EDP-Threading resource measurements: coherent local source mode"
+echo "Local ESPressio root: ${LOCAL_ROOT}"
 
 environments=(
     idf_baseline
@@ -112,7 +116,6 @@ environments=(
 for environment in "${environments[@]}"; do
     echo
     echo "=== ${environment} ==="
-
     (
         cd "${ROOT}"
         pio run \
@@ -124,9 +127,6 @@ done
 echo
 echo "EDP-Threading resource measurement summary"
 echo "=========================================="
-
 for environment in "${environments[@]}"; do
-    grep \
-        -E "EDP_THREADING_(BASELINE|MEASUREMENT)" \
-        "${LOG_DIRECTORY}/${environment}.log"
+    grep -E "EDP_THREADING_(BASELINE|MEASUREMENT)" "${LOG_DIRECTORY}/${environment}.log"
 done
