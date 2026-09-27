@@ -9,12 +9,13 @@ required=(
     "EDP-Platform"
     "EDP-Clock"
     "EDP-BoundedTopology"
+    "EDP-Memory"
 )
 
 for dependency in "${required[@]}"; do
     if [[ ! -d "${WORKSPACE}/${dependency}/src" ]]; then
         echo "Missing sibling repository: ${WORKSPACE}/${dependency}" >&2
-        echo "Clone EDP-System, EDP-Platform, EDP-Clock and EDP-BoundedTopology beside EDP-Threading." >&2
+        echo "Clone EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and EDP-Memory beside EDP-Threading." >&2
         exit 2
     fi
 done
@@ -39,6 +40,7 @@ compile_tests() {
         -I"${WORKSPACE}/EDP-Platform/src" \
         -I"${WORKSPACE}/EDP-Clock/src" \
         -I"${WORKSPACE}/EDP-BoundedTopology/src" \
+        -I"${WORKSPACE}/EDP-Memory/src" \
         "${ROOT}/tests/ThreadingFoundationTests.cpp" \
         -o "${OUTPUT}"
 }
@@ -56,24 +58,15 @@ case "${SANITIZER_MODE}" in
         ;;
     address)
         echo "EDP-Threading host foundation tests: compiling (ASan)"
-        compile_tests \
-            -g \
-            -fno-omit-frame-pointer \
-            -fsanitize=address
+        compile_tests -g -fno-omit-frame-pointer -fsanitize=address
         ;;
     undefined)
         echo "EDP-Threading host foundation tests: compiling (UBSan)"
-        compile_tests \
-            -g \
-            -fno-omit-frame-pointer \
-            -fsanitize=undefined
+        compile_tests -g -fno-omit-frame-pointer -fsanitize=undefined
         ;;
     address,undefined)
         echo "EDP-Threading host foundation tests: compiling (ASan+UBSan)"
-        compile_tests \
-            -g \
-            -fno-omit-frame-pointer \
-            -fsanitize=address,undefined
+        compile_tests -g -fno-omit-frame-pointer -fsanitize=address,undefined
         ;;
     *)
         echo "Unsupported EDP_THREADING_SANITIZER_MODE: ${SANITIZER_MODE}" >&2
