@@ -2,7 +2,7 @@
 
 `EDP-Threading` provides the ESPressio Development Platform's deterministic execution-domain semantics for finite Tasks and persistent Dedicated Threads.
 
-The v1 architecture is static and Composition-driven. Platform owns native execution/synchronization mechanisms; Threading owns Task/Thread lifecycle, cooperative cancellation/stop, waiting, scheduling policy and shutdown; EDP-BoundedTopology supplies the dependency-minimal compact index, membership-set and intrusive-FIFO mechanics used by those Threading semantics. There is no runtime dependency injection, service locator, hidden heap fallback or unbounded EDP-controlled runtime growth.
+The v1 architecture is static and Composition-driven. Platform owns native execution/synchronization mechanisms; Threading owns Task/Thread lifecycle, cooperative cancellation/stop, waiting, scheduling policy and shutdown; EDP-BoundedTopology supplies the dependency-minimal compact index, membership-set and intrusive-FIFO mechanics used by those Threading semantics. EDP-Memory supplies the authoritative typed object-lifetime and ownership-transfer boundary for Task payloads. There is no runtime dependency injection, service locator, hidden heap fallback or unbounded EDP-controlled runtime growth.
 
 ## Public surface
 
@@ -20,6 +20,7 @@ The public vocabulary includes:
 - `ThreadingTopology<...>` — the complete statically declared Threading resource topology.
 - `DedicatedThreadBinding<...>` / `BindDedicatedThread<ThreadIdentity>()` — binds application behaviour to a declared Dedicated Thread without moving behaviour into architectural entitlement.
 - `StaticThreadingRuntime<...>` — the concrete statically owned Bootstrap/runtime façade.
+- `BoundedWaitWakeProvider<...>` — fixed-capacity ordinary-context finite wait/wake slots for higher domains such as EDP-Command.
 
 ## Bootstrap lifecycle
 
@@ -38,7 +39,7 @@ The empty `ThreadingTopology<>` is valid. It owns no managed execution contexts,
 
 Capacities and topology are compile-time properties. Task records use EDP-BoundedTopology capacity-derived index storage, one-bit structural availability sets, shared intrusive FIFO topology and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context.
 
-Threading consumes EDP-System, EDP-Platform, EDP-Clock and EDP-BoundedTopology. There are no optional ESPressio-library dependencies.
+Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and EDP-Memory. There are no optional ESPressio-library dependencies.
 
 ## Current implementation status
 
@@ -50,7 +51,7 @@ The bounded-topology migration is now integrated into `main`. Its validation is 
 
 ## Local validation
 
-Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when EDP-System, EDP-Platform, EDP-Clock and EDP-BoundedTopology are cloned beside this repository. Run UBSan with `EDP_THREADING_SANITIZER_MODE=undefined bash tests/run-host-tests.sh`.
+Run the warnings-as-errors host suite with `bash tests/run-host-tests.sh` when EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and EDP-Memory are cloned beside this repository. Run UBSan with `EDP_THREADING_SANITIZER_MODE=undefined bash tests/run-host-tests.sh`.
 
 Target resource measurements are built without flashing hardware from `tests/resource-measurements` using `bash ./run-resource-measurements.sh`.
 
@@ -71,18 +72,16 @@ A concrete ESP32 integration demo is provided in `demos/basic-threading` for Ard
 EDP-Threading
 ├── EDP-System [mandatory]
 ├── EDP-Platform [mandatory]
-│   └── EDP-System [transitive]
 ├── EDP-Clock [mandatory]
-│   ├── EDP-System [transitive]
-│   └── EDP-Platform [transitive]
-└── EDP-BoundedTopology [mandatory]
-    └── no ESPressio-library dependencies
+├── EDP-BoundedTopology [mandatory]
+└── EDP-Memory [mandatory]
 ```
 
 - `EDP-System` — supplies the compile-time Composition Framework.
 - `EDP-Platform` — supplies substitutable execution-context and synchronization abstractions.
 - `EDP-Clock` — supplies the canonical monotonic timeline used for deadlines, waits and sleeping.
 - `EDP-BoundedTopology` — supplies compact capacity-derived bounded identity, one-bit membership sets and non-owning intrusive FIFO topology without owning Threading semantics or payload lifetime.
+- `EDP-Memory` — supplies authoritative typed construction, move-construction/ownership transfer and destruction for Task payloads so Threading does not bypass the Memory domain with direct C++ lifetime primitives.
 - Optional ESPressio dependencies: none.
 
 See the [dependency graph](./DEPENDENCY_GRAPH.MD) for the authoritative dependency-direction description.
