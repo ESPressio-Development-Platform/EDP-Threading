@@ -22,10 +22,10 @@ struct BoundedWaitWake final : Framework::SharedCapability<Domain> {};
 struct BoundedWaitWakeCapacity final : Framework::Property<BoundedWaitWake, std::size_t> {};
 
 enum class BoundedWaitWakeResult : std::uint8_t {
-    Woken = 0,
-    TimedOut = 1,
-    ProviderFailure = 2,
-    InvalidSlot = 3
+    Woken = 0U,
+    TimedOut = 1U,
+    ProviderFailure = 2U,
+    InvalidSlot = 3U
 };
 
 template<class TSignalProvider, std::size_t TCapacity>
@@ -78,9 +78,12 @@ public:
         return WaitWithBudget(slot, Detail::MonotonicWaitBudget::Until(deadline));
     }
 
-    [[nodiscard]] bool Wake(std::size_t slot) noexcept {
-        if (slot >= TCapacity) return false;
-        return _signals[slot].Notify() == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled;
+    [[nodiscard]] BoundedWaitWakeResult Wake(std::size_t slot) noexcept {
+        if (slot >= TCapacity) return BoundedWaitWakeResult::InvalidSlot;
+        const auto result = _signals[slot].Notify();
+        if (result == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled)
+            return BoundedWaitWakeResult::Woken;
+        return BoundedWaitWakeResult::ProviderFailure;
     }
 };
 
