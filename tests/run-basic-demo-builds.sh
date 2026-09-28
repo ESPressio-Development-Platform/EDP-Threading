@@ -59,7 +59,10 @@ target.write_text("\n".join(expanded) + "\n")
 PY
 
     rm -rf "${ROOT}/${project}/.pio"
-    pio run -d "${ROOT}/${project}" --project-conf "${temp_conf}"
+    if ! pio run -d "${ROOT}/${project}" --project-conf "${temp_conf}"; then
+        rm -f "${temp_conf}"
+        return 1
+    fi
     rm -f "${temp_conf}"
 }
 echo "EDP-Threading basic demo builds: Arduino"
