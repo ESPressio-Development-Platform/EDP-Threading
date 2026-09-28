@@ -279,9 +279,29 @@ namespace Test {
 
 
     /// Always-successful Mutex provider used to isolate Threading bookkeeping behavior in host tests.
-    class MutexProvider final {
+    class MutexProvider final : public Framework::Provider<
+        ESPressio::Platform::Domain,
+        Framework::Offers<
+            Framework::Offer<
+                ESPressio::Platform::Synchronization::Mutex,
+                Framework::PropertyValue<
+                    ESPressio::Platform::Synchronization::MutexWaitResolutionNanoseconds,
+                    1ULL
+                >
+            >
+        >
+    > {
 
         public:
+
+            // Construction and lifetime.
+
+            MutexProvider() noexcept = default;
+            MutexProvider(const MutexProvider&) = delete;
+            MutexProvider& operator =(const MutexProvider&) = delete;
+            MutexProvider(MutexProvider&&) = delete;
+            MutexProvider& operator =(MutexProvider&&) = delete;
+
 
             // Lock operations.
 
@@ -295,6 +315,41 @@ namespace Test {
             /// Reports successful release of the synthetic Mutex.
             ESPressio::Platform::Synchronization::LockReleaseResult Release() noexcept {
                 return ESPressio::Platform::Synchronization::LockReleaseResult::Released;
+            }
+
+    };
+
+
+    /// Platform Mutex provider that deliberately fails acquisition/release for adapter-result tests.
+    class FailingMutexProvider final : public Framework::Provider<
+        ESPressio::Platform::Domain,
+        Framework::Offers<
+            Framework::Offer<
+                ESPressio::Platform::Synchronization::Mutex,
+                Framework::PropertyValue<
+                    ESPressio::Platform::Synchronization::MutexWaitResolutionNanoseconds,
+                    1ULL
+                >
+            >
+        >
+    > {
+
+        public:
+
+            FailingMutexProvider() noexcept = default;
+            FailingMutexProvider(const FailingMutexProvider&) = delete;
+            FailingMutexProvider& operator =(const FailingMutexProvider&) = delete;
+            FailingMutexProvider(FailingMutexProvider&&) = delete;
+            FailingMutexProvider& operator =(FailingMutexProvider&&) = delete;
+
+            ESPressio::Platform::Synchronization::LockAcquireResult Acquire(
+                ESPressio::Platform::Synchronization::WaitTimeout
+            ) noexcept {
+                return ESPressio::Platform::Synchronization::LockAcquireResult::ProviderFailure;
+            }
+
+            ESPressio::Platform::Synchronization::LockReleaseResult Release() noexcept {
+                return ESPressio::Platform::Synchronization::LockReleaseResult::ProviderFailure;
             }
 
     };
@@ -659,6 +714,10 @@ namespace Test {
 
     /// Semantic identity used by Dedicated Thread handle tests.
     struct DedicatedThreadIdentity final {};
+
+
+    /// Semantic identity used to validate keyed ordinary-context mutex composition.
+    struct EventMutexIdentity final {};
 
 
     /// Semantic identity intentionally absent from the test topology.
@@ -1082,6 +1141,11 @@ namespace Test {
     );
 
     static_assert(
+        sizeof(ESPressio::Threading::ThreadContext) == 2U * sizeof(void*),
+        "ThreadContext wake/wait support must retain only resource + static operations pointers"
+    );
+
+    static_assert(
         sizeof(ESPressio::Threading::Detail::TaskRecordAvailabilitySet<10U>) == 2U,
         "Ten Task availability bits must occupy exactly two bytes"
     );
@@ -1217,6 +1281,44 @@ namespace Test {
         ExecutionContextProvider,
         FailingManagedContextRouter
     >;
+
+
+    using PublicWakeSet = ESPressio::Threading::Detail::ManagedContextWakeSet<
+        1U,
+        SignalProvider
+    >;
+
+    using PublicWakeRouter = ESPressio::Threading::Detail::ManagedContextRouter<
+        1U,
+        SignalProvider
+    >;
+
+    using PublicWakeDedicatedThreadRuntime = ESPressio::Threading::Detail::DedicatedThreadRuntime<
+        DedicatedThreadIdentity,
+        DedicatedCallable,
+        100U,
+        PublicWakeRouter::ContextCapacity,
+        MutexProvider,
+        ExecutionContextProvider,
+        PublicWakeRouter
+    >;
+
+    using TestOrdinaryMutex = ESPressio::Threading::OrdinaryMutexProvider<
+        EventMutexIdentity,
+        MutexProvider
+    >;
+
+    using FailingOrdinaryMutex = ESPressio::Threading::OrdinaryMutexProvider<
+        EventMutexIdentity,
+        FailingMutexProvider
+    >;
+
+    static_assert(
+        TestOrdinaryMutex::CompositionOffers::template Contains<
+            ESPressio::Threading::OrdinaryMutex<EventMutexIdentity>
+        >,
+        "OrdinaryMutexProvider must publish its keyed Threading capability"
+    );
 
 
     using DedicatedWorkerDeclaration = ESPressio::Threading::DedicatedWorkerLease<
@@ -3361,6 +3463,146 @@ int main() {
     assert(
         failingWakeDedicatedThreadRuntime.DestroyInfrastructure() ==
         ESPressio::Platform::Execution::ExecutionDestroyResult::Succeeded
+    );
+
+
+    HostValidationStage(
+        "dedicated thread public wake and wait"
+    );
+
+    Test::PublicWakeSet publicWakeSet;
+    assert(
+        publicWakeSet.Validate() ==
+        ESPressio::Threading::Detail::ManagedContextWakeValidationResult::Ready
+    );
+    Test::PublicWakeRouter publicWakeRouter(
+        publicWakeSet
+    );
+    bool publicWakeLifecycleActive = true;
+    Test::PublicWakeDedicatedThreadRuntime publicWakeRuntime(
+        Test::DedicatedCallable{},
+        publicWakeRouter,
+        0U,
+        &publicWakeLifecycleActive,
+        canActivatePredicate,
+        shouldTerminatePredicate
+    );
+    auto publicWakeHandle = publicWakeRuntime.Handle();
+
+    assert(
+        publicWakeHandle.Wake() ==
+        ESPressio::Threading::ThreadWakeResult::Woken
+    );
+    assert(
+        publicWakeRuntime.Wait() ==
+        ESPressio::Threading::ThreadWaitResult::Woken
+    );
+    assert(
+        publicWakeRuntime.WaitFor(
+            ESPressio::Clock::Duration::FromNanoseconds(
+                0
+            )
+        ) == ESPressio::Threading::ThreadWaitResult::TimedOut
+    );
+    assert(
+        publicWakeHandle.Wake() ==
+        ESPressio::Threading::ThreadWakeResult::Woken
+    );
+    assert(
+        publicWakeRuntime.WaitUntil(
+            ESPressio::Clock::MonotonicTimestamp::FromNanoseconds(
+                1U
+            )
+        ) == ESPressio::Threading::ThreadWaitResult::Woken
+    );
+
+    auto movedWakeHandle = std::move(
+        publicWakeHandle
+    );
+    assert(
+        publicWakeHandle.Wake() ==
+        ESPressio::Threading::ThreadWakeResult::ProviderFailure
+    );
+    assert(
+        movedWakeHandle.Wake() ==
+        ESPressio::Threading::ThreadWakeResult::Woken
+    );
+    assert(
+        publicWakeRuntime.Wait() ==
+        ESPressio::Threading::ThreadWaitResult::Woken
+    );
+
+    struct ThreadContextProbe final {
+        bool StopRequested = false;
+        std::size_t WaitCount = 0U;
+        ESPressio::Threading::Duration LastDuration{};
+        ESPressio::Threading::MonotonicTimestamp LastDeadline{};
+    };
+
+    ThreadContextProbe threadContextProbe;
+    const ESPressio::Threading::Detail::ThreadContextOperations threadContextOperations{
+        [](const void* context) noexcept {
+            return static_cast<const ThreadContextProbe*>(context)->StopRequested;
+        },
+        [](void* context) noexcept {
+            ++static_cast<ThreadContextProbe*>(context)->WaitCount;
+            return ESPressio::Threading::ThreadWaitResult::Woken;
+        },
+        [](void* context, ESPressio::Threading::Duration duration) noexcept {
+            auto* probe = static_cast<ThreadContextProbe*>(context);
+            ++probe->WaitCount;
+            probe->LastDuration = duration;
+            return ESPressio::Threading::ThreadWaitResult::TimedOut;
+        },
+        [](void* context, ESPressio::Threading::MonotonicTimestamp deadline) noexcept {
+            auto* probe = static_cast<ThreadContextProbe*>(context);
+            ++probe->WaitCount;
+            probe->LastDeadline = deadline;
+            return ESPressio::Threading::ThreadWaitResult::ProviderFailure;
+        }
+    };
+    ESPressio::Threading::ThreadContext threadContext(
+        &threadContextProbe,
+        threadContextOperations
+    );
+
+    assert(!threadContext.IsStopRequested());
+    assert(threadContext.Wait() == ESPressio::Threading::ThreadWaitResult::Woken);
+    assert(
+        threadContext.WaitFor(
+            ESPressio::Clock::Duration::FromNanoseconds(7)
+        ) == ESPressio::Threading::ThreadWaitResult::TimedOut
+    );
+    assert(
+        threadContext.WaitUntil(
+            ESPressio::Clock::MonotonicTimestamp::FromNanoseconds(9U)
+        ) == ESPressio::Threading::ThreadWaitResult::ProviderFailure
+    );
+    assert(threadContextProbe.WaitCount == 3U);
+
+
+    HostValidationStage(
+        "ordinary mutex provider"
+    );
+
+    Test::TestOrdinaryMutex ordinaryMutex;
+    assert(
+        ordinaryMutex.Acquire() ==
+        ESPressio::Threading::OrdinaryMutexAcquireResult::Acquired
+    );
+    assert(
+        ordinaryMutex.Release() ==
+        ESPressio::Threading::OrdinaryMutexReleaseResult::Released
+    );
+
+    Test::FailingOrdinaryMutex failingOrdinaryMutex;
+    assert(
+        failingOrdinaryMutex.Acquire() ==
+        ESPressio::Threading::OrdinaryMutexAcquireResult::ProviderFailure
+    );
+    assert(
+        failingOrdinaryMutex.Release() ==
+        ESPressio::Threading::OrdinaryMutexReleaseResult::ProviderFailure
     );
 
 

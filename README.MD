@@ -21,6 +21,8 @@ The public vocabulary includes:
 - `DedicatedThreadBinding<...>` / `BindDedicatedThread<ThreadIdentity>()` — binds application behaviour to a declared Dedicated Thread without moving behaviour into architectural entitlement.
 - `StaticThreadingRuntime<...>` — the concrete statically owned Bootstrap/runtime façade.
 - `BoundedWaitWakeProvider<...>` — fixed-capacity ordinary-context finite wait/wake slots for higher domains such as EDP-Command.
+- `Thread<TIdentity>::Wake()` plus `ThreadContext::Wait()/WaitFor()/WaitUntil()` — exposes the existing topology-owned Dedicated-Thread wake mechanism without a second signal allocation.
+- `OrdinaryMutexProvider<TIdentity,TMutexProvider>` — keyed ordinary-context non-recursive mutual exclusion backed by the selected Platform Mutex provider.
 
 ## Bootstrap lifecycle
 
@@ -37,7 +39,7 @@ The empty `ThreadingTopology<>` is valid. It owns no managed execution contexts,
 
 ## Determinism
 
-Capacities and topology are compile-time properties. Task records use EDP-BoundedTopology capacity-derived index storage, one-bit structural availability sets, shared intrusive FIFO topology and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context.
+Capacities and topology are compile-time properties. Task records use EDP-BoundedTopology capacity-derived index storage, one-bit structural availability sets, shared intrusive FIFO topology and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context. A Dedicated Thread may wait indefinitely after exhausting all of its work because every Threading lifecycle/control path that can require attention, including cooperative stop and infrastructure termination, wakes that same context. External higher domains publish advisory work wakes through `Thread<TIdentity>::Wake()`; the Thread must recheck all work sources and stop state after waking.
 
 Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and EDP-Memory. There are no optional ESPressio-library dependencies.
 
@@ -64,7 +66,7 @@ EDP_THREADING_RESOURCE_LOCAL_ROOT=~/DevProjects/ESPressio_Repositories \
 
 Without that variable, the committed `platformio.ini` retains the normal remote `main` dependency baseline.
 
-A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, Dedicated Thread activation/cooperative stop and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
+A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, an indefinitely waiting multi-purpose Dedicated Thread, external advisory wake delivery, keyed ordinary mutex acquisition/release, cooperative stop wake and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
 
 ## Dependencies
 

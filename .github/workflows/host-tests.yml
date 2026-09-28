@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - event_v1
   pull_request:
 
 jobs:
@@ -41,6 +42,12 @@ jobs:
           ref: main
           path: EDP-BoundedTopology
 
+      - name: Checkout EDP-Memory
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Memory
+          path: EDP-Memory
+
       - name: Compile warnings-as-errors host tests
         run: |
           g++ \
@@ -54,6 +61,7 @@ jobs:
             -IEDP-Platform/src \
             -IEDP-Clock/src \
             -IEDP-BoundedTopology/src \
+            -IEDP-Memory/src \
             EDP-Threading/tests/ThreadingFoundationTests.cpp \
             -o threading-foundation-tests
 
@@ -64,3 +72,60 @@ jobs:
         env:
           EDP_THREADING_SANITIZER_MODE: undefined
         run: bash EDP-Threading/tests/run-host-tests.sh
+
+  platform-builds:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout EDP-Threading
+        uses: actions/checkout@v4
+        with:
+          path: EDP-Threading
+
+      - name: Checkout EDP-System
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-System
+          path: EDP-System
+
+      - name: Checkout EDP-Platform
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Platform
+          path: EDP-Platform
+
+      - name: Checkout EDP-Clock
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Clock
+          path: EDP-Clock
+
+      - name: Checkout EDP-BoundedTopology
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-BoundedTopology
+          path: EDP-BoundedTopology
+
+      - name: Checkout EDP-Memory
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Memory
+          path: EDP-Memory
+
+      - name: Checkout EDP-Platform-FreeRTOS
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Platform-FreeRTOS
+          path: EDP-Platform-FreeRTOS
+
+      - name: Checkout EDP-Platform-ESP-IDF
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Platform-ESP-IDF
+          path: EDP-Platform-ESP-IDF
+
+      - name: Install PlatformIO
+        run: python -m pip install --upgrade platformio
+
+      - name: Build current-branch basic Threading demos
+        run: bash EDP-Threading/tests/run-basic-demo-builds.sh

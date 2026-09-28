@@ -78,3 +78,9 @@ Task dispatch and Dedicated Thread semantic activation are valid only while the 
 ## Empty topology
 
 `ThreadingTopology<>` is valid. It owns no Platform wake providers or managed execution resources. Wake-set, router, structural-resolver and shutdown-registration storage compile away.
+
+## Public Dedicated-Thread wake seam
+
+The public Thread handle may publish an advisory wake to the same topology-owned signal already used internally by the Dedicated Thread. `ThreadContext` exposes indefinite and bounded waits over that signal. This does not create a second work queue or notification counter; authoritative application/domain state determines what work exists.
+
+Higher domains that require ordinary non-recursive serialization may consume `OrdinaryMutex<TIdentity>` via `OrdinaryMutexProvider`, which remains Threading-owned while delegating the native mechanism to Platform.

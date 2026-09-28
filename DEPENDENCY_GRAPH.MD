@@ -1,5 +1,7 @@
 # EDP-Threading Dependency Graph
 
+> Revalidated: 2026-09-28 — Event V1 support exposes the existing Dedicated-Thread managed-context wake path publicly and adds a keyed Threading-owned ordinary mutex adapter. No dependency edge changes; EDP-Memory remains mandatory.
+
 > Revalidated: 2026-09-27 — H16 Command reconciliation changes `BoundedWaitWakeProvider::Wake` from Boolean operational success to the existing typed `BoundedWaitWakeResult`; no dependency edge changes.
 
 > Revalidated: 2026-09-26 — Command prerequisite work adds EDP-Memory as a mandatory dependency so typed Task payload lifetime/ownership operations do not bypass the Memory domain. It also adds the Threading-owned ordinary-context bounded wait point.

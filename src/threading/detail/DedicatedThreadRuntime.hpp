@@ -267,6 +267,51 @@ namespace ESPressio::Threading::Detail {
                 )->IsStopRequested();
             }
 
+            /// Bridges an indefinite ThreadContext wait to this runtime's managed-context wake mechanism.
+            static ThreadWaitResult WaitThunk(
+                void* resource
+            ) noexcept {
+                return static_cast<DedicatedThreadRuntime*>(
+                    resource
+                )->Wait();
+            }
+
+            /// Bridges a relative-duration ThreadContext wait to this runtime.
+            static ThreadWaitResult WaitForThunk(
+                void* resource,
+                Duration duration
+            ) noexcept {
+                return static_cast<DedicatedThreadRuntime*>(
+                    resource
+                )->WaitFor(
+                    duration
+                );
+            }
+
+            /// Bridges an absolute-deadline ThreadContext wait to this runtime.
+            static ThreadWaitResult WaitUntilThunk(
+                void* resource,
+                MonotonicTimestamp deadline
+            ) noexcept {
+                return static_cast<DedicatedThreadRuntime*>(
+                    resource
+                )->WaitUntil(
+                    deadline
+                );
+            }
+
+            /// Returns the static ThreadContext operation table for this concrete runtime Type.
+            static const ThreadContextOperations& ContextOperations() noexcept {
+                static const ThreadContextOperations operations{
+                    &IsStopRequestedThunk,
+                    &WaitThunk,
+                    &WaitForThunk,
+                    &WaitUntilThunk
+                };
+
+                return operations;
+            }
+
             /// Invokes the bound application callable using the supported Dedicated Thread signature.
             void InvokeCallable() {
                 if constexpr (
@@ -274,7 +319,7 @@ namespace ESPressio::Threading::Detail {
                 ) {
                     ThreadContext context(
                         this,
-                        &IsStopRequestedThunk
+                        ContextOperations()
                     );
 
                     _callable(
@@ -556,6 +601,42 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            /// Waits on this Dedicated Thread's managed-context signal using one bounded Platform timeout.
+            ThreadWaitResult WaitWithTimeout(
+                ESPressio::Platform::Synchronization::WaitTimeout timeout
+            ) noexcept {
+                const auto result = _router->Wait(
+                    _contextIndex,
+                    timeout
+                );
+
+                if (result == ESPressio::Platform::Synchronization::SignalWaitResult::Signaled) {
+                    return ThreadWaitResult::Woken;
+                }
+
+                if (result == ESPressio::Platform::Synchronization::SignalWaitResult::TimedOut) {
+                    return ThreadWaitResult::TimedOut;
+                }
+
+                return ThreadWaitResult::ProviderFailure;
+            }
+
+            /// Waits on this Dedicated Thread's managed-context signal using one canonical finite wait budget.
+            ThreadWaitResult WaitWithBudget(
+                const MonotonicWaitBudget& budget
+            ) noexcept {
+                const auto remaining = budget.Remaining();
+
+                if (remaining.IsNoWait()) {
+                    return ThreadWaitResult::TimedOut;
+                }
+
+                return WaitWithTimeout(
+                    remaining
+                );
+            }
+
+
             // Handle thunks.
 
             /// Type-erased Thread handle bridge for lifecycle-state observation.
@@ -585,6 +666,15 @@ namespace ESPressio::Threading::Detail {
                 return static_cast<DedicatedThreadRuntime*>(
                     resource
                 )->RequestStop();
+            }
+
+            /// Type-erased Thread handle bridge for advisory managed-context wake publication.
+            static ThreadWakeResult WakeThunk(
+                void* resource
+            ) noexcept {
+                return static_cast<DedicatedThreadRuntime*>(
+                    resource
+                )->Wake();
             }
 
             /// Type-erased Thread handle bridge for indefinite Join.
@@ -851,6 +941,44 @@ namespace ESPressio::Threading::Detail {
                 return result;
             }
 
+            /// Publishes one advisory wake to this Dedicated Thread's managed-context signal.
+            ThreadWakeResult Wake() noexcept {
+                return _router->Wake(
+                    _contextIndex
+                ) == ESPressio::Platform::Synchronization::SignalNotifyResult::Signaled
+                    ? ThreadWakeResult::Woken
+                    : ThreadWakeResult::ProviderFailure;
+            }
+
+            /// Waits indefinitely on this Dedicated Thread's reusable managed-context signal.
+            ThreadWaitResult Wait() noexcept {
+                return WaitWithTimeout(
+                    ESPressio::Platform::Synchronization::WaitTimeout::Forever()
+                );
+            }
+
+            /// Waits for one managed-context wake using a relative canonical monotonic-time budget.
+            ThreadWaitResult WaitFor(
+                Duration duration
+            ) noexcept {
+                return WaitWithBudget(
+                    MonotonicWaitBudget::For(
+                        duration
+                    )
+                );
+            }
+
+            /// Waits for one managed-context wake until a canonical monotonic deadline.
+            ThreadWaitResult WaitUntil(
+                MonotonicTimestamp deadline
+            ) noexcept {
+                return WaitWithBudget(
+                    MonotonicWaitBudget::Until(
+                        deadline
+                    )
+                );
+            }
+
             /// Joins the activation captured when this call begins.
             ThreadJoinResult Join() {
                 return JoinWithBudget(
@@ -943,6 +1071,7 @@ namespace ESPressio::Threading::Detail {
                     &StateThunk,
                     &StartThunk,
                     &RequestStopThunk,
+                    &WakeThunk,
                     &JoinThunk,
                     &JoinForThunk,
                     &JoinUntilThunk
