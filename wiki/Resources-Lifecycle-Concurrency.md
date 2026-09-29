@@ -6,7 +6,7 @@ EDP-BoundedTopology-backed storage preserves the existing Threading memory targe
 
 `TaskRecord::QueueOrExecutionContext` remains one lifecycle-reused compact scalar. Queue linkage and execution-context identity are mutually exclusive, so strong identities are reconstructed at topology boundaries rather than both being retained.
 
-Lifecycle is construction -> Initialize -> Start -> operational -> BeginShutdown -> execution quiescence -> FinalizeShutdown. Shutdown is cooperative and non-forcing. Canonical waits use EDP-Clock monotonic time. No general ISR-safety claim applies to Threading operations.
+Lifecycle is construction -> Initialize -> Start -> operational -> BeginShutdown -> execution quiescence -> FinalizeShutdown. Shutdown is cooperative and non-forcing. Canonical waits use EDP-Clock monotonic time. A Dedicated Thread may wait indefinitely on its existing managed-context signal; external work publication, cooperative stop and infrastructure termination all wake the same signal. A wake is advisory and the Thread rechecks every owned work source plus stop state. No general ISR-safety claim applies to Threading operations.
 
 ## Bounded-topology migration validation
 
@@ -14,4 +14,4 @@ Before reintegration into `main`, target-compiled retained RAM was remeasured ac
 
 Every non-baseline scenario retained exactly the same `total` and `intrinsic` byte count as the validated 23 September baseline. The migration therefore adds no retained Threading RAM in the measured matrix.
 
-Current branch validation also passes warnings-as-errors host execution, the separate Host foundation suite, and UBSan.
+Current branch validation also passes warnings-as-errors host execution, the separate Host foundation suite, and UBSan. Event-support work adds no second wake resource: `ThreadContext` retains only a runtime pointer plus one static-operation-table pointer. A keyed `OrdinaryMutexProvider` retains only its explicitly selected Platform mutex when instantiated.

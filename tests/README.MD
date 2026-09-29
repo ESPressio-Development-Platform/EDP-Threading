@@ -25,7 +25,7 @@ Run the current supported sanitizer validation with:
 EDP_THREADING_SANITIZER_MODE=undefined bash tests/run-host-tests.sh
 ```
 
-AddressSanitizer modes remain available through `EDP_THREADING_SANITIZER_MODE=address` or `address,undefined`, but on the validating macOS host ASan currently hangs before `main()`. That behavior is treated as a host sanitizer/runtime limitation, not as Threading PASS or failure evidence.
+AddressSanitizer modes remain available through `EDP_THREADING_SANITIZER_MODE=address` or `address,undefined`, but on the authoritative RPI400 appliance the ASan primary allocator currently aborts during initialization before any Threading test reaches `main()`. That behavior is treated as an appliance/toolchain limitation, not as Threading PASS or failure evidence.
 
 ## ESP32 integration demo
 
@@ -60,3 +60,11 @@ EDP-Threading demo: PASS
 ```
 
 The Arduino IDE variant is in `demos/basic-threading/Arduino_IDE` and requires the EDP libraries used by the PlatformIO manifests to be installed in the Arduino library search path.
+
+For authoritative branch-coherent build validation on RPI400, run:
+
+```bash
+bash tests/run-basic-demo-builds.sh
+```
+
+The runner injects the sibling repository `src` directories directly so PlatformIO cannot silently substitute remote `main` packages for the branch topology under test.

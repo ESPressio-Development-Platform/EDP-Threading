@@ -22,6 +22,9 @@ namespace ESPressio::Threading {
             /// Requests cooperative stop of the current activation.
             ThreadStopRequestResult (*RequestStop)(void*) noexcept;
 
+            /// Publishes one advisory wake to the Dedicated Thread's managed-context signal.
+            ThreadWakeResult (*Wake)(void*) noexcept;
+
             /// Joins the activation captured when this operation begins.
             ThreadJoinResult (*Join)(void*);
 
@@ -142,6 +145,17 @@ namespace ESPressio::Threading {
                 }
 
                 return _operations->RequestStop(
+                    _resource
+                );
+            }
+
+            /// Publishes one advisory wake to this Dedicated Thread's topology-owned wake signal.
+            ThreadWakeResult Wake() noexcept {
+                if (!IsValid()) {
+                    return ThreadWakeResult::ProviderFailure;
+                }
+
+                return _operations->Wake(
                     _resource
                 );
             }

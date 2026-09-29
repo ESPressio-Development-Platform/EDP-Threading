@@ -128,3 +128,9 @@ All fourteen migration measurement environments built successfully. The strict R
 The migration therefore introduces **zero retained RAM regression** in the validated matrix. In particular, the one-byte Task control, one-bit-per-resource availability representation, two-index FIFO state and lifecycle-reused Task scratch scalar remain preserved in target-compiled layouts.
 
 The whole-image text/data/BSS columns are retained as build evidence, but the migration's locked memory gate concerns the deterministic Threading runtime categories above. Coherent-local measurement mode also narrows ESP-IDF inclusion to the exact ExecutionContext and SpinLock provider headers consumed by this harness, so whole-image sections are not used as a substitute for the explicit retained-resource categories.
+
+## Event-support synchronization surfaces
+
+The Dedicated-Thread public wake/wait seam adds no per-Thread retained synchronization resource: it exposes the signal already counted as the one reusable targeted wake per managed context. `ThreadContext` retains one resource pointer plus one pointer to a static operation table. `Thread::Wake()` adds only a static handle-operation entry.
+
+A keyed `OrdinaryMutexProvider<TIdentity,...>` retains exactly the selected Platform Mutex provider when explicitly instantiated by an application/higher domain; absent use, it creates no runtime storage.

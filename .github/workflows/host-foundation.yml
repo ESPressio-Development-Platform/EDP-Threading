@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - event_v1
   pull_request:
 
 jobs:
@@ -44,6 +45,12 @@ jobs:
           ref: main
           path: EDP-BoundedTopology
 
+      - name: Checkout EDP-Memory
+        uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Memory
+          path: EDP-Memory
+
       - name: Compile foundation tests
         run: |
           g++ \
@@ -57,6 +64,7 @@ jobs:
             -IEDP-Platform/src \
             -IEDP-Clock/src \
             -IEDP-BoundedTopology/src \
+            -IEDP-Memory/src \
             EDP-Threading/tests/ThreadingFoundationTests.cpp \
             -o threading-foundation-tests
 

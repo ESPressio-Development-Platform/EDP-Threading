@@ -1,145 +1,49 @@
 # src/threading/ThreadingTypes.hpp
 
-**Primary classification:** PUBLIC API
+**Primary classification:** PUBLIC API / INTERNAL TYPE-ERASURE SUPPORT
 
-**Source baseline:** `ea0bf415eacd70064c3c7216a6c1e6a48cd85038`
+**Source baseline:** `5e276063a24790fb77d7366136e1e94db2c5ee3d`
 
-[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/ea0bf415eacd70064c3c7216a6c1e6a48cd85038/src/threading/ThreadingTypes.hpp)
+[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/5e276063a24790fb77d7366136e1e94db2c5ee3d/src/threading/ThreadingTypes.hpp)
 
-## Direct includes
+## Purpose
 
-- `cstddef`
-- `cstdint`
-- `ESPressio_Clock.hpp`
-- `ESPressio_Platform.hpp`
+Defines Threading result/state vocabularies, canonical time aliases and invocation-local Task/Thread context views.
 
-## Documented declarations
+## Public result/state declarations
 
-### `ThreadPriority`
+Existing Task/Thread/lifecycle enums remain unchanged. Event-support work adds:
 
-**Classification:** PUBLIC API
+### `ThreadWakeResult`
 
-Logical execution-priority vocabulary shared with the Platform execution contract.
+- `Woken`
+- `ProviderFailure`
 
-```cpp
-using ThreadPriority = ESPressio::Platform::Execution::ExecutionPriority;
-```
+### `ThreadWaitResult`
 
-### `ProcessorAffinity`
+- `Woken`
+- `TimedOut`
+- `ProviderFailure`
 
-**Classification:** PUBLIC API
+The header also exports `ThreadPriority`, `ProcessorAffinity`, `Duration`, and `MonotonicTimestamp` aliases.
 
-Logical processor-affinity vocabulary shared with the Platform execution contract.
+## Context declarations
 
-```cpp
-using ProcessorAffinity = ESPressio::Platform::Execution::ProcessorAffinity;
-```
+### `TaskContext` — PUBLIC API
 
-### `Duration`
+Retains the active Task record and cancellation predicate and exposes `IsCancellationRequested()`.
 
-**Classification:** PUBLIC API
+### `Detail::ThreadContextOperations` — INTERNAL TYPE-ERASURE TABLE
 
-Canonical physical-duration Type supplied by EDP-Clock.
+Static operations for `IsStopRequested`, `Wait`, `WaitFor`, and `WaitUntil`. One table is shared by all context views of the same concrete Dedicated Thread runtime Type.
 
-```cpp
-using Duration = ESPressio::Clock::Duration;
-```
+### `ThreadContext` — PUBLIC API
 
-### `MonotonicTimestamp`
+Retains exactly two pointers: the concrete Dedicated Thread runtime and its static operations table. Public operations:
 
-**Classification:** PUBLIC API
+- `IsStopRequested() const noexcept`
+- `Wait() noexcept` — waits indefinitely for the topology-owned wake signal.
+- `WaitFor(Duration) noexcept` — relative canonical-time wait.
+- `WaitUntil(MonotonicTimestamp) noexcept` — absolute canonical monotonic wait.
 
-Canonical monotonic-coordinate Type supplied by EDP-Clock.
-
-```cpp
-using MonotonicTimestamp = ESPressio::Clock::MonotonicTimestamp;
-```
-
-### `_context`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
-
-Opaque active Task record supplied by the facility.
-
-```cpp
-const void* _context;
-```
-
-### `bool`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
-
-Predicate used to inspect cancellation without duplicating control state.
-
-```cpp
-bool (*_isCancellationRequested)(const void*) noexcept;
-```
-
-### `TaskContext`
-
-**Classification:** PUBLIC API · source access: `public`
-
-Creates a lightweight view over one active Task's authoritative cancellation state.
-
-```cpp
-TaskContext(
-                const void* context,
-                bool (*isCancellationRequested)(const void*) noexcept
-            ) noexcept :
-                _context(context),
-```
-
-### `IsCancellationRequested`
-
-**Classification:** PUBLIC API · source access: `public`
-
-Indicates whether cooperative Task cancellation has been requested.
-
-```cpp
-bool IsCancellationRequested() const noexcept
-```
-
-### `_context`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
-
-Opaque Dedicated Thread resource supplied by the runtime.
-
-```cpp
-const void* _context;
-```
-
-### `bool`
-
-**Classification:** PRIVATE IMPLEMENTATION · source access: `private`
-
-Predicate used to inspect stop state without duplicating control state.
-
-```cpp
-bool (*_isStopRequested)(const void*) noexcept;
-```
-
-### `ThreadContext`
-
-**Classification:** PUBLIC API · source access: `public`
-
-Creates a lightweight view over one activation's authoritative stop state.
-
-```cpp
-ThreadContext(
-                const void* context,
-                bool (*isStopRequested)(const void*) noexcept
-            ) noexcept :
-                _context(context),
-```
-
-### `IsStopRequested`
-
-**Classification:** PUBLIC API · source access: `public`
-
-Indicates whether cooperative Dedicated Thread stop has been requested.
-
-```cpp
-bool IsStopRequested() const noexcept
-```
-
+A wake is not a counted work item. The caller must recheck all authoritative work/control state after return.

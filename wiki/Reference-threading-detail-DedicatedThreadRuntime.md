@@ -2,9 +2,9 @@
 
 **Primary classification:** PRIVATE IMPLEMENTATION
 
-**Source baseline:** `50dbad50650df9fc38dd17cd3b17a60a92a5d802`
+**Source baseline:** `5e276063a24790fb77d7366136e1e94db2c5ee3d`
 
-[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/50dbad50650df9fc38dd17cd3b17a60a92a5d802/src/threading/detail/DedicatedThreadRuntime.hpp)
+[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/5e276063a24790fb77d7366136e1e94db2c5ee3d/src/threading/detail/DedicatedThreadRuntime.hpp)
 
 ## Direct includes
 
@@ -747,4 +747,8 @@ Deterministic byte count reported for `StackBackingBytes`.
 ```cpp
 static constexpr std::size_t StackBackingBytes() noexcept
 ```
+## Event-support wake/wait additions at this baseline
 
+The concrete runtime now supplies `ThreadContext` through a static `ThreadContextOperations` table rather than embedding per-operation pointers in each context view. New private bridges are `WaitThunk`, `WaitForThunk`, `WaitUntilThunk`, `ContextOperations`, `WaitWithTimeout`, `WaitWithBudget`, and type-erased `WakeThunk`.
+
+New runtime operations are `Wake()`, `Wait()`, `WaitFor(Duration)`, and `WaitUntil(MonotonicTimestamp)`. All route through `_router` + `_contextIndex`; no additional signal is retained. `HandleOperations()` now includes `WakeThunk`. `RequestStop()` and `RequestInfrastructureTermination()` continue to publish through the same router wake path, preserving the invariant that an indefinitely waiting Dedicated Thread can observe stop/termination.

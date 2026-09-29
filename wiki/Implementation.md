@@ -7,3 +7,7 @@ Compact index width selection now delegates to `EDP-BoundedTopology::BoundedInde
 The critical scratch optimization remains unchanged: `TaskRecord::QueueOrExecutionContext` is one raw scalar whose interpretation changes from next-record identity while Queued to managed execution-context identity after Worker grant. The implementation never stores both identities simultaneously.
 
 Dedicated-thread Join captures an activation phase so a later restart cannot accidentally satisfy a wait targeting the previous activation. BeginShutdown is terminal and rejects new admission while propagating cancellation/stop requests.
+
+Dedicated Thread handles and invocation-local `ThreadContext` views reach the concrete runtime through static type-erased operation tables. Adding public wake/wait therefore does not add per-Thread notification storage. The context view remains exactly two pointers: runtime + operations table.
+
+`OrdinaryMutexProvider` is an additive adapter and owns no registry: each explicitly instantiated keyed provider contains exactly one concrete Platform non-recursive Mutex provider.

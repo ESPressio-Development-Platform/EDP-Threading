@@ -10,11 +10,13 @@ EDP-Threading demo: PASS
 
 The demo deliberately uses `AbandonImmediately` for Task admission and polls terminal state from the application context, so it does not require application monotonic-clock binding merely to demonstrate the core execution lifecycle.
 
-It validates the complete consumer lifecycle: static topology construction, initialization, transactional infrastructure Start, Task dispatch/result extraction, Dedicated Thread activation/cooperative stop, terminal shutdown, infrastructure finalization and shutdown-completion observation.
+It validates the complete consumer lifecycle: static topology construction, initialization, transactional infrastructure Start, Task dispatch/result extraction, Dedicated Thread activation, indefinite `ThreadContext::Wait()`, external `Thread::Wake()` work notification, keyed `OrdinaryMutexProvider` acquisition/release, cooperative-stop wake, terminal shutdown, infrastructure finalization and shutdown-completion observation.
+
+The Dedicated Thread is intentionally multi-purpose in shape: a wake is advisory rather than an Event/work token. After every wake it rechecks stop state and then services the demonstration work source. `RequestStop()` wakes the same managed-context signal, proving that an indefinitely blocked Thread can still cooperate with termination.
 
 ## Concrete providers
 
-The Arduino targets use the vanilla FreeRTOS execution, signal and mutex providers plus the ESP-IDF `SpinLockProvider` for the single topology-wide lifecycle byte. The ESP-IDF target uses the ESP-IDF execution provider (including its native affinity-capable implementation), the FreeRTOS signal/mutex providers and the same ESP-IDF spin lock. Per-Task and per-Dedicated-Thread intrinsic control remains exactly one byte and is serialized through the mutex already owned by the corresponding runtime. This keeps lifecycle publication race-safe without requiring a target-wide lock-free atomic guarantee that the Xtensa toolchain does not advertise.
+Both Arduino and ESP-IDF demo targets use the FreeRTOS execution, signal and mutex providers plus the ESP-IDF `SpinLockProvider` for the single topology-wide lifecycle byte. The dedicated Threading resource-measurement matrix separately exercises the ESP-IDF execution provider and its native affinity-capable implementation. Per-Task and per-Dedicated-Thread intrinsic control remains exactly one byte and is serialized through the mutex already owned by the corresponding runtime. This keeps lifecycle publication race-safe without requiring a target-wide lock-free atomic guarantee that the Xtensa toolchain does not advertise.
 
 PlatformIO manifests declare every required EDP repository explicitly. For current-tip validation, remove the selected demo's local `.pio` directory before building so the EDP `#main` dependencies are freshly resolved instead of being reused from PlatformIO's cached checkout. The Arduino IDE variant requires those libraries to be installed in the Arduino library search path.
 

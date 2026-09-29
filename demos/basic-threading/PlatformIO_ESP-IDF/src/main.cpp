@@ -1,10 +1,11 @@
+#include <atomic>
 #include <cstdint>
 #include <cstdio>
 #include <tuple>
 #include <utility>
 
 #include <ESPressio_Platform_FreeRTOS.hpp>
-#include <ESPressio_Platform_ESP_IDF.hpp>
+#include <synchronization/SpinLockProvider.hpp>
 #include <ESPressio_Threading.hpp>
 
 namespace Demo {
@@ -20,10 +21,14 @@ namespace Demo {
         TaskDispatchFailed = 3,
         TaskResultMismatch = 4,
         ThreadActivationFailed = 5,
-        ThreadStopRequestFailed = 6,
-        ShutdownInitiationFailed = 7,
-        FinalizationFailed = 8,
-        TerminalWaitFailed = 9
+        ThreadWakeFailed = 6,
+        ThreadWakeNotObserved = 7,
+        ThreadWaitFailed = 8,
+        MutexFailed = 9,
+        ThreadStopRequestFailed = 10,
+        ShutdownInitiationFailed = 11,
+        FinalizationFailed = 12,
+        TerminalWaitFailed = 13
     };
 
 
@@ -33,15 +38,9 @@ namespace Demo {
     using SignalProvider =
         ESPressio::Platform::FreeRTOS::Synchronization::SignalProvider;
 
-#ifdef ARDUINO
-    /// Native execution-context provider selected by the Arduino-ESP32 surface.
+    /// Native FreeRTOS execution-context provider shared by both ESP32 demo surfaces.
     using ExecutionContextProvider =
         ESPressio::Platform::FreeRTOS::Execution::ExecutionContextProvider;
-#else
-    /// Native execution-context provider selected by the ESP-IDF surface.
-    using ExecutionContextProvider =
-        ESPressio::Platform::ESPIDF::Execution::ExecutionContextProvider;
-#endif
 
     /// Topology lifecycle SpinLock provider.
     using SpinLockProvider =
@@ -60,15 +59,42 @@ namespace Demo {
     /// Semantic identity of the persistent Dedicated Thread.
     struct HeartbeatThread final {};
 
+    /// Semantic identity of an independent ordinary-context mutex.
+    struct DemonstrationMutex final {};
+
+    /// Number of application-work wakes observed by the Dedicated Thread.
+    std::atomic<std::uint32_t> HeartbeatWakeCount{0U};
+
+    /// Indicates that the Dedicated Thread's managed-context wait provider failed.
+    std::atomic<bool> HeartbeatWaitFailed{false};
+
     /// Stateful callable bound to the Dedicated Thread.
     struct Heartbeat final {
 
-        /// Runs one semantic Dedicated Thread activation until cooperative stop is requested.
+        /// Waits indefinitely for work and rechecks stop state after every advisory wake.
         void operator ()(
             Threading::ThreadContext& context
         ) noexcept {
             while (!context.IsStopRequested()) {
-                ExecutionContextProvider::Yield();
+                if (
+                    context.Wait() !=
+                    Threading::ThreadWaitResult::Woken
+                ) {
+                    HeartbeatWaitFailed.store(
+                        true,
+                        std::memory_order_relaxed
+                    );
+                    return;
+                }
+
+                if (context.IsStopRequested()) {
+                    return;
+                }
+
+                HeartbeatWakeCount.fetch_add(
+                    1U,
+                    std::memory_order_relaxed
+                );
             }
         }
 
@@ -192,6 +218,62 @@ namespace Demo {
         ) {
             Print("EDP-Threading demo: Dedicated Thread activation failed");
             return DemonstrationResult::ThreadActivationFailed;
+        }
+
+        if (
+            thread.Wake() !=
+            Threading::ThreadWakeResult::Woken
+        ) {
+            Print("EDP-Threading demo: Dedicated Thread wake failed");
+            return DemonstrationResult::ThreadWakeFailed;
+        }
+
+        for (std::size_t spin = 0U; spin < 100000U; ++spin) {
+            if (
+                HeartbeatWakeCount.load(
+                    std::memory_order_relaxed
+                ) > 0U ||
+                HeartbeatWaitFailed.load(
+                    std::memory_order_relaxed
+                )
+            ) {
+                break;
+            }
+
+            ExecutionContextProvider::Yield();
+        }
+
+        if (
+            HeartbeatWaitFailed.load(
+                std::memory_order_relaxed
+            )
+        ) {
+            Print("EDP-Threading demo: Dedicated Thread wait provider failed");
+            return DemonstrationResult::ThreadWaitFailed;
+        }
+
+        if (
+            HeartbeatWakeCount.load(
+                std::memory_order_relaxed
+            ) == 0U
+        ) {
+            Print("EDP-Threading demo: Dedicated Thread wake was not observed");
+            return DemonstrationResult::ThreadWakeNotObserved;
+        }
+
+        Threading::OrdinaryMutexProvider<
+            DemonstrationMutex,
+            MutexProvider
+        > ordinaryMutex;
+
+        if (
+            ordinaryMutex.Acquire() !=
+            Threading::OrdinaryMutexAcquireResult::Acquired ||
+            ordinaryMutex.Release() !=
+            Threading::OrdinaryMutexReleaseResult::Released
+        ) {
+            Print("EDP-Threading demo: ordinary mutex failed");
+            return DemonstrationResult::MutexFailed;
         }
 
         if (

@@ -1,6 +1,6 @@
 # Dependency Contracts
 
-EDP-Threading depends on **EDP-System**, **EDP-Platform**, **EDP-Clock** and **EDP-BoundedTopology**.
+EDP-Threading depends on **EDP-System**, **EDP-Platform**, **EDP-Clock**, **EDP-BoundedTopology** and **EDP-Memory**.
 
 ## EDP-System
 
@@ -38,3 +38,11 @@ No provider object or runtime lifetime is supplied by EDP-BoundedTopology; the d
 ## Ownership boundary
 
 Threading owns semantic Task/Thread lifecycle and Threading-specific bounded runtime state meaning. Platform owns native execution/synchronization semantics. Clock owns time. BoundedTopology owns only the reusable finite-index topology mechanics. No dependency is allowed to invert those ownership boundaries.
+
+## EDP-Memory
+
+EDP-Memory remains the mandatory typed object-lifetime and ownership-transfer boundary used by Threading Task payloads. Event-support wake/mutex additions do not change that edge.
+
+## Higher-domain synchronization boundary
+
+Higher domains may publish work to a Dedicated Thread through `Thread<TIdentity>::Wake()` and may consume the keyed `OrdinaryMutex<TIdentity>` Threading capability. These surfaces deliberately keep higher domains from depending on Platform Signal/Mutex vocabulary directly.

@@ -46,3 +46,7 @@ Shutdown is terminal and initiation is nonblocking. `BeginShutdown()` changes th
 `IsExecutionQuiescent()` scans every resource. Execution quiescence is distinct from Task-record retention: completed/cancelled records may remain because a public handle or waiter still exists without keeping Worker infrastructure alive. Arbitrary user code is never forcefully terminated; a noncooperating callable may therefore prevent terminal shutdown forever.
 
 After quiescence, `FinalizeShutdown()` requests infrastructure termination, joins and destroys all persistent contexts, publishes `ShutdownComplete`, then wakes the runtime-owned bounded shutdown waiters. Applications may observe completion with `WaitForShutdown()`, `WaitForShutdownFor()` or `WaitForShutdownUntil()`. Completion publication occurs once and only after teardown.
+
+## Dedicated Thread work waiting
+
+A running Dedicated Thread may call `ThreadContext::Wait()` indefinitely after it has exhausted its current work. External work producers use `Thread<TIdentity>::Wake()` and lifecycle paths such as `RequestStop()` and infrastructure termination wake the same managed-context signal. After every wake the callable must recheck `IsStopRequested()` and all application work sources; a wake is not itself proof of one unit of work.

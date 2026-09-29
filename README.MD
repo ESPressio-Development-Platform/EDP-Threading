@@ -21,6 +21,8 @@ The public vocabulary includes:
 - `DedicatedThreadBinding<...>` / `BindDedicatedThread<ThreadIdentity>()` — binds application behaviour to a declared Dedicated Thread without moving behaviour into architectural entitlement.
 - `StaticThreadingRuntime<...>` — the concrete statically owned Bootstrap/runtime façade.
 - `BoundedWaitWakeProvider<...>` — fixed-capacity ordinary-context finite wait/wake slots for higher domains such as EDP-Command.
+- `Thread<TIdentity>::Wake()` plus `ThreadContext::Wait()/WaitFor()/WaitUntil()` — exposes the existing topology-owned Dedicated-Thread wake mechanism without a second signal allocation.
+- `OrdinaryMutexProvider<TIdentity,TMutexProvider>` — keyed ordinary-context non-recursive mutual exclusion backed by the selected Platform Mutex provider.
 
 ## Bootstrap lifecycle
 
@@ -37,7 +39,7 @@ The empty `ThreadingTopology<>` is valid. It owns no managed execution contexts,
 
 ## Determinism
 
-Capacities and topology are compile-time properties. Task records use EDP-BoundedTopology capacity-derived index storage, one-bit structural availability sets, shared intrusive FIFO topology and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context.
+Capacities and topology are compile-time properties. Task records use EDP-BoundedTopology capacity-derived index storage, one-bit structural availability sets, shared intrusive FIFO topology and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context. A Dedicated Thread may wait indefinitely after exhausting all of its work because every Threading lifecycle/control path that can require attention, including cooperative stop and infrastructure termination, wakes that same context. External higher domains publish advisory work wakes through `Thread<TIdentity>::Wake()`; the Thread must recheck all work sources and stop state after waking.
 
 Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and EDP-Memory. There are no optional ESPressio-library dependencies.
 
@@ -45,7 +47,7 @@ Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and 
 
 The v1 source implementation includes compile-time topology/requirements, bounded Task facilities, FIFO Worker-Lease scheduling, isolated single-Worker `DedicatedWorkerLease` resources, persistent restart-safe Dedicated Threads, dense targeted wake routing, canonical monotonic waits/sleep, transactional infrastructure Start/rollback, terminal cooperative shutdown and static runtime ownership.
 
-Earlier validation on 20 September 2026 established PASS evidence for the warnings-as-errors host suite, the UBSan host suite, PlatformIO Arduino compile/link plus physical ESP32 runtime, and PlatformIO ESP-IDF compile/link plus physical ESP32 runtime. Those results pre-date the final V2 compliance cleanup that subsequently changed Threading and execution-provider production surfaces, so they remain historical evidence rather than current-tip validation. The present tips still require fresh host/provider validation and fresh Arduino/ESP-IDF target builds plus physical runtime confirmation before completion is claimed. ASan on the validating macOS host hangs before `main()`; that is recorded as a host sanitizer/runtime limitation rather than a Threading PASS or failure.
+Current `event_v1` validation is executed on the authoritative RPI400 appliance. The warnings-as-errors GCC host suite, Clang host suite, UBSan host suite, and coherent local-source PlatformIO Arduino/ESP-IDF demo builds pass for the Dedicated-Thread wake/wait and keyed ordinary-mutex tranche. AddressSanitizer is unavailable on this appliance because its primary allocator aborts during initialization before any Threading test reaches `main()`; that is recorded as an appliance/toolchain limitation rather than Threading PASS or failure. The complete retained-resource matrix and physical ESP32 runtime evidence are tracked in the Event implementation living Handoff and must be complete before the tranche is closed.
 
 The bounded-topology migration is now integrated into `main`. Its validation is complete: warnings-as-errors host execution, the separate Host foundation workflow, UBSan, and all fourteen coherent Arduino/ESP-IDF resource-measurement environments are green. Every validated `total` and `intrinsic` retained-RAM figure is byte-for-byte identical to the 23 September baseline; see [Deterministic resources](./docs/RESOURCES.MD). No version mutation is performed during this development.
 
@@ -64,7 +66,7 @@ EDP_THREADING_RESOURCE_LOCAL_ROOT=~/DevProjects/ESPressio_Repositories \
 
 Without that variable, the committed `platformio.ini` retains the normal remote `main` dependency baseline.
 
-A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, Dedicated Thread activation/cooperative stop and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
+A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, an indefinitely waiting multi-purpose Dedicated Thread, external advisory wake delivery, keyed ordinary mutex acquisition/release, cooperative stop wake and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
 
 ## Dependencies
 

@@ -74,6 +74,19 @@ namespace ESPressio::Threading {
     };
 
 
+    enum class ThreadWakeResult : std::uint8_t {
+        Woken = 0,
+        ProviderFailure = 1
+    };
+
+
+    enum class ThreadWaitResult : std::uint8_t {
+        Woken = 0,
+        TimedOut = 1,
+        ProviderFailure = 2
+    };
+
+
     enum class SleepResult : std::uint8_t {
         Completed = 0,
         Interrupted = 1
@@ -173,6 +186,19 @@ namespace ESPressio::Threading {
     };
 
 
+    namespace Detail {
+
+        /// Type-erased operations bound to one active Dedicated Thread context.
+        struct ThreadContextOperations final {
+            bool (*IsStopRequested)(const void*) noexcept;
+            ThreadWaitResult (*Wait)(void*) noexcept;
+            ThreadWaitResult (*WaitFor)(void*, Duration) noexcept;
+            ThreadWaitResult (*WaitUntil)(void*, MonotonicTimestamp) noexcept;
+        };
+
+    } // ESPressio::Threading::Detail
+
+
     class ThreadContext final {
 
         private:
@@ -180,10 +206,10 @@ namespace ESPressio::Threading {
             // Stop observation.
 
             /// Opaque Dedicated Thread resource supplied by the runtime.
-            const void* _context;
+            void* _context;
 
-            /// Predicate used to inspect stop state without duplicating control state.
-            bool (*_isStopRequested)(const void*) noexcept;
+            /// Static operation table for this concrete Dedicated Thread runtime Type.
+            const Detail::ThreadContextOperations* _operations;
 
         public:
 
@@ -191,19 +217,49 @@ namespace ESPressio::Threading {
 
             /// Creates a lightweight view over one activation's authoritative stop state.
             ThreadContext(
-                const void* context,
-                bool (*isStopRequested)(const void*) noexcept
+                void* context,
+                const Detail::ThreadContextOperations& operations
             ) noexcept :
                 _context(context),
-                _isStopRequested(isStopRequested) {}
+                _operations(&operations) {}
 
 
             // Stop inspection.
 
             /// Indicates whether cooperative Dedicated Thread stop has been requested.
             bool IsStopRequested() const noexcept {
-                return _isStopRequested(
+                return _operations->IsStopRequested(
                     _context
+                );
+            }
+
+
+            // Managed-context waiting.
+
+            /// Waits indefinitely until this Dedicated Thread's reusable wake signal is published.
+            ThreadWaitResult Wait() noexcept {
+                return _operations->Wait(
+                    _context
+                );
+            }
+
+            /// Waits for a wake using one relative canonical monotonic-time budget.
+            ThreadWaitResult WaitFor(
+                Duration duration
+            ) noexcept {
+                return _operations->WaitFor(
+                    _context,
+                    duration
+                );
+            }
+
+            /// Waits for a wake until one canonical monotonic deadline.
+            ThreadWaitResult WaitUntil(
+                MonotonicTimestamp deadline
+            ) noexcept {
+                return _operations->WaitUntil(
+                    _context,
+                    deadline
                 );
             }
 
