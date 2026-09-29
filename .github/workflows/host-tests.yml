@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - event_v1
   pull_request:
 
 jobs:
