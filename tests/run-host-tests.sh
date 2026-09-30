@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKSPACE="$(cd "${ROOT}/.." && pwd)"
+CXX_BIN="${CXX:-c++}"
 
 required=(
     "EDP-System"
@@ -28,7 +29,7 @@ cleanup() {
 trap cleanup EXIT
 
 compile_tests() {
-    c++ \
+    "${CXX_BIN}" \
         -std=c++20 \
         -Wall \
         -Wextra \
@@ -86,3 +87,5 @@ else
 fi
 
 echo "EDP-Threading host foundation tests: PASS"
+
+"${ROOT}/tests/run-fail-closed-ordinary-mutex-tests.sh"

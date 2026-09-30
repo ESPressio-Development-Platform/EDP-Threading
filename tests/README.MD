@@ -17,7 +17,7 @@ Then, from `EDP-Threading`:
 bash tests/run-host-tests.sh
 ```
 
-The runner compiles `ThreadingFoundationTests.cpp` as C++20 with `-Wall -Wextra -Wpedantic -Werror`, executes it, and removes the temporary binary. Runtime progress markers are always emitted.
+The runner compiles `ThreadingFoundationTests.cpp` as C++20 with `-Wall -Wextra -Wpedantic -Werror`, executes it, then executes the focused `FailClosedOrdinaryMutexTests.cpp` suite. That focused suite covers healthy ownership, acquire failure, release failure, sticky terminal state, and a caller already waiting when another caller discovers release failure. Temporary binaries are removed. Runtime progress markers are always emitted.
 
 Run the current supported sanitizer validation with:
 

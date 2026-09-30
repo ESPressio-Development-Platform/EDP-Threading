@@ -29,3 +29,5 @@ Esptool defines `--no-progress` on the `write-flash` subcommand, not as a global
 ## C++ Language Baseline
 
 Both PlatformIO-compatible surfaces compile as C++20. The Arduino surface selects maintained PIOArduino stable explicitly. The ESP-IDF surface intentionally retains the previously compile/link-validated PIOArduino commit pin `d41d8383706dc146fd91a0e1d3c59a915a4d493e` so its known PlatformIO Core/SCons/ESP-IDF compatibility is preserved.
+
+The demo also instantiates `FailClosedOrdinaryMutexProvider` using the platform Mutex and SpinLock concretes and verifies one healthy acquire/release cycle without latching terminal failure.

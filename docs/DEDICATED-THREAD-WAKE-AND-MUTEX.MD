@@ -15,3 +15,13 @@ These APIs are ordinary-context operations. They make no ISR-safety promise.
 `OrdinaryMutex<TIdentity>` is an exclusive Threading Composition capability whose identity separates unrelated consumers. `OrdinaryMutexProvider<TIdentity,TMutexProvider>` owns one selected Platform non-recursive Mutex provider and exposes only indefinite ordinary-context `Acquire()` and `Release()` operations with strong Threading-owned result enums.
 
 The adapter exists so higher domains such as Event can depend on a Threading synchronization contract without depending directly on Platform synchronization vocabulary. It adds no global registry, recursion, ISR surface, hidden allocation, or fallback resource.
+
+## Fail-closed keyed ordinary mutex
+
+`FailClosedOrdinaryMutex<TIdentity>` is a separate exclusive Threading capability for consumers whose correctness requires a sticky terminal synchronization-failure state. `FailClosedOrdinaryMutexProvider<TIdentity,TMutexProvider,TFailureSpinLockProvider>` owns the selected Platform non-recursive Mutex together with an independent Platform SpinLock protecting one sticky failure byte. It remains ordinary-context only and non-recursive.
+
+Healthy `Acquire()` uses finite native-mutex wait slices and rechecks the failure latch between slices. The public operation therefore still waits indefinitely while healthy, while a caller that was already waiting can observe a failure latched by another caller instead of remaining blocked forever behind a native mutex whose ownership integrity is uncertain. The target failure-observation interval is 1 ms, rounded upward to the selected Mutex provider's advertised wait resolution.
+
+`Acquire()` distinguishes `Acquired`, previously latched `FailedState`, and the call which first observes a native `ProviderFailure`. `Release()` similarly distinguishes `Released`, `FailedState`, and `ProviderFailure`. Any native acquire/release provider failure latches terminal failure before returning. `IsFailed()` reads that latch under the independent SpinLock. The latch is never cleared during the provider object's lifetime.
+
+The SpinLock is intentionally used instead of assuming a lock-free C++ atomic exists on every target. This keeps Platform mechanics inside Threading and allows higher domains such as RemoteSystem to consume one Threading provider without taking a direct Platform dependency. The failure SpinLock protects only a Boolean latch and must be held for no external work. No ISR surface is exposed by the Threading adapter.

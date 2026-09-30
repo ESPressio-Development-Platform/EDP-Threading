@@ -134,3 +134,9 @@ The whole-image text/data/BSS columns are retained as build evidence, but the mi
 The Dedicated-Thread public wake/wait seam adds no per-Thread retained synchronization resource: it exposes the signal already counted as the one reusable targeted wake per managed context. `ThreadContext` retains one resource pointer plus one pointer to a static operation table. `Thread::Wake()` adds only a static handle-operation entry.
 
 A keyed `OrdinaryMutexProvider<TIdentity,...>` retains exactly the selected Platform Mutex provider when explicitly instantiated by an application/higher domain; absent use, it creates no runtime storage.
+
+## Fail-closed ordinary mutex storage
+
+`FailClosedOrdinaryMutexProvider<TIdentity,TMutexProvider,TFailureSpinLockProvider>` is instantiated only when explicitly selected by a higher domain. It retains exactly the selected Platform Mutex provider, one selected Platform SpinLock provider, and one Boolean terminal-failure latch subject to ordinary C++ alignment/padding. No queue, waiter registry, dynamic allocation, failure counter or per-caller state is retained by Threading.
+
+The failure SpinLock exists because a native mutex failure cannot safely protect publication of its own terminal state. The latch is independent of that mutex and is read only at operation boundaries / finite acquisition slices. Applications requiring exact target byte accounting should measure the chosen concrete Mutex and SpinLock provider Types; Threading does not infer target storage from nominal C++ field widths.

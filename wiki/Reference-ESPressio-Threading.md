@@ -8,7 +8,7 @@
 
 ## Purpose
 
-The aggregate Threading entry point exports the primary Task/Thread topology API, bounded wait facilities, and the keyed ordinary mutex adapter. It contains no runtime state.
+The aggregate Threading entry point exports the primary Task/Thread topology API, bounded wait facilities, and the keyed ordinary mutex adapters, including the fail-closed variant. It contains no runtime state.
 
 ## Direct includes
 
@@ -16,6 +16,7 @@ The aggregate Threading entry point exports the primary Task/Thread topology API
 - `threading/BoundedWaitPoint.hpp`
 - `threading/BoundedWaitWakeProvider.hpp`
 - `threading/OrdinaryMutexProvider.hpp`
+- `threading/FailClosedOrdinaryMutexProvider.hpp`
 
 ## Documented declarations
 

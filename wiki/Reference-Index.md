@@ -38,6 +38,7 @@ Every production header under `src/` has a source-derived reference page. Public
 | `src/threading/BoundedWaitPoint.hpp` | PUBLIC ORDINARY-CONTEXT WAIT/WAKE API | [open](Reference-threading-BoundedWaitPoint) |
 | `src/threading/BoundedWaitWakeProvider.hpp` | PUBLIC COMPOSITION / BOUNDED WAIT-WAKE API | [open](Reference-threading-BoundedWaitWakeProvider) |
 | `src/threading/OrdinaryMutexProvider.hpp` | PUBLIC COMPOSITION / SYNCHRONIZATION API | [open](Reference-threading-OrdinaryMutexProvider) |
+| `src/threading/FailClosedOrdinaryMutexProvider.hpp` | PUBLIC COMPOSITION / SYNCHRONIZATION API | [open](Reference-threading-FailClosedOrdinaryMutexProvider) |
 | `src/threading/Task.hpp` | PUBLIC API | [open](Reference-threading-Task) |
 | `src/threading/TaskCompletion.hpp` | PUBLIC API | [open](Reference-threading-TaskCompletion) |
 | `src/threading/TaskResults.hpp` | PUBLIC API | [open](Reference-threading-TaskResults) |

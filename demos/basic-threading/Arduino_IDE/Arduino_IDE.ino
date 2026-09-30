@@ -5,7 +5,7 @@
 #include <utility>
 
 #include <ESPressio_Platform_FreeRTOS.hpp>
-#include <synchronization/SpinLockProvider.hpp>
+#include <ESPressio_Platform_ESP_IDF_SpinLock.hpp>
 #include <ESPressio_Threading.hpp>
 
 namespace Demo {
@@ -61,6 +61,9 @@ namespace Demo {
 
     /// Semantic identity of an independent ordinary-context mutex.
     struct DemonstrationMutex final {};
+
+    /// Semantic identity of the fail-closed ordinary-context mutex.
+    struct FailClosedDemonstrationMutex final {};
 
     /// Number of application-work wakes observed by the Dedicated Thread.
     std::atomic<std::uint32_t> HeartbeatWakeCount{0U};
@@ -273,6 +276,23 @@ namespace Demo {
             Threading::OrdinaryMutexReleaseResult::Released
         ) {
             Print("EDP-Threading demo: ordinary mutex failed");
+            return DemonstrationResult::MutexFailed;
+        }
+
+        Threading::FailClosedOrdinaryMutexProvider<
+            FailClosedDemonstrationMutex,
+            MutexProvider,
+            SpinLockProvider
+        > failClosedMutex;
+
+        if (
+            failClosedMutex.Acquire() !=
+            Threading::FailClosedOrdinaryMutexAcquireResult::Acquired ||
+            failClosedMutex.Release() !=
+            Threading::FailClosedOrdinaryMutexReleaseResult::Released ||
+            failClosedMutex.IsFailed()
+        ) {
+            Print("EDP-Threading demo: fail-closed ordinary mutex failed");
             return DemonstrationResult::MutexFailed;
         }
 

@@ -46,3 +46,5 @@ EDP-Memory remains the mandatory typed object-lifetime and ownership-transfer bo
 ## Higher-domain synchronization boundary
 
 Higher domains may publish work to a Dedicated Thread through `Thread<TIdentity>::Wake()` and may consume the keyed `OrdinaryMutex<TIdentity>` Threading capability. These surfaces deliberately keep higher domains from depending on Platform Signal/Mutex vocabulary directly.
+
+`FailClosedOrdinaryMutexProvider` reuses the existing mandatory EDP-Platform dependency twice: a non-recursive `Mutex` for consumer serialization and an independent `SpinLock` for sticky failure publication. This adds no new repository dependency edge. The SpinLock is intentionally independent so mutex-provider failure never has to synchronize its own terminal-state publication.

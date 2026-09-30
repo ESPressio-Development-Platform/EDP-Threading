@@ -23,6 +23,7 @@ The public vocabulary includes:
 - `BoundedWaitWakeProvider<...>` — fixed-capacity ordinary-context finite wait/wake slots for higher domains such as EDP-Command.
 - `Thread<TIdentity>::Wake()` plus `ThreadContext::Wait()/WaitFor()/WaitUntil()` — exposes the existing topology-owned Dedicated-Thread wake mechanism without a second signal allocation.
 - `OrdinaryMutexProvider<TIdentity,TMutexProvider>` — keyed ordinary-context non-recursive mutual exclusion backed by the selected Platform Mutex provider.
+- `FailClosedOrdinaryMutexProvider<TIdentity,TMutexProvider,TFailureSpinLockProvider>` — keyed ordinary-context non-recursive mutual exclusion with an independently synchronized sticky terminal-failure latch for higher domains which must fail closed if the native mutex provider loses integrity.
 
 ## Bootstrap lifecycle
 
@@ -47,7 +48,7 @@ Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and 
 
 The v1 source implementation includes compile-time topology/requirements, bounded Task facilities, FIFO Worker-Lease scheduling, isolated single-Worker `DedicatedWorkerLease` resources, persistent restart-safe Dedicated Threads, dense targeted wake routing, canonical monotonic waits/sleep, transactional infrastructure Start/rollback, terminal cooperative shutdown and static runtime ownership.
 
-Current `main` validation is executed on the authoritative RPI400 appliance. The warnings-as-errors GCC host suite, Clang host suite, UBSan host suite, and coherent local-source PlatformIO Arduino/ESP-IDF demo builds pass for the Dedicated-Thread wake/wait and keyed ordinary-mutex tranche. AddressSanitizer is unavailable on this appliance because its primary allocator aborts during initialization before any Threading test reaches `main()`; that is recorded as an appliance/toolchain limitation rather than Threading PASS or failure. The retained-resource matrix and physical ESP32 runtime evidence were completed as part of the Event V1 integration validation.
+Current `main` validation is executed on the authoritative RPI400 appliance. The warnings-as-errors host suite, focused GCC/Clang fail-closed mutex tests, UBSan host suite, and coherent local-source PlatformIO Arduino/ESP-IDF demo builds cover the Dedicated-Thread wake/wait, keyed ordinary-mutex, and fail-closed ordinary-mutex surfaces. AddressSanitizer is unavailable on this appliance because its primary allocator aborts during initialization before any Threading test reaches `main()`; that is recorded as an appliance/toolchain limitation rather than Threading PASS or failure. The retained-resource matrix and physical ESP32 runtime evidence were completed as part of the Event V1 integration validation.
 
 The bounded-topology migration is now integrated into `main`. Its validation is complete: warnings-as-errors host execution, the separate Host foundation workflow, UBSan, and all fourteen coherent Arduino/ESP-IDF resource-measurement environments are green. Every validated `total` and `intrinsic` retained-RAM figure is byte-for-byte identical to the 23 September baseline; see [Deterministic resources](./docs/RESOURCES.MD). No version mutation is performed during this development.
 
@@ -66,7 +67,7 @@ EDP_THREADING_RESOURCE_LOCAL_ROOT=~/DevProjects/ESPressio_Repositories \
 
 Without that variable, the committed `platformio.ini` retains the normal remote `main` dependency baseline.
 
-A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, an indefinitely waiting multi-purpose Dedicated Thread, external advisory wake delivery, keyed ordinary mutex acquisition/release, cooperative stop wake and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
+A concrete ESP32 integration demo is provided in `demos/basic-threading` for Arduino IDE, PlatformIO Arduino and PlatformIO ESP-IDF. It exercises initialization, transactional infrastructure Start, bounded Task execution/result extraction, an indefinitely waiting multi-purpose Dedicated Thread, external advisory wake delivery, keyed ordinary mutex acquisition/release, fail-closed ordinary-mutex acquisition/release, cooperative stop wake and terminal shutdown. Successful execution prints `EDP-Threading demo: PASS`.
 
 ## Dependencies
 
@@ -93,6 +94,7 @@ See the [dependency graph](./DEPENDENCY_GRAPH.MD) for the authoritative dependen
 - [Architecture and execution model](./docs/ARCHITECTURE.MD)
 - [Lifecycle, ownership and cancellation](./docs/LIFECYCLE.MD)
 - [Deterministic resources](./docs/RESOURCES.MD)
+- [Dedicated Thread wake and mutex contracts](./docs/DEDICATED-THREAD-WAKE-AND-MUTEX.MD)
 - [Dependency graph](./DEPENDENCY_GRAPH.MD)
 
 ## C++ Language Baseline
