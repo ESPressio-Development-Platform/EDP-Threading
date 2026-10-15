@@ -68,3 +68,9 @@ bash tests/run-basic-demo-builds.sh
 ```
 
 The runner injects the sibling repository `src` directories directly so PlatformIO cannot silently substitute remote `main` packages for the branch topology under test.
+
+## Keyed ordinary mutex finite/NoWait prerequisite
+
+The host runner also invokes `tests/run-ordinary-mutex-tests.sh`, compiling/executing `tests/OrdinaryMutexTests.cpp`. That dedicated suite checks immediate contention, relative finite timeout forwarding, distinctly injected provider failure, legacy Forever acquisition, release, and zero added Timebase/heap. The native relative timeout is only the mechanism: an EDP-Logging caller must still pass its *current remaining* canonical EDP-Clock deadline budget.
+
+**Status:** test code is published to GitHub but **not yet executed** on RPI400 or AI-AGENT-02. Do not infer D12.1 is fully met by this Threading extension alone; EDP-Memory's internal lock still needs a bounded mechanism.

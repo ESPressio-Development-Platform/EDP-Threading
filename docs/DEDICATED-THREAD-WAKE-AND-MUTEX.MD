@@ -12,7 +12,7 @@ These APIs are ordinary-context operations. They make no ISR-safety promise.
 
 ## Keyed ordinary mutex
 
-`OrdinaryMutex<TIdentity>` is an exclusive Threading Composition capability whose identity separates unrelated consumers. `OrdinaryMutexProvider<TIdentity,TMutexProvider>` owns one selected Platform non-recursive Mutex provider and exposes only indefinite ordinary-context `Acquire()` and `Release()` operations with strong Threading-owned result enums.
+`OrdinaryMutex<TIdentity>` is an exclusive Threading Composition capability whose identity separates unrelated consumers. `OrdinaryMutexProvider<TIdentity,TMutexProvider>` owns one selected Platform non-recursive Mutex provider and exposes ordinary-context `Acquire()` (indefinite), `TryAcquire()` (immediate), `Acquire(Platform::Synchronization::WaitTimeout)` (finite, no-wait or indefinitely) and `Release()` with strong Threading-owned result enums.
 
 The adapter exists so higher domains such as Event can depend on a Threading synchronization contract without depending directly on Platform synchronization vocabulary. It adds no global registry, recursion, ISR surface, hidden allocation, or fallback resource.
 
@@ -25,3 +25,9 @@ Healthy `Acquire()` uses finite native-mutex wait slices and rechecks the failur
 `Acquire()` distinguishes `Acquired`, previously latched `FailedState`, and the call which first observes a native `ProviderFailure`. `Release()` similarly distinguishes `Released`, `FailedState`, and `ProviderFailure`. Any native acquire/release provider failure latches terminal failure before returning. `IsFailed()` reads that latch under the independent SpinLock. The latch is never cleared during the provider object's lifetime.
 
 The SpinLock is intentionally used instead of assuming a lock-free C++ atomic exists on every target. This keeps Platform mechanics inside Threading and allows higher domains such as RemoteSystem to consume one Threading provider without taking a direct Platform dependency. The failure SpinLock protects only a Boolean latch and must be held for no external work. No ISR surface is exposed by the Threading adapter.
+
+### Logging prerequisite: truthful bounded acquisition
+
+The new `Acquire(timeout)` maps native Platform `LockAcquireResult::TimedOut` to Threading `OrdinaryMutexAcquireResult::TimedOut`, separate from actual `ProviderFailure`. `TryAcquire()` is strictly `Acquire(NoWait())`. Legacy parameterless `Acquire()` remains `Acquire(Forever())`, preserving its previous meaning and numeric result constants. No new mutable synchronization state, heap or second mutex is introduced.
+
+**Relative native timeout != canonical deadline:** Caller must derive *remaining* EDP-Clock Monotonic budget for each timed call and re-evaluate the same canonical deadline on return before subsequent pool/queue actions. EDP-Platform provider resolution/actual timeout fidelity must be qualified. This extension alone **does not yet prove D12.1 end-to-end producer bounded admission** while EDP-Memory's internal pool mutex acquisition remains unbounded. That owner-level gap is separately tracked.

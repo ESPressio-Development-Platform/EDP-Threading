@@ -20,6 +20,7 @@ Exclusive Threading Composition capability. `Identity` is the semantic key separ
 
 - `Acquired`
 - `ProviderFailure`
+- `TimedOut` — contended nonblocking or finite native timeout; distinct from provider failure.
 
 ### `OrdinaryMutexReleaseResult`
 
@@ -32,7 +33,11 @@ Composition provider offering exactly `OrdinaryMutex<TIdentity>`. It owns exactl
 
 Public operations:
 
-- `Acquire() noexcept` — waits indefinitely in ordinary execution context and maps the Platform result to `OrdinaryMutexAcquireResult`.
+- `Acquire() noexcept` — indefinitely waits via the existing native Forever policy.
+- `TryAcquire() noexcept` — immediate native NoWait acquisition, reports `TimedOut` if contended.
+- `Acquire(WaitTimeout) noexcept` — caller-selected relative native timeout, reports `TimedOut` separately from `ProviderFailure`. Does not acquire or own a competing Monotonic timebase.
 - `Release() noexcept` — releases ownership and maps the Platform result to `OrdinaryMutexReleaseResult`.
 
 No hidden allocation, registry, timeout policy, ISR operation or fallback mutex exists.
+
+The caller is responsible for translating one EDP-Clock absolute deadline into a remaining relative `WaitTimeout` on each attempt. Native provider resolution and quality must be validated. This capability does not fix EDP-Memory's independently acquired internal pool mutex.

@@ -22,7 +22,7 @@ The public vocabulary includes:
 - `StaticThreadingRuntime<...>` — the concrete statically owned Bootstrap/runtime façade.
 - `BoundedWaitWakeProvider<...>` — fixed-capacity ordinary-context finite wait/wake slots for higher domains such as EDP-Command.
 - `Thread<TIdentity>::Wake()` plus `ThreadContext::Wait()/WaitFor()/WaitUntil()` — exposes the existing topology-owned Dedicated-Thread wake mechanism without a second signal allocation.
-- `OrdinaryMutexProvider<TIdentity,TMutexProvider>` — keyed ordinary-context non-recursive mutual exclusion backed by the selected Platform Mutex provider.
+- `OrdinaryMutexProvider<TIdentity,TMutexProvider>` — keyed ordinary-context non-recursive mutual exclusion backed by the selected Platform Mutex provider, now with immediate `TryAcquire()` and finite native `Acquire(WaitTimeout)` alongside legacy indefinite `Acquire()`.
 - `FailClosedOrdinaryMutexProvider<TIdentity,TMutexProvider,TFailureSpinLockProvider>` — keyed ordinary-context non-recursive mutual exclusion with an independently synchronized sticky terminal-failure latch for higher domains which must fail closed if the native mutex provider loses integrity.
 
 ## Bootstrap lifecycle

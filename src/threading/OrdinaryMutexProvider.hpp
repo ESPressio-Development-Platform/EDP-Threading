@@ -17,10 +17,11 @@ namespace ESPressio::Threading {
     };
 
 
-    /// Result of acquiring a keyed ordinary-context mutex indefinitely.
+    /// Result of ordinary-context mutex acquisition, including bounded wait outcomes.
     enum class OrdinaryMutexAcquireResult : std::uint8_t {
         Acquired = 0,
-        ProviderFailure = 1
+        ProviderFailure = 1,
+        TimedOut = 2
     };
 
 
@@ -72,13 +73,47 @@ namespace ESPressio::Threading {
             OrdinaryMutexProvider(OrdinaryMutexProvider&&) = delete;
             OrdinaryMutexProvider& operator =(OrdinaryMutexProvider&&) = delete;
 
+            /// Acquires a keyed mutex using one caller-supplied native relative wait budget.
+            ///
+            /// The owner of a canonical Monotonic deadline must compute the remaining budget
+            /// immediately before this call and recheck EDP-Clock on return. This adapter
+            /// does not create another timebase or silently renew a deadline.
+            ///
+            /// @param timeout Native wait mechanism policy, including zero-wait and finite waits.
+            [[nodiscard]] OrdinaryMutexAcquireResult Acquire(
+                ESPressio::Platform::Synchronization::WaitTimeout timeout
+            ) noexcept {
+                const auto result = _mutex.Acquire(timeout);
+
+                switch (result) {
+                    case ESPressio::Platform::Synchronization::LockAcquireResult::Acquired:
+                        return OrdinaryMutexAcquireResult::Acquired;
+
+                    case ESPressio::Platform::Synchronization::LockAcquireResult::TimedOut:
+                        return OrdinaryMutexAcquireResult::TimedOut;
+
+                    case ESPressio::Platform::Synchronization::LockAcquireResult::ProviderFailure:
+                        return OrdinaryMutexAcquireResult::ProviderFailure;
+
+                    default:
+                        return OrdinaryMutexAcquireResult::ProviderFailure;
+                }
+            }
+
+            /// Attempts acquisition without waiting on another mutex owner.
+            [[nodiscard]] OrdinaryMutexAcquireResult TryAcquire() noexcept {
+                return Acquire(
+                    ESPressio::Platform::Synchronization::WaitTimeout::NoWait()
+                );
+            }
+
             /// Acquires the mutex indefinitely from ordinary execution context.
+            ///
+            /// Maintained for existing higher-domain callers that explicitly require Forever.
             [[nodiscard]] OrdinaryMutexAcquireResult Acquire() noexcept {
-                return _mutex.Acquire(
+                return Acquire(
                     ESPressio::Platform::Synchronization::WaitTimeout::Forever()
-                ) == ESPressio::Platform::Synchronization::LockAcquireResult::Acquired
-                    ? OrdinaryMutexAcquireResult::Acquired
-                    : OrdinaryMutexAcquireResult::ProviderFailure;
+                );
             }
 
             /// Releases the mutex owned by the current ordinary execution context.

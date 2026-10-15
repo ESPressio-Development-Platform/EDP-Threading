@@ -89,3 +89,4 @@ fi
 echo "EDP-Threading host foundation tests: PASS"
 
 "${ROOT}/tests/run-fail-closed-ordinary-mutex-tests.sh"
+"${ROOT}/tests/run-ordinary-mutex-tests.sh"
