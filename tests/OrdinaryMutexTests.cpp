@@ -33,6 +33,25 @@ namespace Test {
 
         public:
 
+            // Provider lifetime and exclusive-identity contract.
+
+            /// Constructs a new unlocked synthetic native Mutex provider.
+            PlatformMutex() = default;
+
+            /// Prevents accidental duplication of the native Mutex provider.
+            PlatformMutex(const PlatformMutex&) = delete;
+
+            /// Prevents copying ownership into an existing native Mutex provider.
+            PlatformMutex& operator=(const PlatformMutex&) = delete;
+
+            /// Prevents transfer of the native Mutex provider's identity.
+            PlatformMutex(PlatformMutex&&) = delete;
+
+            /// Prevents transfer into an existing native Mutex provider.
+            PlatformMutex& operator=(PlatformMutex&&) = delete;
+
+            // Deterministic test observations and fault injection.
+
             /// Last requested native wait mode.
             Sync::WaitMode LastMode = Sync::WaitMode::NoWait;
 
@@ -79,6 +98,9 @@ namespace Test {
             }
 
     };
+
+    static_assert(!std::is_copy_constructible_v<PlatformMutex>);
+    static_assert(!std::is_move_constructible_v<PlatformMutex>);
 
     using Mutex = ESPressio::Threading::OrdinaryMutexProvider<TestMutexIdentity, PlatformMutex>;
 
