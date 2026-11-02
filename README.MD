@@ -95,6 +95,8 @@ See the [dependency graph](./DEPENDENCY_GRAPH.MD) for the authoritative dependen
 - [Lifecycle, ownership and cancellation](./docs/LIFECYCLE.MD)
 - [Deterministic resources](./docs/RESOURCES.MD)
 - [Dedicated Thread wake and mutex contracts](./docs/DEDICATED-THREAD-WAKE-AND-MUTEX.MD)
+- [Bounded wait point](./docs/BOUNDED-WAIT-POINT.MD)
+  Describes the non-owning, finite Platform Signal-backed wait capability for ordinary, non-ISR callers.
 - [Dependency graph](./DEPENDENCY_GRAPH.MD)
 
 ## C++ Language Baseline
