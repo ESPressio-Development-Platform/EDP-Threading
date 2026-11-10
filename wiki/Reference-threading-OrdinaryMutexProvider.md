@@ -2,9 +2,9 @@
 
 **Primary classification:** PUBLIC COMPOSITION / SYNCHRONIZATION API
 
-**Source baseline:** `5e276063a24790fb77d7366136e1e94db2c5ee3d`
+**Source baseline:** `269d3dbc9b2143f5bd3046182d20db57d97e32a3`
 
-[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/5e276063a24790fb77d7366136e1e94db2c5ee3d/src/threading/OrdinaryMutexProvider.hpp)
+[Open exact source](https://github.com/ESPressio-Development-Platform/EDP-Threading/blob/269d3dbc9b2143f5bd3046182d20db57d97e32a3/src/threading/OrdinaryMutexProvider.hpp)
 
 ## Purpose and boundary
 
@@ -17,6 +17,10 @@ Provides a keyed ordinary-context non-recursive mutual-exclusion capability owne
 Exclusive Threading Composition capability. `Identity` is the semantic key separating independent mutex instances.
 
 ### `OrdinaryMutexAcquireResult`
+
+**Classification:** PUBLIC API. The enum values are `Acquired = 0` (native lock held by caller), `ProviderFailure = 1` (native provider did not satisfy its contract, no lock ownership claim) and `TimedOut = 2` (NoWait contention or genuinely expired relative native wait, distinct from provider failure). These values do not imply a Clock-owned absolute deadline by themselves.
+
+### `OrdinaryMutexAcquireResult` (value listing)
 
 - `Acquired`
 - `ProviderFailure`
@@ -41,3 +45,8 @@ Public operations:
 No hidden allocation, registry, timeout policy, ISR operation or fallback mutex exists.
 
 The caller is responsible for translating one EDP-Clock absolute deadline into a remaining relative `WaitTimeout` on each attempt. Native provider resolution and quality must be validated. This capability does not fix EDP-Memory's independently acquired internal pool mutex.
+
+
+## Internal state, limits and consumer obligations
+
+The private alias `MutexTraits` validates the native Platform Mutex provider's contract during instantiation. The private field `_mutex` is the **sole authoritative native synchronization object** for this keyed capability, owned in-place for the adapter's lifetime and never copied/moved. The public `Identity` alias distinguishes semantically independent exclusive Composition capability instances. All calls are ordinary-context only; no ISR or recursive acquisition is supported. `Acquire(timeout)` passes one caller-selected Platform relative wait policy to the native owner, maps Acquired/TimedOut/ProviderFailure explicitly, and returns provider failure for unrecognized native outcomes. `TryAcquire()` delegates to `Acquire(NoWait())`; parameterless `Acquire()` delegates to `Acquire(Forever())`. `Release()` maps native Released to the Threading typed result, otherwise ProviderFailure. No new heap allocation, temporary resource, history or hidden timebase is retained. Callers must compute remaining EDP-Clock budget and re-evaluate absolute deadlines around each bounded operation. Failing native synchronization does **not** guarantee the caller recovered ownership or safety elsewhere; Memory's internal waiter queue remains a separate owner.
