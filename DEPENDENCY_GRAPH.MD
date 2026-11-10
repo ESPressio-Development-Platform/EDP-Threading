@@ -1,6 +1,6 @@
 # EDP-Threading Dependency Graph
 
-> Revalidated: 2026-09-28 — Event V1 support exposes the existing Dedicated-Thread managed-context wake path publicly and adds a keyed Threading-owned ordinary mutex adapter. No dependency edge changes; EDP-Memory remains mandatory.
+> Revalidated: 2026-11-10 — feature/logging-v1 exact Clock/main and Memory/main optional-owner review; new keyed ordinary mutex timed result adds no dependency edge.\n\n> Historical revalidation: 2026-09-28 — Event V1 support exposes the existing Dedicated-Thread managed-context wake path publicly and adds a keyed Threading-owned ordinary mutex adapter. No dependency edge changes; EDP-Memory remains mandatory.
 
 > Revalidated: 2026-09-27 — H16 Command reconciliation changes `BoundedWaitWakeProvider::Wake` from Boolean operational success to the existing typed `BoundedWaitWakeResult`; no dependency edge changes.
 
@@ -16,6 +16,29 @@ EDP-Threading
 ├── EDP-BoundedTopology [mandatory]
 └── EDP-Memory [mandatory]
 ```
+
+## Full transitive dependency closure (10 November 2026)
+
+The graph below represents each mandatory direct edge **and** its recursively reachable mandatory dependencies. Duplicate nodes appear wherever they are independently reached; that is intentional provenance rather than a cyclic dependency.
+
+```text
+EDP-Threading
+├── EDP-System [direct]
+├── EDP-Platform [direct]
+│   └── EDP-System [transitive]
+├── EDP-Clock [direct]
+│   ├── EDP-System [transitive]
+│   └── EDP-Platform [transitive]
+│       └── EDP-System [transitive]
+├── EDP-BoundedTopology [direct]
+└── EDP-Memory [direct]
+    ├── EDP-System [transitive]
+    ├── EDP-Platform [transitive]
+    │   └── EDP-System [transitive]
+    └── EDP-BoundedTopology [transitive]
+```
+
+There are **no** optional EDP package dependencies. Memory's direct native finite/Forever blocked-waiter path remains separately unqualified for synchronization-provider failure under [Memory #16](https://github.com/ESPressio-Development-Platform/EDP-Memory/issues/16). Threading's Logging integration exercises the Memory `NoWait` acquisition route, with its own Clock-owned absolute deadline checks. This is not an assertion that every Memory waiting path has become safe.
 
 ## Mandatory Dependencies
 
