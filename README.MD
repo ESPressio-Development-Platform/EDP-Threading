@@ -48,9 +48,9 @@ Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and 
 
 The v1 source implementation includes compile-time topology/requirements, bounded Task facilities, FIFO Worker-Lease scheduling, isolated single-Worker `DedicatedWorkerLease` resources, persistent restart-safe Dedicated Threads, dense targeted wake routing, canonical monotonic waits/sleep, transactional infrastructure Start/rollback, terminal cooperative shutdown and static runtime ownership.
 
-Current `main` validation is executed on the authoritative RPI400 appliance. The warnings-as-errors host suite, focused GCC/Clang fail-closed mutex tests, UBSan host suite, and coherent local-source PlatformIO Arduino/ESP-IDF demo builds cover the Dedicated-Thread wake/wait, keyed ordinary-mutex, and fail-closed ordinary-mutex surfaces. AddressSanitizer is unavailable on this appliance because its primary allocator aborts during initialization before any Threading test reaches `main()`; that is recorded as an appliance/toolchain limitation rather than Threading PASS or failure. The retained-resource matrix and physical ESP32 runtime evidence were completed as part of the Event V1 integration validation.
+The separately qualified existing `main` foundation and `feature/logging-v1` bounded ordinary-mutex extension are validated on the authorised RPI400 appliance. The feature is promoted to `main` only after per-repository downstream acceptance. The warnings-as-errors host suite, focused GCC/Clang fail-closed mutex tests, UBSan host suite, and coherent local-source PlatformIO Arduino/ESP-IDF demo builds cover the Dedicated-Thread wake/wait, keyed ordinary-mutex, and fail-closed ordinary-mutex surfaces. AddressSanitizer is unavailable on this appliance because its primary allocator aborts during initialization before any Threading test reaches `main()`; that is recorded as an appliance/toolchain limitation rather than Threading PASS or failure. The retained-resource matrix and physical ESP32 runtime evidence were completed as part of the Event V1 integration validation.
 
-The bounded-topology migration is now integrated into `main`. Its validation is complete: warnings-as-errors host execution, the separate Host foundation workflow, UBSan, and all fourteen coherent Arduino/ESP-IDF resource-measurement environments are green. Every validated `total` and `intrinsic` retained-RAM figure is byte-for-byte identical to the 23 September baseline; see [Deterministic resources](./docs/RESOURCES.MD). No version mutation is performed during this development.
+The bounded-topology migration is now integrated into `main`. Its validation is complete: warnings-as-errors host execution, the separate Host foundation workflow, UBSan, and all fourteen coherent Arduino/ESP-IDF resource-measurement environments are green. Every validated `total` and `intrinsic` retained-RAM figure is byte-for-byte identical to the 23 September baseline; see [Deterministic resources](./docs/RESOURCES.MD). No version mutation is performed during this development; the version remains `0.1.0`. Direct finite/Forever blocked-waiter fault recovery in EDP-Memory remains a separately tracked unsafe public path (Memory #16), not an implicit guarantee conferred by Threading's NoWait/Clock deadline composition.
 
 ## Local validation
 
@@ -73,11 +73,19 @@ A concrete ESP32 integration demo is provided in `demos/basic-threading` for Ard
 
 ```text
 EDP-Threading
-├── EDP-System [mandatory]
-├── EDP-Platform [mandatory]
-├── EDP-Clock [mandatory]
-├── EDP-BoundedTopology [mandatory]
-└── EDP-Memory [mandatory]
+├── EDP-System [mandatory, direct]
+├── EDP-Platform [mandatory, direct]
+│   └── EDP-System [mandatory, transitive]
+├── EDP-Clock [mandatory, direct]
+│   ├── EDP-System [mandatory, transitive]
+│   └── EDP-Platform [mandatory, transitive]
+│       └── EDP-System [mandatory, transitive]
+├── EDP-BoundedTopology [mandatory, direct]
+└── EDP-Memory [mandatory, direct]
+    ├── EDP-System [mandatory, transitive]
+    ├── EDP-Platform [mandatory, transitive]
+    │   └── EDP-System [mandatory, transitive]
+    └── EDP-BoundedTopology [mandatory, transitive]
 ```
 
 - `EDP-System` — supplies the compile-time Composition Framework.
