@@ -468,3 +468,5 @@ tests/resource-measurements/.measurement-logs/
 
 # Generated native context-binding qualification SDK configuration.
 /tests/context-binding-hil/sdkconfig.*
+
+/tests/context-binding-migration/sdkconfig.*

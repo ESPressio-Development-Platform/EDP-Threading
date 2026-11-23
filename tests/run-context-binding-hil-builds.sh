@@ -12,4 +12,5 @@ for target in "${targets[@]}"; do
         *) echo 'Unsupported context-binding acceptance target' >&2; exit 2 ;;
     esac
     "$PIO" run -d "$ROOT/tests/context-binding-hil" -e "$target"
+    "$PIO" run -d "$ROOT/tests/context-binding-migration" -e "$target"
 done
