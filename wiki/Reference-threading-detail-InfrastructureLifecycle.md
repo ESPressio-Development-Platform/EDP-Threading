@@ -244,3 +244,11 @@ Publishes the terminal ShutdownComplete state after all managed contexts are des
 ESPressio::Platform::Synchronization::SpinLockReleaseResult PublishShutdownComplete() noexcept
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+INTERNAL owner coordination adds `StartSelectedUncommitted(resources...)`, `RejectSelectedStart(resources...)` and `CommitSelectedStart()`. Native Start success alone never opens admission. Rejection publishes the existing StartRollback state before waking every resource, including a partly started facility, and performs no join/destroy. Commit is called only after the selected owner proves the acknowledgement barrier. These operations rely on the existing serialized control owner and SpinLock lifecycle publication; no second authority or new state word is added.

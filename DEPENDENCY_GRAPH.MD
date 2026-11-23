@@ -38,7 +38,7 @@ EDP-Threading
     └── EDP-BoundedTopology [transitive]
 ```
 
-There are **no** optional EDP package dependencies. Memory's direct native finite/Forever blocked-waiter path remains separately unqualified for synchronization-provider failure under [Memory #16](https://github.com/ESPressio-Development-Platform/EDP-Memory/issues/16). Threading's Logging integration exercises the Memory `NoWait` acquisition route, with its own Clock-owned absolute deadline checks. This is not an assertion that every Memory waiting path has become safe.
+There are **no** new mandatory EDP package dependencies. Explicit context binding additionally requires the selected Platform binding contract/provider as described below. Memory's direct native finite/Forever blocked-waiter path remains separately unqualified for synchronization-provider failure under [Memory #16](https://github.com/ESPressio-Development-Platform/EDP-Memory/issues/16). Threading's Logging integration exercises the Memory `NoWait` acquisition route, with its own Clock-owned absolute deadline checks. This is not an assertion that every Memory waiting path has become safe.
 
 ## Mandatory Dependencies
 
@@ -55,3 +55,11 @@ EDP-Threading has no optional ESPressio-library dependencies.
 ## Dependency direction
 
 Threading is downstream of System, Platform, Clock, BoundedTopology and Memory. None of these foundations depends on Threading. Higher domains such as EDP-Command consume Threading's synchronization capabilities rather than Platform synchronization directly.
+
+
+
+## Selected current-context binding (23 November 2026)
+
+The default source closure remains System, Platform, Clock, BoundedTopology and Memory above. Including `ESPressio_Threading_ContextBinding.hpp` and selecting `ContextBindingPolicy` consumes the optional CurrentContextBinding capability from the already mandatory Platform owner (`feature/profiling-v1` until reintegration), plus existing Signal/SpinLock and Clock contracts. There is no Threading -> Profiling or Threading -> SDK include edge. No foundation acquires a reverse Threading edge.
+
+Concrete native demos optionally select Platform-ESP-IDF/main for binding, execution, SpinLock and canonical timebase, and Platform-FreeRTOS/main for Signal/Mutex. Their exact transitive package closure is Platform, System, Clock, Memory, Persistence, BoundedTopology and Security; these are application concrete dependencies, not mandatory Threading SDK dependencies. Portable synchronization in host tests is test-only. Versions stay 0.1.0.

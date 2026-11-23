@@ -386,3 +386,11 @@ Completes finalization because the terminal node owns no infrastructure resource
 ThreadingFinalizationResult FinalizeShutdown() noexcept
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+INTERNAL `FinalizeBounded(MonotonicWaitBudget&)` wakes this resource, continues its selected cleanup and then the tail with the same budget. The terminal specialization returns Completed without state or a new budget. It does not discard already-published native/retirement evidence and does not use Forever. The original unselected `FinalizeShutdown` traversal remains unchanged.

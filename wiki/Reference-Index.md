@@ -48,3 +48,12 @@ Every production header under `src/` has a source-derived reference page. Public
 | `src/threading/ThreadingTypes.hpp` | PUBLIC API | [open](Reference-threading-ThreadingTypes) |
 
 > Bounded-topology migration reference pages are pinned individually to the exact source commit they describe. Unchanged pages retain their previous exact-source baseline until their source changes.
+
+
+
+## Optional binding source units
+
+- [ESPressio_Threading_ContextBinding.hpp](Reference-ESPressio-Threading-ContextBinding)
+- [threading/ContextBinding.hpp](Reference-threading-ContextBinding)
+- [threading/detail/ContextBindingScope.hpp](Reference-threading-detail-ContextBindingScope)
+- [tests/run-context-binding-tests.sh](Reference-tests-run-context-binding-tests)

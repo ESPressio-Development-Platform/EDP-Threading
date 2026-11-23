@@ -1,7 +1,7 @@
 {
   "name": "EDP-Threading",
   "description": "Deterministic Task and Dedicated Thread execution for the ESPressio Development Platform",
-  "keywords": "espressio,threading,task,thread,worker,concurrency,embedded",
+  "keywords": "espressio,threading,task,thread,worker,concurrency,embedded,context-binding",
   "homepage": "https://espressio.org",
   "authors": {"name":"Simon J. Stuart","maintainer":true,"url":"https://espressio.org"},
   "build": {"flags":["-std=gnu++20"],"unflags":["-std=gnu++11","-std=gnu++14","-std=gnu++17"]},

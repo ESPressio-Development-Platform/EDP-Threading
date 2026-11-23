@@ -288,6 +288,7 @@ namespace ESPressio::Threading::Detail {
                         result !=
                         ESPressio::Platform::Execution::ExecutionStartResult::Succeeded
                     ) {
+                        if constexpr (!HasContextBinding<TManagedContextRouter>) {
                         static_cast<void>(
                             RequestTerminationPrefix<0U>(
                                 startedCount
@@ -299,6 +300,8 @@ namespace ESPressio::Threading::Detail {
                                 startedCount
                             )
                         );
+                        }
+                        // Selected startup delegates stop publication and bounded cleanup to the topology owner.
 
                         return result;
                     }
@@ -487,6 +490,24 @@ namespace ESPressio::Threading::Detail {
                 return JoinNext<0U>(
                     timeout
                 );
+            }
+
+            /// Continues selected Worker teardown with one shared budget across the complete facility.
+            ThreadingFinalizationResult FinalizeBounded(
+                MonotonicWaitBudget& budget
+            ) noexcept requires (HasContextBinding<TManagedContextRouter>) {
+                auto result = ThreadingFinalizationResult::Completed;
+                std::apply(
+                    [&budget, &result](auto&... workers) noexcept {
+                        const auto visit = [&budget, &result](auto& worker) noexcept {
+                            const auto next = worker.FinalizeBounded(budget);
+                            if (next != ThreadingFinalizationResult::Completed) { result = next; }
+                        };
+                        (visit(workers), ...);
+                    },
+                    _workers
+                );
+                return result;
             }
 
             /// Destroys every initialized Worker execution context after successful join.

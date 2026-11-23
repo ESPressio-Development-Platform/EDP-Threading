@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "ManagedContextRouter.hpp"
+#include "ContextBindingScope.hpp"
 #include "ManagedContextWakeSet.hpp"
 #include "ShutdownWaitRuntime.hpp"
 #include "StaticTopologyResourceStorage.hpp"
@@ -46,7 +47,8 @@ namespace ESPressio::Threading::Detail {
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed execution.
     /// @tparam TSpinLockProvider Concrete Platform SpinLock provider Type protecting topology lifecycle publication.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
-    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider>
+    /// @tparam TContextBindingPolicy Explicit optional owner binding policy; defaults to no registration.
+    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider, class TContextBindingPolicy = UnselectedContextBinding>
     class StaticTopologyOwner final {
 
         static_assert(
@@ -70,7 +72,7 @@ namespace ESPressio::Threading::Detail {
             >;
 
             /// Managed-context router Type owned by the runtime.
-            using Router = ManagedContextRouter<
+            using Router = typename TContextBindingPolicy::template Router<
                 ContextCapacity,
                 TSignalProvider
             >;
@@ -334,6 +336,35 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Starts selected native entries and commits admission only after their finite acknowledgement barrier.
+            /// @tparam TIndices Every topology resource index in the chosen startup order.
+            template<std::size_t... TIndices>
+            ThreadingStartResult StartBoundFor(
+                Duration duration,
+                std::index_sequence<TIndices...>
+            ) noexcept requires (TContextBindingPolicy::IsSelected) {
+                const auto state = _bootstrap.LifecycleState().State();
+                if (state == InfrastructureState::Started) { return ThreadingStartResult::AlreadyStarted; }
+                if (state != InfrastructureState::Initialized) { return ThreadingStartResult::NotInitialized; }
+                auto budget = MonotonicWaitBudget::For(duration);
+                const auto started = _bootstrap.LifecycleState().StartSelectedUncommitted(
+                    _resources.template Get<TIndices>()...
+                );
+                if (started != ThreadingStartResult::Succeeded) {
+                    _router.BindingPolicy().RecordNativeStartFailure();
+                    static_cast<void>(_resources.BeginShutdown());
+                    return started;
+                }
+                if (_router.BindingPolicy().Await(budget) != decltype(_router.BindingPolicy().StartupResult())::Ready) {
+                    const auto failed = _bootstrap.LifecycleState().RejectSelectedStart(
+                        _resources.template Get<TIndices>()...
+                    );
+                    static_cast<void>(_resources.BeginShutdown());
+                    return failed;
+                }
+                return _bootstrap.LifecycleState().CommitSelectedStart();
+            }
+
         public:
 
             // Construction and ownership.
@@ -362,11 +393,53 @@ namespace ESPressio::Threading::Detail {
             /// Constructs the complete static topology, retaining Dedicated Thread bindings without starting execution.
             explicit StaticTopologyOwner(
                 TBindings bindings
-            ) :
+            ) requires (!TContextBindingPolicy::IsSelected) :
                 _bootstrap(),
                 _wakeSet(),
                 _router(
                     _wakeSet
+                ),
+                _bindings(
+                    std::move(
+                        bindings
+                    )
+                ),
+                _resources(
+                    _bindings,
+                    _router,
+                    _bootstrap.LifecycleState()
+                ),
+                _resolver(
+                    MakeResolver(
+                        _resources,
+                        std::make_index_sequence<TTopology::ResourceCount>{}
+                    )
+                ),
+                _shutdownWait(
+                    _bootstrap.LifecycleState(),
+                    _router
+                ) {
+                if constexpr (
+                    ContextCapacity > 0U
+                ) {
+                    _router.BindTopology(
+                        &_resolver,
+                        &Resolver::ResolveCurrentThunk,
+                        &Resolver::IsInterruptedThunk
+                    );
+                }
+            }
+
+            /// Constructs an explicitly binding-aware topology using address-stable Bootstrap policy storage.
+            explicit StaticTopologyOwner(
+                TBindings bindings,
+                TContextBindingPolicy& bindingPolicy
+            ) requires (TContextBindingPolicy::IsSelected) :
+                _bootstrap(),
+                _wakeSet(),
+                _router(
+                    _wakeSet,
+                    bindingPolicy
                 ),
                 _bindings(
                     std::move(
@@ -409,6 +482,12 @@ namespace ESPressio::Threading::Detail {
                     InfrastructureState::Uninitialized
                 ) {
                     return ThreadingInitializationResult::AlreadyInitialized;
+                }
+
+                if constexpr (TContextBindingPolicy::IsSelected) {
+                    if (_router.BindingPolicy().Prepare() != decltype(_router.BindingPolicy().Prepare())::Ready) {
+                        return ThreadingInitializationResult::ProviderFailure;
+                    }
                 }
 
                 if (
@@ -475,6 +554,12 @@ namespace ESPressio::Threading::Detail {
                     return ThreadingInitializationResult::AlreadyInitialized;
                 }
 
+                if constexpr (TContextBindingPolicy::IsSelected) {
+                    if (_router.BindingPolicy().Prepare() != decltype(_router.BindingPolicy().Prepare())::Ready) {
+                        return ThreadingInitializationResult::ProviderFailure;
+                    }
+                }
+
                 if (
                     _wakeSet.Validate() !=
                     ManagedContextWakeValidationResult::Ready ||
@@ -496,8 +581,16 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Starts all initialized infrastructure contexts transactionally in topology declaration order.
-            ThreadingStartResult Start() noexcept {
+            ThreadingStartResult Start() noexcept requires (!TContextBindingPolicy::IsSelected) {
                 return StartAll(
+                    std::make_index_sequence<TTopology::ResourceCount>{}
+                );
+            }
+
+            /// Uses one explicit finite Clock budget for all required binding acknowledgements.
+            ThreadingStartResult StartFor(Duration duration) noexcept requires (TContextBindingPolicy::IsSelected) {
+                return StartBoundFor(
+                    duration,
                     std::make_index_sequence<TTopology::ResourceCount>{}
                 );
             }
@@ -505,7 +598,7 @@ namespace ESPressio::Threading::Detail {
             /// Starts all initialized topology resources transactionally using an application-specified compile-time permutation.
             /// @tparam TResourceIndices Topology resource indices naming every declared resource exactly once in start order.
             template<std::size_t... TResourceIndices>
-            ThreadingStartResult StartInOrder() noexcept {
+            ThreadingStartResult StartInOrder() noexcept requires (!TContextBindingPolicy::IsSelected) {
                 static_assert(
                     sizeof...(TResourceIndices) == TTopology::ResourceCount,
                     "StartInOrder must name every topology resource exactly once"
@@ -543,6 +636,51 @@ namespace ESPressio::Threading::Detail {
 
                 return _bootstrap.Start(
                     _resources.template Get<TResourceIndices>()...
+                );
+            }
+
+            /// Starts explicitly selected resources in a validated compile-time order under one finite Clock budget.
+            /// @tparam TResourceIndices Every topology resource index exactly once in the required order.
+            template<std::size_t... TResourceIndices>
+            ThreadingStartResult StartInOrderFor(Duration duration) noexcept requires (TContextBindingPolicy::IsSelected) {
+                static_assert(
+                    sizeof...(TResourceIndices) == TTopology::ResourceCount,
+                    "StartInOrder must name every topology resource exactly once"
+                );
+
+                static_assert(
+                    (
+                        (TResourceIndices < TTopology::ResourceCount) &&
+                        ... &&
+                        true
+                    ),
+                    "StartInOrder contains a topology resource index outside the declared range"
+                );
+
+                constexpr bool unique = []() constexpr {
+                    constexpr std::array<std::size_t, TTopology::ResourceCount> order{
+                        TResourceIndices...
+                    };
+
+                    for (std::size_t left = 0U; left < order.size(); ++left) {
+                        for (std::size_t right = left + 1U; right < order.size(); ++right) {
+                            if (order[left] == order[right]) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    return true;
+                }();
+
+                static_assert(
+                    unique,
+                    "StartInOrder must name every topology resource exactly once"
+                );
+
+                return StartBoundFor(
+                    duration,
+                    std::index_sequence<TResourceIndices...>{}
                 );
             }
 
@@ -625,7 +763,7 @@ namespace ESPressio::Threading::Detail {
             }
 
             /// Tears down quiescent infrastructure, publishes terminal completion, and wakes shutdown waiters.
-            ThreadingFinalizationResult FinalizeShutdown() noexcept {
+            ThreadingFinalizationResult FinalizeShutdown() noexcept requires (!TContextBindingPolicy::IsSelected) {
                 if (
                     _bootstrap.LifecycleState().State() !=
                     InfrastructureState::ShuttingDown
@@ -659,6 +797,26 @@ namespace ESPressio::Threading::Detail {
                 }
 
                 return ThreadingFinalizationResult::Completed;
+            }
+
+
+            /// Continues ordinary shutdown or failed-start cleanup using one separately supplied finite Clock budget.
+            /// Incomplete or anomalous retirement preserves all still-owned resources for the control owner.
+            ThreadingFinalizationResult FinalizeShutdownFor(Duration duration) noexcept requires (TContextBindingPolicy::IsSelected) {
+                const auto state = _bootstrap.LifecycleState().State();
+                if (state != InfrastructureState::ShuttingDown && state != InfrastructureState::StartRollback) {
+                    return ThreadingFinalizationResult::NotShuttingDown;
+                }
+                if (!IsExecutionQuiescent()) { return ThreadingFinalizationResult::ExecutionNotQuiescent; }
+                auto budget = MonotonicWaitBudget::For(duration);
+                const auto result = _resources.FinalizeBounded(budget);
+                if (result != ThreadingFinalizationResult::Completed) { return result; }
+                if (_bootstrap.LifecycleState().PublishShutdownComplete() != ESPressio::Platform::Synchronization::SpinLockReleaseResult::Released) {
+                    return ThreadingFinalizationResult::ProviderFailure;
+                }
+                return _shutdownWait.WakeCompleted() == ShutdownWaitWakeResult::Succeeded
+                    ? ThreadingFinalizationResult::Completed
+                    : ThreadingFinalizationResult::ProviderFailure;
             }
 
 

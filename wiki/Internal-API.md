@@ -5,3 +5,9 @@ Internal machinery includes shared capacity-derived bounded-index representation
 `detail/TopologyIndex.hpp` is the Threading-internal adapter between EDP-BoundedTopology's strong bounded identities and Threading's raw compact scalar fields. It adds no runtime state and preserves Threading's existing 32-bit maximum index contract.
 
 These mechanisms must remain bounded by compile-time topology. Internal routing types are not consumer extension points unless explicitly surfaced by a public template contract.
+
+
+
+## Optional context binding
+
+BindingManagedContextRouter, ContextBindingScope and selected lifecycle/finalization hooks are owner integration machinery, not method-probe entry points or a supported way to clear activity flags. See [contract and reference](Context-Binding).

@@ -275,6 +275,14 @@ namespace ESPressio::Threading::Detail {
                     _tail.IsExecutionQuiescent();
             }
 
+            /// Continues selected native cleanup for this resource and tail under one shared Clock budget.
+            ThreadingFinalizationResult FinalizeBounded(MonotonicWaitBudget& budget) noexcept {
+                static_cast<void>(_resource.RequestInfrastructureTermination());
+                const auto result = _resource.FinalizeBounded(budget);
+                const auto tailResult = _tail.FinalizeBounded(budget);
+                return result != ThreadingFinalizationResult::Completed ? result : tailResult;
+            }
+
             /// Terminates, joins, and destroys this infrastructure resource before finalizing the recursive tail.
             ThreadingFinalizationResult FinalizeShutdown() noexcept {
                 const auto wakeResult = _resource.RequestInfrastructureTermination();
@@ -367,6 +375,11 @@ namespace ESPressio::Threading::Detail {
             /// Reports quiescence because the terminal node owns no execution resource.
             bool IsExecutionQuiescent() noexcept {
                 return true;
+            }
+
+            /// Ends the selected bounded cleanup traversal without consuming a fresh budget.
+            ThreadingFinalizationResult FinalizeBounded(MonotonicWaitBudget&) noexcept {
+                return ThreadingFinalizationResult::Completed;
             }
 
             /// Completes finalization because the terminal node owns no infrastructure resource.

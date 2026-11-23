@@ -752,3 +752,11 @@ static constexpr std::size_t StackBackingBytes() noexcept
 The concrete runtime now supplies `ThreadContext` through a static `ThreadContextOperations` table rather than embedding per-operation pointers in each context view. New private bridges are `WaitThunk`, `WaitForThunk`, `WaitUntilThunk`, `ContextOperations`, `WaitWithTimeout`, `WaitWithBudget`, and type-erased `WakeThunk`.
 
 New runtime operations are `Wake()`, `Wait()`, `WaitFor(Duration)`, and `WaitUntil(MonotonicTimestamp)`. All route through `_router` + `_contextIndex`; no additional signal is retained. `HandleOperations()` now includes `WakeThunk`. `RequestStop()` and `RequestInfrastructureTermination()` continue to publish through the same router wake path, preserving the invariant that an indefinitely waiting Dedicated Thread can observe stop/termination.
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+PRIVATE outer `Entry` constructs `ContextBindingScope` before calling the persistent inner `Run` activation loop. One binding spans all semantic activations and waits, and retires only after the final inner body returns. Selected exception-enabled entry records abnormal unwinding before retirement without clearing the abandoned activation state. `Initialize`/`StartInfrastructure` publish successful native ownership only when selected. INTERNAL `FinalizeBounded(budget)` passes the direct context index and existing provider to the selected owner; anomalies preserve storage. No per-context pointer is added to this runtime.

@@ -505,3 +505,13 @@ Returns caller-owned physical stack backing bytes.
 static constexpr std::size_t StackBackingBytes() noexcept
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+PRIVATE outer `Entry` constructs `ContextBindingScope` before calling persistent inner `Run`. A rejected bind returns without announcing Worker availability or invoking eligible work. The guard retires after the complete inner body, retaining one identity across dispatch, wait and yield. Selected exception-enabled entry catches inner unwinding, marks abnormal exit and lets the guard retire; it does not fake Task completion. `Run` contains the previous persistent loop and may unwind to the selected outer boundary. Default exception behavior remains the original noexcept entry boundary.
+
+`Initialize` and `StartInfrastructure` publish successful native ownership through the selected router only; the default branch has no such calls. INTERNAL `FinalizeBounded(budget)` delegates the direct `_contextIndex` and existing `_provider` to the selected policy, retaining successful Join/Destroy evidence for retry. No per-Worker field is added.

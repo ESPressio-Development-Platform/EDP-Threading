@@ -123,6 +123,13 @@ namespace ESPressio::Threading::Detail {
                 );
             }
 
+            /// Continues selected native teardown without restarting the caller's shared deadline.
+            ThreadingFinalizationResult FinalizeBounded(
+                MonotonicWaitBudget& budget
+            ) noexcept requires (HasContextBinding<TManagedContextRouter>) {
+                return _runtime.FinalizeBounded(budget);
+            }
+
             /// Destroys the isolated Worker context and releases its native provider state.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return _runtime.DestroyInfrastructure();

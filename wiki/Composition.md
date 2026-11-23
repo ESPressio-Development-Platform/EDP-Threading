@@ -5,3 +5,9 @@ Threading declares a static application topology but continues to consume Platfo
 Initialization and Start order are explicit. Optional `InitializeInOrder<...>` and `StartInOrder<...>` require a complete permutation of topology resources rather than allowing partial ad-hoc ordering.
 
 `FailClosedOrdinaryMutexProvider` is also a Threading Composition provider. It offers the distinct exclusive `FailClosedOrdinaryMutex<TIdentity>` capability and is parameterized by the concrete Platform Mutex and independent Platform SpinLock providers selected by Bootstrap. The higher-domain consumer therefore binds one Threading provider while Platform-specific failure-publication mechanics remain below the Threading boundary.
+
+
+
+## Optional context binding
+
+CurrentContextBindingPolicy validates the exact selected Platform capability properties and strongly typed/noexcept provider methods. Provider choice is compile-time and Bootstrap-owned; no runtime search is added. See [contract and reference](Context-Binding).

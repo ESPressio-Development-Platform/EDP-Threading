@@ -350,3 +350,11 @@ Deterministic byte count reported for `StackBackingBytes`.
 static constexpr std::size_t StackBackingBytes() noexcept
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+INTERNAL `FinalizeBounded(MonotonicWaitBudget&)` forwards the existing budget to `_worker.FinalizeBounded`; persistent Task/Worker identity is unchanged across lease dispatch.

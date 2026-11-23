@@ -13,3 +13,9 @@ Task-record and Worker availability are represented by `EDP-BoundedTopology::Bou
 The topology-owned targeted wake belonging to a Dedicated Thread is also its public work-notification surface. `Thread::Wake()` signals it externally; `ThreadContext::Wait()/WaitFor()/WaitUntil()` wait on it internally. Start, stop and infrastructure termination already use the same route. No second Event-specific signal or wake counter is created.
 
 `OrdinaryMutex<TIdentity>` is a keyed exclusive Threading capability backed by one selected Platform non-recursive mutex. It exists for higher domains that need ordinary-context serialization without depending directly on Platform synchronization.
+
+
+
+## Optional context binding
+
+Optional binding encloses real native Worker/Dedicated entry. Selected startup admission requires every Bound acknowledgement; failures publish cooperative rollback. Default runtime remains unchanged. See [contract and reference](Context-Binding).

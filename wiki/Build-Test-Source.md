@@ -11,3 +11,9 @@ The bounded-topology migration completion run, performed immediately before rein
 `demos/basic-threading` is the primary integration demonstration.
 
 The Event-support tranche adds explicit host tests for `Thread::Wake`, indefinite/finite `ThreadContext` waits, moved-from wake safety, and keyed ordinary mutex success/provider failure. The ESP32 basic-threading demo exercises an indefinitely waiting Dedicated Thread, external wake, stop wake and the mutex adapter.
+
+
+
+## Optional context binding
+
+tests/run-context-binding-tests.sh compiles actual Threading ownership over independent host threads, runs precise failure/lifetime cases and a separate exceptional-exit subprocess. These fixtures are not native ESP32 evidence; SDK/device results are recorded independently in Policy handoffs. See [contract and reference](Context-Binding).

@@ -273,3 +273,11 @@ Exposes the owned concrete runtime to internal topology coordination.
 Runtime& RuntimeState() noexcept
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+INTERNAL `FinalizeBounded(MonotonicWaitBudget&)` forwards the exact existing budget to `_runtime.FinalizeBounded`. This owns no additional state and does not infer completion from semantic stop alone.

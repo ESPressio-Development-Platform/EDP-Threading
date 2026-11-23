@@ -45,3 +45,11 @@ using StaticThreadingRuntime = Detail::StaticTopologyOwner<
         TTopology,
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+`StaticThreadingRuntime` now has a seventh `TContextBindingPolicy = Detail::UnselectedContextBinding` parameter, forwarded to `StaticTopologyOwner`. This is a PUBLIC optional configuration Type. The selected policy is explicitly included through `ESPressio_Threading_ContextBinding.hpp`; ordinary consumers need no binding header. `StartFor`/`StartInOrderFor` and `FinalizeShutdownFor` require caller-supplied finite durations.

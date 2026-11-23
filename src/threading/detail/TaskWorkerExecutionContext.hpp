@@ -5,6 +5,10 @@
 
 #include <ESPressio_Platform.hpp>
 
+#include "../ThreadingTypes.hpp"
+#include "ContextBindingScope.hpp"
+#include "MonotonicWaitBudget.hpp"
+
 namespace ESPressio::Threading::Detail {
 
     enum class WorkerExecutionInitializationResult : std::uint8_t {
@@ -195,6 +199,34 @@ namespace ESPressio::Threading::Detail {
                     return;
                 }
 
+                ContextBindingScope<TManagedContextRouter> binding(
+                    *self->_router,
+                    self->_contextIndex
+                );
+
+                if (!binding.IsBound()) { return; }
+
+#if defined(__cpp_exceptions)
+                if constexpr (HasContextBinding<TManagedContextRouter>) {
+                    try {
+                        self->Run();
+                    } catch (...) {
+                        // Unwinding ends every captured inner scope before the outer binding guard retires.
+                        // Retain abnormal-exit evidence; never manufacture semantic completion.
+                        self->_router->BindingPolicy().MarkAbnormalExit(self->_contextIndex);
+                    }
+                } else {
+                    self->Run();
+                }
+#else
+                self->Run();
+#endif
+            }
+
+            /// Persistent inner execution body; entry registration surrounds its complete lifetime.
+            void Run() {
+                auto* self = this;
+
                 static_cast<void>(
                     self->_facility->WorkerBecameAvailable(
                         self->_contextIndex
@@ -326,12 +358,24 @@ namespace ESPressio::Threading::Detail {
                     return WorkerExecutionInitializationResult::ProviderFailure;
                 }
 
+                if constexpr (HasContextBinding<TManagedContextRouter>) {
+                    _router->BindingPolicy().MarkInitialized(_contextIndex);
+                }
+
                 return WorkerExecutionInitializationResult::Succeeded;
             }
 
             /// Starts the already initialized persistent Worker trampoline.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
-                return _provider.Start();
+                const auto result = _provider.Start();
+
+                if constexpr (HasContextBinding<TManagedContextRouter>) {
+                    if (result == ESPressio::Platform::Execution::ExecutionStartResult::Succeeded) {
+                        _router->BindingPolicy().MarkStarted(_contextIndex);
+                    }
+                }
+
+                return result;
             }
 
             /// Compatibility spelling retained inside the implementation while Bootstrap is integrated.
@@ -358,6 +402,18 @@ namespace ESPressio::Threading::Detail {
             /// Destroys the joined native execution context.
             ESPressio::Platform::Execution::ExecutionDestroyResult Destroy() noexcept {
                 return _provider.Destroy();
+            }
+
+
+            /// Continues selected-policy teardown under the caller's one shared Clock budget.
+            ThreadingFinalizationResult FinalizeBounded(
+                MonotonicWaitBudget& budget
+            ) noexcept requires (HasContextBinding<TManagedContextRouter>) {
+                return _router->BindingPolicy().Cleanup(
+                    _contextIndex,
+                    _provider,
+                    budget
+                );
             }
 
 

@@ -545,3 +545,11 @@ Indicates whether this facility has no queued or actively executing Task work.
 bool IsExecutionQuiescent() noexcept
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+The selected branch of PRIVATE `StartNext` returns native Start failure immediately; it never joins its started prefix before the topology publishes rollback. The default branch retains its original prefix behavior. INTERNAL `FinalizeBounded(budget)` uses tuple traversal over existing Workers and shares the same mutable Clock budget with each; it adds no retained iterator or per-Worker counter. It visits every Worker and reports incomplete/provider-failure results, leaving each successful destruction recorded in the selected policy for retry.

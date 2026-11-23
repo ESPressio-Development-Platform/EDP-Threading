@@ -12,3 +12,6 @@
 - [Dependency Contracts](Dependency-Contracts)
 - [Reference Index](Reference-Index)
 - [Compiler Definitions](Compiler-Definitions)
+
+
+- [Optional context binding](Context-Binding)

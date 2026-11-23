@@ -11,3 +11,9 @@ Dedicated-thread Join captures an activation phase so a later restart cannot acc
 Dedicated Thread handles and invocation-local `ThreadContext` views reach the concrete runtime through static type-erased operation tables. Adding public wake/wait therefore does not add per-Thread notification storage. The context view remains exactly two pointers: runtime + operations table.
 
 `OrdinaryMutexProvider` is an additive adapter and owns no registry: each explicitly instantiated keyed provider contains exactly one concrete Platform non-recursive Mutex provider.
+
+
+
+## Optional context binding
+
+Outer native Entry binds before persistent Run and retires afterward. A partial selected facility returns Start failure to the control owner before any join. Fixed native ownership facts make bounded cleanup retryable without repeated destruction. See [contract and reference](Context-Binding).

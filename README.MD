@@ -42,7 +42,7 @@ The empty `ThreadingTopology<>` is valid. It owns no managed execution contexts,
 
 Capacities and topology are compile-time properties. Task records use EDP-BoundedTopology capacity-derived index storage, one-bit structural availability sets, shared intrusive FIFO topology and bounded callable/result storage. Managed contexts use dense topology-derived indices and structural resolution rather than a RAM pointer registry. Blocking operations are predicate-driven and use one reusable targeted wake mechanism per managed sequential context. A Dedicated Thread may wait indefinitely after exhausting all of its work because every Threading lifecycle/control path that can require attention, including cooperative stop and infrastructure termination, wakes that same context. External higher domains publish advisory work wakes through `Thread<TIdentity>::Wake()`; the Thread must recheck all work sources and stop state after waking.
 
-Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and EDP-Memory. There are no optional ESPressio-library dependencies.
+Threading consumes EDP-System, EDP-Platform, EDP-Clock, EDP-BoundedTopology and EDP-Memory. The existing mandatory package closure is unchanged. Explicit context binding additionally selects the CurrentContextBinding capability from Platform feature/profiling-v1 and a downstream concrete provider; see the optional binding contract below.
 
 ## Current implementation status
 
@@ -110,3 +110,9 @@ See the [dependency graph](./DEPENDENCY_GRAPH.MD) for the authoritative dependen
 ## C++ Language Baseline
 
 ESPressio requires C++20. Threading host tests, CI workflows, resource-measurement builds, and ESP32 integration demos all compile against that baseline. PlatformIO-compatible ESP32 development should use PIOArduino; repository-specific validated pins are retained where required for known toolchain compatibility.
+
+
+
+## Optional context binding
+
+Applications that require a typed current-context record can explicitly select a binding policy. Worker and Dedicated entry register before successful startup, preserve the binding across ordinary work/activation, and retire after their complete persistent body returns. Selected registration failure refuses startup and retains ownership for bounded shutdown continuation. Existing runtime configurations remain unselected. See [current-context binding](./docs/CONTEXT-BINDING.MD) for the complete setup, identity, lifetime and failure contract. This provides Threading integration only; a Profiling capture runtime is a separate consumer.

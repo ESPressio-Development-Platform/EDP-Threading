@@ -399,6 +399,34 @@ namespace ESPressio::Threading::Detail {
                     return;
                 }
 
+                ContextBindingScope<TManagedContextRouter> binding(
+                    *self->_router,
+                    self->_contextIndex
+                );
+
+                if (!binding.IsBound()) { return; }
+
+#if defined(__cpp_exceptions)
+                if constexpr (HasContextBinding<TManagedContextRouter>) {
+                    try {
+                        self->Run();
+                    } catch (...) {
+                        // Unwinding ends every captured inner scope before the outer binding guard retires.
+                        // Retain abnormal-exit evidence; never manufacture semantic completion.
+                        self->_router->BindingPolicy().MarkAbnormalExit(self->_contextIndex);
+                    }
+                } else {
+                    self->Run();
+                }
+#else
+                self->Run();
+#endif
+            }
+
+            /// Persistent activation body, enclosed by the outer native binding lifetime.
+            void Run() {
+                auto* self = this;
+
                 for (;;) {
                     if (
                         self->_shouldTerminate(
@@ -789,12 +817,24 @@ namespace ESPressio::Threading::Detail {
                     return WorkerExecutionInitializationResult::ProviderFailure;
                 }
 
+                if constexpr (HasContextBinding<TManagedContextRouter>) {
+                    _router->BindingPolicy().MarkInitialized(_contextIndex);
+                }
+
                 return WorkerExecutionInitializationResult::Succeeded;
             }
 
             /// Starts the persistent Platform execution context after the topology initialization barrier.
             ESPressio::Platform::Execution::ExecutionStartResult StartInfrastructure() noexcept {
-                return _provider.Start();
+                const auto result = _provider.Start();
+
+                if constexpr (HasContextBinding<TManagedContextRouter>) {
+                    if (result == ESPressio::Platform::Execution::ExecutionStartResult::Succeeded) {
+                        _router->BindingPolicy().MarkStarted(_contextIndex);
+                    }
+                }
+
+                return result;
             }
 
             /// Wakes the persistent trampoline so rollback/shutdown termination is re-evaluated.
@@ -816,6 +856,18 @@ namespace ESPressio::Threading::Detail {
             /// Destroys the initialized Platform execution context and releases its native provider state.
             ESPressio::Platform::Execution::ExecutionDestroyResult DestroyInfrastructure() noexcept {
                 return _provider.Destroy();
+            }
+
+
+            /// Continues selected-policy teardown under one shared Clock budget.
+            ThreadingFinalizationResult FinalizeBounded(
+                MonotonicWaitBudget& budget
+            ) noexcept requires (HasContextBinding<TManagedContextRouter>) {
+                return _router->BindingPolicy().Cleanup(
+                    _contextIndex,
+                    _provider,
+                    budget
+                );
             }
 
 

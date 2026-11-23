@@ -597,3 +597,15 @@ ShutdownWaitResult WaitForShutdownUntil(
             )
 ```
 
+
+
+
+## Current optional binding integration
+
+The original reference inventory above remains the unselected baseline unless amended here. The current additive contract is [optional context binding](Context-Binding), implemented on `feature/profiling-v1`. Existing six-argument runtimes retain the original router and default behavior. Selected registration uses exact Platform contracts and one canonical Clock startup budget. It introduces no SDK/Profiling dependency, registry, scheduler, allocator, probe scan or new monotonic source. See [normative owner contract](../docs/CONTEXT-BINDING.MD).
+
+The seventh `TContextBindingPolicy` selects `Router` through its nested alias; no policy storage is added to the default owner. The original constructor is constrained to unselected configurations; the selected constructor additionally borrows a stable policy and passes it to the router. `Initialize` and `InitializeInOrder` invoke the selected mapping's one-shot `Prepare` before native allocation.
+
+`StartBoundFor(duration,index_sequence)` is PRIVATE coordination: checks the existing lifecycle, creates one `MonotonicWaitBudget`, starts native resources uncommitted, waits for all fixed acknowledgements, and only then commits Started. On rejection it publishes rollback before waking resources and applies existing semantic shutdown. PUBLIC `StartFor` and `StartInOrderFor` forward the full topology or validated resource permutation. PUBLIC no-budget `Start`/`StartInOrder` remain available only unselected.
+
+PUBLIC `FinalizeShutdownFor(duration)` handles ShuttingDown and StartRollback, requires semantic quiescence, and passes one shared budget through `Resources::FinalizeBounded`. Incomplete cleanup preserves resource storage. Only complete native cleanup publishes ShutdownComplete and wakes existing shutdown waiters. Unselected `FinalizeShutdown()` is unchanged.

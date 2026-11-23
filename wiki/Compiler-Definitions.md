@@ -49,3 +49,9 @@ This macro is supplied by the Arduino build environment; EDP-Threading does not 
 No repository-defined production compiler definition is required to configure the EDP-Threading public/runtime API. Threading topology, capacities, priorities and affinity are expressed through C++ types/templates rather than preprocessor configuration.
 
 > Audited on `main` after reintegration of the bounded-topology migration and introduction of the coherent-local resource include switch.
+
+
+
+## Optional context binding
+
+Context binding is selected with C++ Types, without a production feature macro. __cpp_exceptions enables selected outer exception capture; absent exception support does not promise unwinding. EDP_THREADING_TEST_OPTIMIZATION and EDP_THREADING_SANITIZERS configure only the new host runner. See [contract and reference](Context-Binding).

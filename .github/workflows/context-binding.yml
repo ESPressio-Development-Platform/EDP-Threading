@@ -1,0 +1,58 @@
+name: Optional context binding
+
+on:
+  push:
+    branches: [main, feature/profiling-v1]
+  pull_request:
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+        optimization: [-O0, -O2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: EDP-Threading
+      - uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Platform
+          ref: feature/profiling-v1
+          path: EDP-Platform
+      - uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Platform-Portable
+          ref: feature/profiling-v1
+          path: EDP-Platform-Portable
+      - uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-System
+          ref: main
+          path: EDP-System
+      - uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Clock
+          ref: main
+          path: EDP-Clock
+      - uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-Memory
+          ref: main
+          path: EDP-Memory
+      - uses: actions/checkout@v4
+        with:
+          repository: ESPressio-Development-Platform/EDP-BoundedTopology
+          ref: main
+          path: EDP-BoundedTopology
+      - name: Execute actual-owner host fixture
+        env:
+          CXX: ${{ matrix.compiler }}
+          EDP_THREADING_TEST_OPTIMIZATION: ${{ matrix.optimization }}
+        run: bash EDP-Threading/tests/run-context-binding-tests.sh
+      - name: Execute selected lifetime fixture under ASan and UBSan
+        env:
+          CXX: ${{ matrix.compiler }}
+          EDP_THREADING_SANITIZERS: '1'
+        run: bash EDP-Threading/tests/run-context-binding-tests.sh

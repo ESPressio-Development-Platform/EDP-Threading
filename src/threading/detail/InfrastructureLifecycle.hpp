@@ -344,6 +344,47 @@ namespace ESPressio::Threading::Detail {
             }
 
 
+            // Explicitly selected context-binding startup; the control owner serializes calls.
+
+            /// Publishes failed startup before waking every resource, including a partial facility.
+            /// @tparam TResources Topology-owned resources in startup order.
+            template<class... TResources>
+            ThreadingStartResult RejectSelectedStart(TResources&... resources) noexcept {
+                static_cast<void>(PublishState(InfrastructureState::StartRollback));
+                auto resourceTuple = std::forward_as_tuple(resources...);
+                static_cast<void>(WakeStarted<0U>(
+                    resourceTuple,
+                    sizeof...(TResources)
+                ));
+                return ThreadingStartResult::ProviderFailure;
+            }
+
+            /// Starts native contexts without admitting work or performing an unbounded rollback join.
+            /// @tparam TResources Explicitly binding-aware topology-owned resources.
+            template<class... TResources>
+            ThreadingStartResult StartSelectedUncommitted(TResources&... resources) noexcept {
+                const auto state = State();
+                if (state == InfrastructureState::Started) { return ThreadingStartResult::AlreadyStarted; }
+                if (state != InfrastructureState::Initialized) { return ThreadingStartResult::NotInitialized; }
+                auto resourceTuple = std::forward_as_tuple(resources...);
+                std::size_t startedCount = 0U;
+                if (StartNext<0U>(
+                    resourceTuple,
+                    startedCount
+                ) != ESPressio::Platform::Execution::ExecutionStartResult::Succeeded) {
+                    return RejectSelectedStart(resources...);
+                }
+                return ThreadingStartResult::Succeeded;
+            }
+
+            /// Opens semantic admission only after the selected owner has observed every Bound acknowledgement.
+            ThreadingStartResult CommitSelectedStart() noexcept {
+                return PublishState(InfrastructureState::Started) == ESPressio::Platform::Synchronization::SpinLockReleaseResult::Released
+                    ? ThreadingStartResult::Succeeded
+                    : ThreadingStartResult::ProviderFailure;
+            }
+
+
             // Shutdown initiation.
 
             /// Begins the terminal application-wide shutdown transition without blocking for execution completion.

@@ -18,7 +18,8 @@ namespace ESPressio::Threading {
     /// @tparam TExecutionContextProvider Concrete Platform execution-context provider Type used for managed contexts.
     /// @tparam TSpinLockProvider Concrete Platform SpinLock provider Type protecting topology lifecycle publication.
     /// @tparam TMutexProvider Concrete Platform Mutex provider Type protecting resource-local state.
-    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider>
+    /// @tparam TContextBindingPolicy Explicit context registration policy, absent by default.
+    template<class TTopology, class TBindings, class TSignalProvider, class TExecutionContextProvider, class TSpinLockProvider, class TMutexProvider, class TContextBindingPolicy = Detail::UnselectedContextBinding>
     /// Concrete statically owned runtime Type realizing one complete Threading topology.
     using StaticThreadingRuntime = Detail::StaticTopologyOwner<
         TTopology,
@@ -26,7 +27,8 @@ namespace ESPressio::Threading {
         TSignalProvider,
         TExecutionContextProvider,
         TSpinLockProvider,
-        TMutexProvider
+        TMutexProvider,
+        TContextBindingPolicy
     >;
 
 } // ESPressio::Threading
