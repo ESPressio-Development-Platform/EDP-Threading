@@ -21,3 +21,6 @@ tests/run-context-binding-tests.sh compiles actual Threading ownership over inde
 ## Complete optional-binding demo projects
 
 The current-context-binding demo has identical complete Example.hpp sources for Arduino IDE and both PIOArduino framework projects. tests/run-context-binding-demo-builds.sh builds both declared target environments under Arduino and ESP-IDF, or accepts one explicit target. Public manifests use GitHub URLs, without filesystem dependency roots. See [runner reference](Reference-tests-run-context-binding-demo-builds) and [project walkthrough](../demos/current-context-binding/README.MD). Device execution evidence remains separate from compilation.
+
+
+Actual Arduino IDE/CLI source discovery and compilation were exercised with CLI1.6 and core4 on both boards; the merged sketch images also ran physically on both targets. The four PIO profiles are separate SDK evidence. The complete native failure/stress/migration acceptance remains a separate fixture rather than a claim inferred from the basic demo.

@@ -65,3 +65,18 @@ THREADING_BINDING_DEMO_PASS ordinary=3 isolated=3 dedicated=... policy_bytes=...
 ```
 
 Dedicated wake counts may exceed six because targeted wake notifications are advisory/latched. Actual byte counts are reported by the selected target/compiler. Firmware compilation alone is not evidence of device execution; qualification evidence is recorded separately in Policy handoffs.
+
+## Qualified Arduino IDE toolchain
+
+The actual sketch was compiled and run on ESP32-WROOM and ESP32-S3 with official Arduino CLI 1.6.0 and Espressif Arduino-ESP32 core 4.0.0, with C++20 explicitly selected. Install the same linked library revisions in the configured Arduino library location before compiling.
+
+From this example directory:
+
+```sh
+arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+arduino-cli core install esp32:esp32@4.0.0 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+arduino-cli compile --fqbn esp32:esp32:esp32 --build-property compiler.cpp.extra_flags=-std=gnu++20 Arduino_IDE
+arduino-cli compile --fqbn esp32:esp32:esp32s3:USBMode=hwcdc,CDCOnBoot=cdc --build-property compiler.cpp.extra_flags=-std=gnu++20 Arduino_IDE
+```
+
+The IDE/core-4 sample reports Policy=120 bytes and Runtime=27384 bytes; the separately qualified PIO profiles report 112 and 27232 bytes. These are explicit example configurations on those exact SDKs, not a universal footprint or approved Profiling budget. Passing the example does not qualify arbitrary SDKs or the unfinished Profiling capture/export system.

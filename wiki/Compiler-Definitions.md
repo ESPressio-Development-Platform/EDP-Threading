@@ -55,3 +55,8 @@ No repository-defined production compiler definition is required to configure th
 ## Optional context binding
 
 Context binding is selected with C++ Types, without a production feature macro. __cpp_exceptions enables selected outer exception capture; absent exception support does not promise unwinding. EDP_THREADING_TEST_OPTIMIZATION and EDP_THREADING_SANITIZERS configure only the new host runner. See [contract and reference](Context-Binding).
+
+
+## Arduino IDE qualification
+
+Official CLI1.6/core4 sketch builds use compiler.cpp.extra_flags=-std=gnu++20. S3 USBMode=hwcdc and CDCOnBoot=cdc select the verified hardware CDC console. These are toolchain/board choices, not a production Threading feature macro. The PIO and IDE SDK profiles have separately measured sizes and separate device receipts.
