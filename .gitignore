@@ -465,3 +465,6 @@ tests/resource-measurements/.measurement-logs/
 # Generated current-context demo SDK target configuration.
 /demos/current-context-binding/PlatformIO_ESP-IDF/sdkconfig.esp32dev
 /demos/current-context-binding/PlatformIO_ESP-IDF/sdkconfig.esp32s3
+
+# Generated native context-binding qualification SDK configuration.
+/tests/context-binding-hil/sdkconfig.*

@@ -43,3 +43,7 @@ The control owner serializes preparation/start/shutdown/finalization and startup
 ## Complete source-led example
 
 The [three-form project](../demos/current-context-binding/README.MD) includes the complete record/provider/topology/Clock/start/dispatch/activation/retirement integration. Its three Example.hpp copies are identical; only the framework entry differs. Public demo dependency references are GitHub URLs. The native execution concrete is selected explicitly under both frameworks so Join/Destroy uses the qualified native owner.
+
+## Native failure acceptance project
+
+The maintained [SDK acceptance fixture](../tests/context-binding-hil/README.MD) uses actual Threading ownership and native TLS/execution over explicit fault-forwarding test adapters. It exercises foreign binding preservation, UnsupportedContext, partial native startup, bounded late acknowledgement, repeated fixed-backing incarnations and retained retirement mismatch on both boards/frameworks. The terminal failed owner remains live until reset. These are owner-lifetime checks, not capture or durable-export acceptance.

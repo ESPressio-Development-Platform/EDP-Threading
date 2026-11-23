@@ -71,3 +71,5 @@ jobs:
         run: python -m pip install platformio
       - name: Build Arduino and ESP-IDF source-led examples
         run: bash tests/run-context-binding-demo-builds.sh ${{ matrix.target }}
+      - name: Build native failure and incarnation acceptance fixture
+        run: bash tests/run-context-binding-hil-builds.sh ${{ matrix.target }} ${{ matrix.target }}-arduino
