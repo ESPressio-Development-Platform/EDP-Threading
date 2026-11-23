@@ -39,3 +39,7 @@ The control owner serializes preparation/start/shutdown/finalization and startup
 ## Validation
 
 `tests/run-context-binding-tests.sh` exercises actual Threading ownership over independent host threads with explicitly synthetic binding/native fixtures: persistence across dispatch/activation, precise bind refusal, a partly started multi-Worker facility, late entry, retained storage, fresh incarnation identities, invalid mapping, exact retirement anomalies and exceptional owner exit. The exception subprocess intentionally ends while the failed owner remains retained; it does not claim production reclamation. Existing default tests remain separate. Native SDK builds, physical owner acceptance and compiled default-removal evidence must be recorded separately; host fixtures do not prove them.
+
+## Complete source-led example
+
+The [three-form project](../demos/current-context-binding/README.MD) includes the complete record/provider/topology/Clock/start/dispatch/activation/retirement integration. Its three Example.hpp copies are identical; only the framework entry differs. Public demo dependency references are GitHub URLs. The native execution concrete is selected explicitly under both frameworks so Join/Destroy uses the qualified native owner.

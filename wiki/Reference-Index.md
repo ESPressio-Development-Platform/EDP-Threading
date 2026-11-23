@@ -57,3 +57,4 @@ Every production header under `src/` has a source-derived reference page. Public
 - [threading/ContextBinding.hpp](Reference-threading-ContextBinding)
 - [threading/detail/ContextBindingScope.hpp](Reference-threading-detail-ContextBindingScope)
 - [tests/run-context-binding-tests.sh](Reference-tests-run-context-binding-tests)
+- [tests/run-context-binding-demo-builds.sh](Reference-tests-run-context-binding-demo-builds)

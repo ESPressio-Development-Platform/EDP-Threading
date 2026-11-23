@@ -17,3 +17,7 @@ The Event-support tranche adds explicit host tests for `Thread::Wake`, indefinit
 ## Optional context binding
 
 tests/run-context-binding-tests.sh compiles actual Threading ownership over independent host threads, runs precise failure/lifetime cases and a separate exceptional-exit subprocess. These fixtures are not native ESP32 evidence; SDK/device results are recorded independently in Policy handoffs. See [contract and reference](Context-Binding).
+
+## Complete optional-binding demo projects
+
+The current-context-binding demo has identical complete Example.hpp sources for Arduino IDE and both PIOArduino framework projects. tests/run-context-binding-demo-builds.sh builds both declared target environments under Arduino and ESP-IDF, or accepts one explicit target. Public manifests use GitHub URLs, without filesystem dependency roots. See [runner reference](Reference-tests-run-context-binding-demo-builds) and [project walkthrough](../demos/current-context-binding/README.MD). Device execution evidence remains separate from compilation.

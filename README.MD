@@ -116,3 +116,22 @@ ESPressio requires C++20. Threading host tests, CI workflows, resource-measureme
 ## Optional context binding
 
 Applications that require a typed current-context record can explicitly select a binding policy. Worker and Dedicated entry register before successful startup, preserve the binding across ordinary work/activation, and retire after their complete persistent body returns. Selected registration failure refuses startup and retains ownership for bounded shutdown continuation. Existing runtime configurations remain unselected. See [current-context binding](./docs/CONTEXT-BINDING.MD) for the complete setup, identity, lifetime and failure contract. This provides Threading integration only; a Profiling capture runtime is a separate consumer.
+
+### Build the complete optional binding integration
+
+The [current-context binding example](./demos/current-context-binding/README.MD) is a complete source-led project for PIOArduino/Arduino, PIOArduino/ESP-IDF and Arduino IDE. It supplies the complete record, mapping, topology, concrete providers, canonical Clock, dispatch/activation code and bounded lifecycle; no source-generation script is required.
+
+1. Open the selected [Arduino](./demos/current-context-binding/PlatformIO_Arduino/platformio.ini) or [ESP-IDF](./demos/current-context-binding/PlatformIO_ESP-IDF/platformio.ini) project. Every dependency is an explicit GitHub URL. Threading and Platform use the profiling feature branch; their native concrete providers use main.
+2. Read [Example.hpp](./demos/current-context-binding/PlatformIO_Arduino/src/Example.hpp) from its record definition through its `Run()` function. The three native contexts receive three different fixed records, and the seventh runtime template argument explicitly selects `Policy`.
+3. Build and upload for `esp32dev` or `esp32s3`; monitor at 115200 baud. `Run()` binds one Clock, initializes, requires all registrations within its explicit two-second startup budget, dispatches ordinary/isolated work and runs three Dedicated activations. It then cooperatively stops and finalizes with a separately supplied budget.
+4. Check the `THREADING_BINDING_DEMO_PASS` marker. On a real startup/finalization failure, retain the complete owner and inspect the policy's exact fixed-slot facts; the [failure contract](./docs/CONTEXT-BINDING.MD) explains continuation.
+
+The Arduino sketch is complete once the supplied `Example.hpp` is beside it:
+
+```cpp
+#include <Arduino.h>
+#include "Example.hpp"
+
+void setup() { Example::Run(); }
+void loop() { delay(1000); }
+```

@@ -56,3 +56,18 @@ jobs:
           CXX: ${{ matrix.compiler }}
           EDP_THREADING_SANITIZERS: '1'
         run: bash EDP-Threading/tests/run-context-binding-tests.sh
+
+  sdk-demo:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [esp32dev, esp32s3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PlatformIO runner for PIOArduino projects
+        run: python -m pip install platformio
+      - name: Build Arduino and ESP-IDF source-led examples
+        run: bash tests/run-context-binding-demo-builds.sh ${{ matrix.target }}
