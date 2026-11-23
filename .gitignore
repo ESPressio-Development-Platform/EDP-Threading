@@ -461,3 +461,7 @@ tests/resource-measurements/src/CMakeLists.txt
 tests/resource-measurements/sdkconfig.*
 tests/resource-measurements/platformio.local.*.ini
 tests/resource-measurements/.measurement-logs/
+
+# Generated current-context demo SDK target configuration.
+/demos/current-context-binding/PlatformIO_ESP-IDF/sdkconfig.esp32dev
+/demos/current-context-binding/PlatformIO_ESP-IDF/sdkconfig.esp32s3
